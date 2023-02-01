@@ -1,0 +1,5 @@
+laspy==2.3.0
+laszip==0.1.0
+lazrs==0.4.5
+numpy==1.23.3
+open3d==0.16.0
