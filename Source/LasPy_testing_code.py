@@ -55,5 +55,23 @@ def readout_LAS_file(filename):
         print(e)
 
 
+def reconstruct_surface(input_point_cloud):
+    """A function to recreate the surfaces of the given point cloud.
+    !!! This function is still very unstable and yet doesn't show any meaningful or useful results !!!
+
+    Args:
+        input_point_cloud (open3d.cpu.pybind.geometry.PointCloud): Point cloud to have surfaces reconstructed
+
+    Returns:
+       open3d.cpu.pybind.geometry.TriangleMesh: A TriangleMesh with the recreated surfaces of the given point cloud.
+    """
+    alpha = 75
+    mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(pcd, alpha)
+    mesh.compute_vertex_normals()
+
+    return mesh
+
+
 pcd = readout_LAS_file(dataset_desk)
+# pcd_reconstruct = reconstruct_surface(pcd)
 o3d.visualization.draw_geometries([pcd])
