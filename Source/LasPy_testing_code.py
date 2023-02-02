@@ -1,6 +1,8 @@
 import laspy
-import open3d as o3d
 import numpy as np
+import open3d as o3d
+
+dataset_desk = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWorker.las"
 
 dataset_desk = "Productcode/Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWorker.laz"
 
