@@ -4,7 +4,19 @@ import open3d as o3d
 
 dataset_desk = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWorker.las"
 
-dataset_desk = "Productcode/Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWorker.laz"
+
+def normalize_array(inputArray):
+    """A function made to normalize a NumPy ndarray.
+
+    Args:
+        inputArray (numpy.ndarray): A NumPy ndarray to normalize.
+
+    Returns:
+       numpy.ndarray: The normalized NumPy ndarray.
+    """
+    normalizedArray = (inputArray-np.min(inputArray))/(np.max(inputArray)-np.min(inputArray))
+
+    return normalizedArray
 
 
 def readout_LAS_file(filename):
@@ -18,16 +30,23 @@ def readout_LAS_file(filename):
         open3d.cpu.pybind.geometry.PointCloud: An Open3D point cloud containing the contents of the LAS/LAZ file.
     """
     try:
-        las = laspy.read(dataset_desk)
-
-        point_data = np.stack([las.X, las.Y, las.Z], axis=0).transpose((1, 0))
+        las = laspy.read(filename)
 
         geom = o3d.geometry.PointCloud()
-        geom.points = o3d.utility.Vector3dVector(point_data)
+
+        # Create an Open3d model that contains the points from the LAS/LAZ file.
+        pointData = np.stack([las.X, las.Y, las.Z], axis=0).transpose((1, 0))
+        geom.points = o3d.utility.Vector3dVector(pointData)
+
+        # Assign the colours of the points to the Open3d model. Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly. # noqa: E501
+        colourData = np.stack([normalize_array(las.red), normalize_array(las.green), normalize_array(las.blue)], axis=0).transpose((1, 0))  # noqa: E501
+        geom.colors = o3d.utility.Vector3dVector(colourData)
+
         print("A " + str(geom)[:-1] + " was extracted from the given LAS/LAZ file.")
         return geom
     except FileNotFoundError:
         print("Could not find a file on the given PATH, please check if the PATH exists.")
+        exit()
     except laspy.errors.LaspyException:
         print("The framework could not handle this file, please check if the file is not corrupted and/or if it is a LAS/LAZ file.")  # noqa: E501
     except Exception as e:
