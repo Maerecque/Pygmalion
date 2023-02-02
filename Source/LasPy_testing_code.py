@@ -59,6 +59,30 @@ def readout_LAS_file(filename):
         print(e)
 
 
+def remove_noise(inputPointCloud, showExample=False, showRemovedPoints=False):
+    """A function to remove noise from a point cloud.
+    !!! This function is still an experimental feature. !!!
+
+    Args:
+        inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
+        showExample (bool, optional): Boolean to show an example of the point cloud when the noise removal is done. Defaults to False.  # noqa; E501
+        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False. # noqa; E501
+
+    Returns:
+        open3d.cpu.pybind.geometry.PointCloud): A cleaned up version of the point cloud.
+    """
+    cl, ind = inputPointCloud.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+
+    if showExample: o3d.visualization.draw_geometries([cl])
+
+    if showRemovedPoints:
+        outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud])
+
+    return cl
+
+
 def reconstruct_surface(input_point_cloud):
     """A function to recreate the surfaces of the given point cloud.
     !!! This function is still very unstable and yet doesn't show any meaningful or useful results !!!
@@ -77,5 +101,4 @@ def reconstruct_surface(input_point_cloud):
 
 
 pcd = readout_LAS_file(dataset_desk)
-# pcd_reconstruct = reconstruct_surface(pcd)
 o3d.visualization.draw_geometries([pcd])
