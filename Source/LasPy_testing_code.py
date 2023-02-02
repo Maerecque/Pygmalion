@@ -62,6 +62,7 @@ def readout_LAS_file(filename):
 def remove_noise(inputPointCloud, showExample=False, showRemovedPoints=False):
     """A function to remove noise from a point cloud.
     !!! This function is still an experimental feature. !!!
+    Right now remove_statistical_outlier is used, but radius_outlier_removal also exists and is probably worth looking into. 👀
 
     Args:
         inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
