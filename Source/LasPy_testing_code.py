@@ -14,9 +14,13 @@ def normalize_array(inputArray):
     Returns:
        numpy.ndarray: The normalized NumPy ndarray.
     """
-    normalizedArray = (inputArray-np.min(inputArray))/(np.max(inputArray)-np.min(inputArray))
+    try:
+        if type(inputArray) is not np.ndarray: raise TypeError
+        normalizedArray = (inputArray - np.min(inputArray)) / (np.max(inputArray) - np.min(inputArray))
 
-    return normalizedArray
+        return normalizedArray
+    except TypeError:
+        print("Given value is not the correct type; not a NumPy ndarray.")
 
 
 def readout_LAS_file(filename):
