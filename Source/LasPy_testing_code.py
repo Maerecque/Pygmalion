@@ -19,6 +19,19 @@ def decimate_np_array_size(inputArray: np.ndarray, factor: int) -> np.ndarray:
     return inputArray[::factor]
 
 
+def voxelize_point_cloud(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, voxelSize: int) -> o3d.cpu.pybind.geometry.VoxelGrid:  # noqa: E501
+    """A function to create a VoxelGrid from a given point cloud.
+
+    Args:
+        inputPointCloud (o3d.cpu.pybind.geometry.PointCloud): An open3d point cloud to be converted.
+        voxelSize (int): Size of the voxels.
+
+    Returns:
+        o3d.cpu.pybind.geometry.VoxelGrid: An open3d VoxelGrid
+    """
+    return o3d.geometry.VoxelGrid.create_from_point_cloud(inputPointCloud, voxel_size=voxelSize)
+
+
 def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarray:
     """A function made to normalize a NumPy ndarray.
 
