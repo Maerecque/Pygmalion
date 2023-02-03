@@ -3,6 +3,20 @@ import numpy as np
 import open3d as o3d
 
 dataset_desk = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWorker.las"
+dataset_desk_big = ".//Werfkelderscans/Geomaat/Statisch/121602-DeskWithWorker.las"
+
+
+def decimate_np_array_size(inputArray, factor):
+    """A function to reduce the size of a given numpy array by a given factor. E.g. if factor is 10, then the original size of the array will be divided by 10 (from 1000 points to 100 points).  # noqa: E501
+
+    Args:
+        inputArray (numpy.ndarray): The input numpy array to be reduced.
+        factor (int): The reduction factor that the inputArray will be divided by.
+
+    Returns:
+        numpy.ndarray: The decreased numpy array.
+    """
+    return inputArray[::factor]
 
 
 def normalize_array(inputArray):
@@ -40,11 +54,11 @@ def readout_LAS_file(filename):
 
         # Create an Open3d model that contains the points from the LAS/LAZ file.
         pointData = np.stack([las.X, las.Y, las.Z], axis=0).transpose((1, 0))
-        geom.points = o3d.utility.Vector3dVector(pointData)
+        geom.points = o3d.utility.Vector3dVector(decimate_np_array_size(pointData, 100))
 
         # Assign the colours of the points to the Open3d model. Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly. # noqa: E501
         colourData = np.stack([normalize_array(las.red), normalize_array(las.green), normalize_array(las.blue)], axis=0).transpose((1, 0))  # noqa: E501
-        geom.colors = o3d.utility.Vector3dVector(colourData)
+        geom.colors = o3d.utility.Vector3dVector(decimate_np_array_size(colourData, 100))
 
         print("A " + str(geom)[:-1] + " was extracted from the given LAS/LAZ file.")
         return geom
@@ -89,13 +103,13 @@ def reconstruct_surface(input_point_cloud):
     !!! This function is still very unstable and yet doesn't show any meaningful or useful results !!!
 
     Args:
-        input_point_cloud (open3d.cpu.pybind.geometry.PointCloud): Point cloud to have surfaces reconstructed
+        input_point_cloud (open3d.cpu.pybind.geometry.PointCloud): Point cloud to have surfaces reconstructed.
 
     Returns:
        open3d.cpu.pybind.geometry.TriangleMesh: A TriangleMesh with the recreated surfaces of the given point cloud.
     """
     alpha = 75
-    mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(pcd, alpha)
+    mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(input_point_cloud, alpha)
     mesh.compute_vertex_normals()
 
     return mesh
