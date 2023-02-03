@@ -6,11 +6,11 @@ dataset_desk = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWo
 dataset_desk_big = ".//Werfkelderscans/Geomaat/Statisch/121602-DeskWithWorker.las"
 
 
-def decimate_np_array_size(inputArray, factor):
+def decimate_np_array_size(inputArray: np.ndarray, factor: int) -> np.ndarray:
     """A function to reduce the size of a given numpy array by a given factor. E.g. if factor is 10, then the original size of the array will be divided by 10 (from 1000 points to 100 points).  # noqa: E501
 
     Args:
-        inputArray (numpy.ndarray): The input numpy array to be reduced.
+        inputArray (np.ndarray): The input numpy array to be reduced.
         factor (int): The reduction factor that the inputArray will be divided by.
 
     Returns:
@@ -19,11 +19,13 @@ def decimate_np_array_size(inputArray, factor):
     return inputArray[::factor]
 
 
-def normalize_array(inputArray):
+def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarray:
     """A function made to normalize a NumPy ndarray.
 
     Args:
         inputArray (numpy.ndarray): A NumPy ndarray to normalize.
+    Raises:
+        TypeError: If the inputArray is not of the NumPy ndarray type, this error will be raised.
 
     Returns:
        numpy.ndarray: The normalized NumPy ndarray.
@@ -37,7 +39,7 @@ def normalize_array(inputArray):
         print("Given value is not the correct type; not a NumPy ndarray.")
 
 
-def readout_LAS_file(filename):
+def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to read a LAS/LAZ file and convert the contents into an Open3D format.
     This makes it possible to use the Open3D tools on the LAS/LAZ files.
 
@@ -45,7 +47,7 @@ def readout_LAS_file(filename):
         filename (str): A PATH to a LAS/LAZ file to be converted.
 
     Returns:
-        open3d.cpu.pybind.geometry.PointCloud: An Open3D point cloud containing the contents of the LAS/LAZ file.
+        o3d.cpu.pybind.geometry.PointCloud: An Open3D point cloud containing the contents of the LAS/LAZ file.
     """
     try:
         las = laspy.read(filename)
@@ -73,18 +75,18 @@ def readout_LAS_file(filename):
         print(e)
 
 
-def remove_noise(inputPointCloud, showExample=False, showRemovedPoints=False):
+def remove_noise(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, showExample: bool = False, showRemovedPoints: bool = False) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
     """A function to remove noise from a point cloud.
     !!! This function is still an experimental feature. !!!
     Right now remove_statistical_outlier is used, but radius_outlier_removal also exists and is probably worth looking into. 👀
 
     Args:
         inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
-        showExample (bool, optional): Boolean to show an example of the point cloud when the noise removal is done. Defaults to False.  # noqa; E501
-        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False. # noqa; E501
+        showExample (bool, optional): Boolean to show an example of the point cloud when the noise removal is done. Defaults to False.  # noqa: E501
+        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False. # noqa: E501
 
     Returns:
-        open3d.cpu.pybind.geometry.PointCloud): A cleaned up version of the point cloud.
+        open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
     """
     cl, ind = inputPointCloud.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
 
@@ -98,7 +100,7 @@ def remove_noise(inputPointCloud, showExample=False, showRemovedPoints=False):
     return cl
 
 
-def reconstruct_surface(input_point_cloud):
+def reconstruct_surface(input_point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.TriangleMesh:
     """A function to recreate the surfaces of the given point cloud.
     !!! This function is still very unstable and yet doesn't show any meaningful or useful results !!!
 
