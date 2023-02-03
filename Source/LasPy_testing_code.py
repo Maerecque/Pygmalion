@@ -4,6 +4,7 @@ import open3d as o3d
 
 dataset_desk = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWorker.las"
 dataset_desk_big = ".//Werfkelderscans/Geomaat/Statisch/121602-DeskWithWorker.las"
+dataset_basement = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-Gerrit-4.laz"
 
 
 def decimate_np_array_size(inputArray: np.ndarray, factor: int) -> np.ndarray:
@@ -134,5 +135,10 @@ def reconstruct_surface(input_point_cloud: o3d.cpu.pybind.geometry.PointCloud) -
     return mesh
 
 
-pcd = readout_LAS_file(dataset_desk)
-o3d.visualization.draw_geometries([pcd])
+pcd = readout_LAS_file(dataset_basement)
+
+cleaned_pcd = remove_noise(pcd, False, True)
+voxel_pcd = voxelize_point_cloud(cleaned_pcd, 1000)
+o3d.visualization.draw_geometries([voxel_pcd])
+
+# o3d.visualization.draw_geometries([pcd])
