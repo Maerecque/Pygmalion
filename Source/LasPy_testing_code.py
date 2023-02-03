@@ -14,7 +14,7 @@ def decimate_np_array_size(inputArray: np.ndarray, factor: int) -> np.ndarray:
         factor (int): The reduction factor that the inputArray will be divided by.
 
     Returns:
-        numpy.ndarray: The decreased numpy array.
+        np.ndarray: The decreased numpy array.
     """
     return inputArray[::factor]
 
@@ -37,6 +37,8 @@ def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarra
 
     Args:
         inputArray (numpy.ndarray): A NumPy ndarray to normalize.
+        isColour (bool, optional): A boolean value to divide the ndarray to the LAS colour standards to 0. Defaults to False.  # noqa: E501
+
     Raises:
         TypeError: If the inputArray is not of the NumPy ndarray type, this error will be raised.
 
@@ -45,7 +47,9 @@ def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarra
     """
     try:
         if type(inputArray) is not np.ndarray: raise TypeError
-        normalizedArray = (inputArray - np.min(inputArray)) / (np.max(inputArray) - np.min(inputArray))
+
+        if isColour is True: normalizedArray = inputArray / 65535
+        else: normalizedArray = (inputArray - np.min(inputArray)) / (np.max(inputArray) - np.min(inputArray))
 
         return normalizedArray
     except TypeError:
@@ -69,11 +73,11 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
 
         # Create an Open3d model that contains the points from the LAS/LAZ file.
         pointData = np.stack([las.X, las.Y, las.Z], axis=0).transpose((1, 0))
-        geom.points = o3d.utility.Vector3dVector(decimate_np_array_size(pointData, 100))
+        geom.points = o3d.utility.Vector3dVector(pointData)
 
         # Assign the colours of the points to the Open3d model. Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly. # noqa: E501
-        colourData = np.stack([normalize_array(las.red), normalize_array(las.green), normalize_array(las.blue)], axis=0).transpose((1, 0))  # noqa: E501
-        geom.colors = o3d.utility.Vector3dVector(decimate_np_array_size(colourData, 100))
+        colourData = np.stack([normalize_array(las.red, True), normalize_array(las.green, True), normalize_array(las.blue, True)], axis=0).transpose((1, 0))  # noqa: E501
+        geom.colors = o3d.utility.Vector3dVector(colourData)
 
         print("A " + str(geom)[:-1] + " was extracted from the given LAS/LAZ file.")
         return geom
