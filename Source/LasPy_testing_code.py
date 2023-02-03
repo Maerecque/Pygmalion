@@ -9,6 +9,7 @@ dataset_basement = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-Gerrit
 
 def decimate_np_array_size(inputArray: np.ndarray, factor: int) -> np.ndarray:
     """A function to reduce the size of a given numpy array by a given factor. E.g. if factor is 10, then the original size of the array will be divided by 10 (from 1000 points to 100 points).  # noqa: E501
+    !!! As it turns out this function does not function as expected, so currently this function is unused. 😅 !!!
 
     Args:
         inputArray (np.ndarray): The input numpy array to be reduced.
