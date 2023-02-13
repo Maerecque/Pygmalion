@@ -1,14 +1,29 @@
 import laspy
 import numpy as np
 import open3d as o3d
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+# from voxelCarving import *
 
-dataset_desk = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-DeskWithWorker.las"
-dataset_desk_big = ".//Werfkelderscans/Geomaat/Statisch/121602-DeskWithWorker.las"
-dataset_basement = ".//Werfkelderscans/Geomaat/Handscanner/121601-GeoSLAM-Gerrit-4.laz"
+
+def get_file_path(description: str, fileformat: any) -> str:
+    """A function to get the filepath of a selected file.
+
+    Args:
+        description (str): Description of the to be selected file format.
+        fileformat (any): Either a string of one specified file format or a list of file formats. e.g. "*.txt" or ["*.txt", "*.docx"] # noqa: E501
+
+    Returns:
+        str: The filepath of the selected file.
+    """
+    Tk().withdraw()  # we don't want a full GUI, so keep the root window from appearing
+    filename = askopenfilename(filetypes=[(description, fileformat)])  # show an "Open" dialog box and return the path to the selected file # noqa: E501
+    return filename
 
 
 def decimate_np_array_size(inputArray: np.ndarray, factor: int) -> np.ndarray:
-    """A function to reduce the size of a given numpy array by a given factor. E.g. if factor is 10, then the original size of the array will be divided by 10 (from 1000 points to 100 points).  # noqa: E501
+    """A function to reduce the size of a given numpy array by a given factor.
+    E.g. if factor is 10, then the original size of the array will be divided by 10 (from 1000 points to 100 points).
     !!! As it turns out this function does not function as expected, so currently this function is unused. 😅 !!!
 
     Args:
@@ -136,7 +151,7 @@ def reconstruct_surface(input_point_cloud: o3d.cpu.pybind.geometry.PointCloud) -
     return mesh
 
 
-pcd = readout_LAS_file(dataset_basement)
+pcd = readout_LAS_file(get_file_path("LAS and LAZ files", ["*.las", "*.laz"]))
 
 cleaned_pcd = remove_noise(pcd, False, True)
 voxel_pcd = voxelize_point_cloud(cleaned_pcd, 1000)
