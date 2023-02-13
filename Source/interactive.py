@@ -1,7 +1,4 @@
-# examples/python/visualization/interactive_visualization.py
-
 import numpy as np
-import copy
 import open3d as o3d
 import laspy
 from tkinter import Tk
@@ -129,7 +126,9 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         print(e)
 
 
-def demo_crop_geometry():
+def crop_geometry():
+    """A function to crop shapes out of a point cloud and save them in a separate LAS file.
+    """
     print("Demo for manual geometry cropping")
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
     pcd = readout_LAS_file(file_name)
@@ -148,30 +147,5 @@ def demo_crop_geometry():
     convert_ply_to_las(file_name)
 
 
-def draw_registration_result(source, target, transformation):
-    source_temp = copy.deepcopy(source)
-    target_temp = copy.deepcopy(target)
-    source_temp.paint_uniform_color([1, 0.706, 0])
-    target_temp.paint_uniform_color([0, 0.651, 0.929])
-    source_temp.transform(transformation)
-    o3d.visualization.draw_geometries([source_temp, target_temp])
-
-
-def pick_points(pcd):
-    print("")
-    print(
-        "1) Please pick at least three correspondences using [shift + left click]"
-    )
-    print("   Press [shift + right click] to undo point picking")
-    print("2) After picking points, press 'Q' to close the window")
-    vis = o3d.visualization.VisualizerWithEditing()
-    vis.create_window()
-    vis.add_geometry(pcd)
-    vis.run()  # user picks points
-    vis.destroy_window()
-    print("")
-    return vis.get_picked_points()
-
-
 if __name__ == "__main__":
-    demo_crop_geometry()
+    crop_geometry()
