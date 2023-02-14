@@ -61,6 +61,7 @@ def get_file_path(description: str, fileformat: any) -> str:
     """
     Tk().withdraw()  # we don't want a full GUI, so keep the root window from appearing
     filename = askopenfilename(filetypes=[(description, fileformat)])  # show an "Open" dialog box and return the path to the selected file # noqa: E501
+    print("The following file was selected: \n" + filename)
     return filename
 
 
@@ -101,8 +102,6 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
     try:
         las = laspy.read(filename)
 
-        print(las.header)
-
         geom = o3d.geometry.PointCloud()
 
         # Create an Open3d model that contains the points from the LAS/LAZ file.
@@ -130,6 +129,8 @@ def crop_geometry():
     """A function to crop shapes out of a point cloud and save them in a separate LAS file.
     """
     print("Demo for manual geometry cropping")
+    print("Be aware that cropped files that are created with this application cannot be used again with this application.")  # noqa: E501
+    print("NOTE: This application is not suited for very large files, try to use files that are 350MB or smaller.")
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
     pcd = readout_LAS_file(file_name)
 
