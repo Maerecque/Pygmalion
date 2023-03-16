@@ -18,6 +18,35 @@ class FileFormatError(Exception): pass
 class noFileGivenError(Exception): pass
 
 
+## OKAY CURRENT STATE OF THIS FUNCTION IS IT DOESN'T WORK, FOR SOME REASON PDAL DOES NOT WORK, REASON FOR COMMENT OUT OF THE IMPORT # noqa: E501, E266
+# def convert_ply_to_las2():
+#     toConvertToLas = get_file_path("PLY files", "*.ply")
+#     # pcd = o3d.io.read_point_cloud(toConvertToLas)
+#     # o3d.visualization.draw_geometries([pcd])
+
+#     newLasFileName = os.path.splitext(toConvertToLas)[0] + ".las"
+
+#     # Create a pipeline object
+#     pipeline = {
+#         "pipeline": [
+#             {
+#                 "type": "readers.ply",
+#                 "filename": toConvertToLas
+#             },
+#             {
+#                 "type": "writers.las",
+#                 "filename": newLasFileName
+#             }
+#         ]
+#     }
+
+#     # Execute the pipeline
+#     pd = pdal.Pipeline(json.dumps(pipeline))
+#     pd.validate()
+#     count = pd.execute()
+#     count
+
+
 def convert_ply_to_las(inputLasPath: str = None):
     """A function to convert a ply file to a LAS file, based on a given LAS input file.
     With this function the user is prompted to select a PLY file that will be converted to a LAS file.
@@ -76,35 +105,7 @@ def convert_ply_to_las(inputLasPath: str = None):
             print("No accompanying JSON file was found.")
 
 
-## OKAY CURRENT STATE OF THIS FUNCTION IS IT DOESN'T WORK, FOR SOME REASON PDAL DOES NOT WORK, REASON FOR COMMENT OUT OF THE IMPORT # noqa: E501, E266
-# def convert_ply_to_las2():
-#     toConvertToLas = get_file_path("PLY files", "*.ply")
-#     # pcd = o3d.io.read_point_cloud(toConvertToLas)
-#     # o3d.visualization.draw_geometries([pcd])
-
-#     newLasFileName = os.path.splitext(toConvertToLas)[0] + ".las"
-
-#     # Create a pipeline object
-#     pipeline = {
-#         "pipeline": [
-#             {
-#                 "type": "readers.ply",
-#                 "filename": toConvertToLas
-#             },
-#             {
-#                 "type": "writers.las",
-#                 "filename": newLasFileName
-#             }
-#         ]
-#     }
-
-#     # Execute the pipeline
-#     pd = pdal.Pipeline(json.dumps(pipeline))
-#     pd.validate()
-#     count = pd.execute()
-#     count
-
-def grid_subsampling(points, voxel_size):
+def grid_subsampling(points: laspy.LasReader, voxel_size: int) -> list:
     """Define a function that takes as input an array of points, and a voxel size expressed in meters.
     It returns the sampled point cloud.
 
