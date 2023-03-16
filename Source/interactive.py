@@ -7,44 +7,9 @@ import numpy as np
 import open3d as o3d
 from plyfile import PlyData
 
-# import pdal
-# import json
-
-## RIGHT NOW WITH THIS CONVERSION, THERE IS SOMETHING THAT IS CHANGED IN THE LAS FILE THAT FOR SOME REASON REALLY SCREWS WITH THE SCALES # noqa: E501, E266
-## So update (4 weeks later), It might be that CC autoscaling has f'ed with the scales of certain objects, since a new test with cropped objects that are from CC and with PLY method that still work and look like they are in the correct position. # noqa: E501, E266
-
 
 class FileFormatError(Exception): pass
 class noFileGivenError(Exception): pass
-
-
-## OKAY CURRENT STATE OF THIS FUNCTION IS IT DOESN'T WORK, FOR SOME REASON PDAL DOES NOT WORK, REASON FOR COMMENT OUT OF THE IMPORT # noqa: E501, E266
-# def convert_ply_to_las2():
-#     toConvertToLas = get_file_path("PLY files", "*.ply")
-#     # pcd = o3d.io.read_point_cloud(toConvertToLas)
-#     # o3d.visualization.draw_geometries([pcd])
-
-#     newLasFileName = os.path.splitext(toConvertToLas)[0] + ".las"
-
-#     # Create a pipeline object
-#     pipeline = {
-#         "pipeline": [
-#             {
-#                 "type": "readers.ply",
-#                 "filename": toConvertToLas
-#             },
-#             {
-#                 "type": "writers.las",
-#                 "filename": newLasFileName
-#             }
-#         ]
-#     }
-
-#     # Execute the pipeline
-#     pd = pdal.Pipeline(json.dumps(pipeline))
-#     pd.validate()
-#     count = pd.execute()
-#     count
 
 
 def convert_ply_to_las(inputLasPath: str = None):
@@ -262,9 +227,7 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
     o3d.visualization.draw_geometries_with_editing([pcd])
 
 
-def crop_geometry():
-    """A function to crop shapes out of a point cloud and save them in a separate LAS file.
-    """
+if __name__ == "__main__":
     print("Be aware that files that are created with this application cannot be used again with this application.")  # noqa: E501
     print("NOTE: This application is not suited for very large files, try to use files that are 350MB or smaller.")
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
@@ -274,8 +237,3 @@ def crop_geometry():
         open_point_cloud_editor(pcd)
 
     convert_ply_to_las(file_name)
-
-
-if __name__ == "__main__":
-    # convert_ply_to_las2()
-    crop_geometry()
