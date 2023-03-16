@@ -42,7 +42,7 @@ def convert_ply_to_las(inputLasPath: str = None):
         outfile.blue = plyFile['vertex']['blue']
 
     except Exception as e:
-        print("Something wen't wrong during conversion, the PLY file will not be deleted.")
+        print("Something went wrong during conversion, the PLY file will not be deleted.")
         print(e)
     else:
         outfile.write(newLasFileName)
