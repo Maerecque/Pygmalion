@@ -117,6 +117,7 @@ def grid_subsampling(points, voxel_size):
 
     return grid_candidate_center
 
+
 def get_file_path(description: str, fileformat: any) -> str:
     """A function to get the filepath of a selected file.
 
@@ -127,7 +128,10 @@ def get_file_path(description: str, fileformat: any) -> str:
     Returns:
         str: The filepath of the selected file.
     """
-    Tk().withdraw()  # we don't want a full GUI, so keep the root window from appearing
+    root = Tk()
+    root.withdraw()  # we don't want a full GUI, so keep the root window from appearing
+    root.iconbitmap("Source\\support_files\\logo.ico")
+
     filename = askopenfilename(filetypes=[(description, fileformat)])  # show an "Open" dialog box and return the path to the selected file # noqa: E501
     print("The following file was selected: \n" + filename)
     return filename
