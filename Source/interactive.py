@@ -11,6 +11,7 @@ from plyfile import PlyData
 # import json
 
 ## RIGHT NOW WITH THIS CONVERSION, THERE IS SOMETHING THAT IS CHANGED IN THE LAS FILE THAT FOR SOME REASON REALLY SCREWS WITH THE SCALES # noqa: E501, E266
+## So update (4 weeks later), It might be that CC autoscaling has f'ed with the scales of certain objects, since a new test with cropped objects that are from CC and with PLY method that still work and look like they are in the correct position. # noqa: E501, E266
 
 
 def convert_ply_to_las(inputLasPath: str = None):
@@ -136,7 +137,15 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         o3d.cpu.pybind.geometry.PointCloud: An Open3D point cloud containing the contents of the LAS/LAZ file.
     """
     try:
+        if not filename:
+            raise noFileGivenError
+            
+        
         las = laspy.read(filename)
+
+        # check if LAS file is in the correct format
+        if "<LasData(1.2, point fmt: <PointFormat(3," not in str(las):
+            raise FileFormatError
 
         geom = o3d.geometry.PointCloud()
 
@@ -148,17 +157,28 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         colourData = np.stack([normalize_array(las.red, True), normalize_array(las.green, True), normalize_array(las.blue, True)], axis=0).transpose((1, 0))  # noqa: E501
         geom.colors = o3d.utility.Vector3dVector(colourData)
 
+        # # It seems like Open3d does not accept the use gps as a variable. Find a way to give this to the ply file
+        # gpsData = np.stack([las.gps_time], axis=0).transpose((1, 0))
+        # geom.gps = o3d.utility.Vector2dVector(gpsData)
+
         print("A " + str(geom)[:-1] + " was extracted from the given LAS/LAZ file.")
         return geom
     except FileNotFoundError:
-        print("Could not find a file on the given PATH, please check if the PATH exists.")
+        print("Could not find a file on the given PATH,  please check if the PATH exists.")
         exit()
+    except noFileGivenError:
+        print("No file was selected, script will not be stopped.")
     except laspy.errors.LaspyException:
         print("The framework could not handle this file, please check if the file is not corrupted and/or if it is a LAS/LAZ file.")  # noqa: E501
+        exit()
+    except FileFormatError:
+        print("The chosen LAS/LAZ file is not in the correct format or correct version. This file will not be used.")
+        exit()
     except Exception as e:
         print("An unforeseen error occurred. See below for details.")
         print(type(e))
         print(e)
+        exit()
 
 
 def crop_geometry():
