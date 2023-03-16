@@ -31,12 +31,24 @@ def convert_ply_to_las(inputLasPath: str = None):
     try:
         print("Select your created ply file to convert it to a LAS file.")
         toConvertToLas = get_file_path("PLY files", "*.ply")
-        plyFile = PlyData.read(toConvertToLas, False)
 
+        # if no PLY file is selected this if statement will be ran.
+        if not toConvertToLas:
+            raise noFileGivenError
+
+        plyFile = PlyData.read(toConvertToLas, False)
         newLasFileName = os.path.splitext(toConvertToLas)[0] + ".las"
 
-        LasHeaderPointFormat = laspy.read(inputLasPath).header.point_format
-        LasHeaderFileVersion = laspy.read(inputLasPath).header.version
+        # if no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.
+        if not inputLasPath:
+            customHeader = laspy.LasHeader(version="1.2", point_format=3)
+            LasHeaderPointFormat = customHeader.point_format
+            LasHeaderFileVersion = customHeader.version
+
+        else:
+            LasHeaderPointFormat = laspy.read(inputLasPath).header.point_format
+            LasHeaderFileVersion = laspy.read(inputLasPath).header.version
+
         outfile = laspy.create(point_format=LasHeaderPointFormat, file_version=LasHeaderFileVersion)
 
         outfile.x = plyFile['vertex']['x']
@@ -46,6 +58,9 @@ def convert_ply_to_las(inputLasPath: str = None):
         outfile.green = plyFile['vertex']['green']
         outfile.blue = plyFile['vertex']['blue']
 
+    except noFileGivenError:
+        print("No file was selected, script will be stopped.")
+        exit()
     except Exception as e:
         print("Something went wrong during conversion, the PLY file will not be deleted.")
         print(e)
