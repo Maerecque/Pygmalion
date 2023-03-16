@@ -14,6 +14,10 @@ from plyfile import PlyData
 ## So update (4 weeks later), It might be that CC autoscaling has f'ed with the scales of certain objects, since a new test with cropped objects that are from CC and with PLY method that still work and look like they are in the correct position. # noqa: E501, E266
 
 
+class FileFormatError(Exception): pass
+class noFileGivenError(Exception): pass
+
+
 def convert_ply_to_las(inputLasPath: str = None):
     """A function to convert a ply file to a LAS file, based on a given LAS input file.
     With this function the user is prompted to select a PLY file that will be converted to a LAS file.
@@ -85,6 +89,33 @@ def convert_ply_to_las(inputLasPath: str = None):
 #     count = pd.execute()
 #     count
 
+def grid_subsampling(points, voxel_size):
+    """Define a function that takes as input an array of points, and a voxel size expressed in meters.
+    It returns the sampled point cloud.
+
+    Not sure if this function should be used, but the idea is very potential
+
+    Args:
+        points (laspy.LasReader): _description_
+        voxel_size (int): _description_
+
+    Returns:
+        list: _description_
+    """
+    # nb_vox = np.ceil((np.max(points, axis=0) - np.min(points, axis=0)) / voxel_size)
+    non_empty_voxel_keys, inverse, nb_pts_per_voxel = np.unique(((points - np.min(points, axis=0)) // voxel_size).astype(int), axis=0, return_inverse=True, return_counts=True)  # noqa: E501
+    idx_pts_vox_sorted = np.argsort(inverse)
+    voxel_grid = {}
+    grid_barycenter, grid_candidate_center = [], []
+    last_seen = 0
+
+    for idx, vox in enumerate(non_empty_voxel_keys):
+        voxel_grid[tuple(vox)] = points[idx_pts_vox_sorted[last_seen:last_seen + nb_pts_per_voxel[idx]]]
+        grid_barycenter.append(np.mean(voxel_grid[tuple(vox)], axis=0))
+        grid_candidate_center.append(voxel_grid[tuple(vox)][np.linalg.norm(voxel_grid[tuple(vox)] - np.mean(voxel_grid[tuple(vox)], axis=0), axis=1).argmin()])  # noqa: E501
+        last_seen += nb_pts_per_voxel[idx]
+
+    return grid_candidate_center
 
 def get_file_path(description: str, fileformat: any) -> str:
     """A function to get the filepath of a selected file.
