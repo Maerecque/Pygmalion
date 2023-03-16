@@ -68,7 +68,7 @@ def convert_ply_to_las(inputLasPath: str = None):
         plyFile = PlyData.read(toConvertToLas, False)
         newLasFileName = os.path.splitext(toConvertToLas)[0] + ".las"
 
-        # if no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.
+        # if no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.  # noqa: E501
         if not inputLasPath:
             customHeader = laspy.LasHeader(version="1.2", point_format=3)
             LasHeaderPointFormat = customHeader.point_format
@@ -236,7 +236,7 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
 
 
 def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
-    """A function to open a window that allows the point clouds to be cropped. The export of the cropped clouds are in PLY format.
+    """A function to open a window that allows the point clouds to be cropped. The export of the cropped clouds are in PLY format.  # noqa: E501
 
     Args:
         pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be edited.
