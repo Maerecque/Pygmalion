@@ -130,11 +130,14 @@ def get_file_path(description: str, fileformat: any) -> str:
     """
     root = Tk()
     root.withdraw()  # we don't want a full GUI, so keep the root window from appearing
-    root.iconbitmap("Source\\support_files\\logo.ico")
+    root.iconbitmap(os.path.realpath(os.path.dirname(__file__)) + "\\support_files\\logo.ico")
 
     filename = askopenfilename(filetypes=[(description, fileformat)])  # show an "Open" dialog box and return the path to the selected file # noqa: E501
-    print("The following file was selected: \n" + filename)
-    return filename
+    if filename:
+        print("The following file was selected: \n" + filename)
+        return filename
+
+    return
 
 
 def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarray:
