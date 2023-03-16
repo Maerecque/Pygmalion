@@ -216,16 +216,12 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         exit()
 
 
-def crop_geometry():
-    """A function to crop shapes out of a point cloud and save them in a separate LAS file.
+def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
+    """A function to open a window that allows the point clouds to be cropped. The export of the cropped clouds are in PLY format.
+
+    Args:
+        pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be edited.
     """
-    print("Demo for manual geometry cropping")
-    print("Be aware that files that are created with this application cannot be used again with this application.")  # noqa: E501
-    print("NOTE: This application is not suited for very large files, try to use files that are 350MB or smaller.")
-    file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
-    pcd = readout_LAS_file(file_name)
-
-
     print("\n")  # noqa: E303
     print("1) Press 'Y' twice to align geometry with negative direction of y-axis")
     print("2) Press 'K' to lock screen and to switch to selection mode")
@@ -235,6 +231,18 @@ def crop_geometry():
     print("5) Press 'S' to save the selected geometry")
     print("6) Press 'F' to switch to freeview mode")
     o3d.visualization.draw_geometries_with_editing([pcd])
+
+
+def crop_geometry():
+    """A function to crop shapes out of a point cloud and save them in a separate LAS file.
+    """
+    print("Be aware that files that are created with this application cannot be used again with this application.")  # noqa: E501
+    print("NOTE: This application is not suited for very large files, try to use files that are 350MB or smaller.")
+    file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
+    pcd = readout_LAS_file(file_name)
+
+    if pcd is not None:
+        open_point_cloud_editor(pcd)
 
     convert_ply_to_las(file_name)
 
