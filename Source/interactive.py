@@ -203,11 +203,19 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         geom = o3d.geometry.PointCloud()
 
         # Create an Open3d model that contains the points from the LAS/LAZ file.
-        pointData = np.stack([las.X, las.Y, las.Z], axis=0).transpose((1, 0))
+        pointData = np.stack([
+            las.X,
+            las.Y,
+            las.Z
+        ], axis=0).transpose((1, 0))
         geom.points = o3d.utility.Vector3dVector((pointData * las.header.scales) + las.header.offsets)
 
         # Assign the colours of the points to the Open3d model. Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly. # noqa: E501
-        colourData = np.stack([normalize_array(las.red, True), normalize_array(las.green, True), normalize_array(las.blue, True)], axis=0).transpose((1, 0))  # noqa: E501
+        colourData = np.stack([
+            normalize_array(las.red, True),
+            normalize_array(las.green, True),
+            normalize_array(las.blue, True)
+        ], axis=0).transpose((1, 0))
         geom.colors = o3d.utility.Vector3dVector(colourData)
 
         # # It seems like Open3d does not accept the use gps as a variable. Find a way to give this to the ply file
