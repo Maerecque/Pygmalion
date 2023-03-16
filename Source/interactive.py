@@ -83,9 +83,9 @@ def convert_ply_to_las(inputLasPath: str = None):
         outfile.x = plyFile['vertex']['x']
         outfile.y = plyFile['vertex']['y']
         outfile.z = plyFile['vertex']['z']
-        outfile.red = plyFile['vertex']['red']
-        outfile.green = plyFile['vertex']['green']
-        outfile.blue = plyFile['vertex']['blue']
+        outfile.red = plyFile['vertex']['red'] * 257
+        outfile.green = plyFile['vertex']['green'] * 257
+        outfile.blue = plyFile['vertex']['blue'] * 257
 
     except noFileGivenError:
         print("No file was selected, script will be stopped.")
@@ -245,6 +245,8 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
 
 def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
     """A function to open a window that allows the point clouds to be cropped. The export of the cropped clouds are in PLY format.  # noqa: E501
+    It has to be noted that when exporting the cutouts to PLY format, Open3D will round off the colour values.
+    This results in somewhat distorted colors when converting them back to LAS format.
 
     Args:
         pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be edited.
