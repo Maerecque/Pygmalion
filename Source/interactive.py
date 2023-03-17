@@ -233,23 +233,39 @@ def convert_ply_to_las(inputLasPath: str = None):
             print("No accompanying JSON file was found.")
 
 
-def pointcloud_dbscan(pcd: o3d.cpu.pybind.geometry.PointCloud):
-    # Convert to numpy array
+def pointcloud_dbscan(pcd: o3d.cpu.pybind.geometry.PointCloud, eps: float = 0.1, min_samples: int = 20, visualize: bool = True) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
+    """A function to perform a DBScan on a point cloud.
+
+    Args:
+        pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud that will be used as input for the DBScan.
+        eps (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+            This is not a maximum bound on the distances of points within a cluster.
+            This is the most important DBSCAN parameter to choose appropriately for your data set and distance function. Defaults to 0.1.
+        min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+            This includes the point itself. Defaults to 20.
+        visualize (bool, optional): A boolean parameter to toggle visualization. Defaults to True.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Point cloud with DBScan performed on it.
+    """
+    # Convert points to a numpy array.
     xyz = np.asarray(pcd.points)
 
-    # Perform DBSCAN clustering
+    # Perform DBSCAN clustering.
     dbscan = DBSCAN(eps=0.1, min_samples=20)
     labels = dbscan.fit_predict(xyz)
 
-    # Create a color map for the clusters
-    max_label = labels.max()
-    colors = plt.cm.jet(labels / (max_label if max_label > 0 else 1))
+    # Create a color map for the clusters.
+    maxLabel = labels.max()
+    colors = plt.cm.jet(labels / (maxLabel if maxLabel > 0 else 1))
 
-    # Set colors for each point in the point cloud
+    # Set colors for each point in the point cloud.
     pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
-    # Visualize the results
-    o3d.visualization.draw_geometries([pcd])
+    if visualize:
+        o3d.visualization.draw_geometries([pcd])
+
+    return pcd
 
 
 if __name__ == "__main__":
