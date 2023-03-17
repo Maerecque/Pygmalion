@@ -17,7 +17,7 @@ def get_file_path(description: str, fileformat: any) -> str:
 
     Args:
         description (str): Description of the to be selected file format.
-        fileformat (any): Either a string of one specified file format or a list of file formats. e.g. "*.txt" or ["*.txt", "*.docx"] # noqa: E501
+        fileformat (any): Either a string of one specified file format or a list of file formats. e.g. "*.txt" or ["*.txt", "*.docx"].
 
     Returns:
         str: The filepath of the selected file.
@@ -25,8 +25,8 @@ def get_file_path(description: str, fileformat: any) -> str:
     root = Tk()
     root.withdraw()  # we don't want a full GUI, so keep the root window from appearing
     root.iconbitmap(os.path.realpath(os.path.dirname(__file__)) + "\\support_files\\logo.ico")
-
-    filename = askopenfilename(filetypes=[(description, fileformat)])  # show an "Open" dialog box and return the path to the selected file # noqa: E501
+    # show an "Open" dialog box and return the path to the selected file
+    filename = askopenfilename(filetypes=[(description, fileformat)])
     if filename:
         print("The following file was selected: \n" + filename)
         return filename
@@ -64,7 +64,8 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         ], axis=0).transpose((1, 0))
         geom.points = o3d.utility.Vector3dVector((pointData * las.header.scales) + las.header.offsets)
 
-        # Assign the colours of the points to the Open3d model. Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly. # noqa: E501
+        # Assign the colours of the points to the Open3d model.
+        # Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly.
         colourData = np.stack([
             normalize_array(las.red, True),
             normalize_array(las.green, True),
@@ -72,7 +73,7 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         ], axis=0).transpose((1, 0))
         geom.colors = o3d.utility.Vector3dVector(colourData)
 
-        # # It seems like Open3d does not accept the use gps as a variable. Find a way to give this to the ply file
+        # # It seems like Open3d does not accept the use gps as a variable. Find a way to give this to the ply file.
         # gpsData = np.stack([las.gps_time], axis=0).transpose((1, 0))
         # geom.gps = o3d.utility.Vector2dVector(gpsData)
 
@@ -85,7 +86,7 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         print("No file was selected, script will not be stopped.")
         return
     except laspy.errors.LaspyException:
-        print("The framework could not handle this file, please check if the file is not corrupted and/or if it is a LAS/LAZ file.")  # noqa: E501
+        print("The framework could not handle this file, please check if the file is not corrupted and/or if it is a LAS/LAZ file.")
         exit()
     except FileFormatError:
         print("The chosen LAS/LAZ file is not in the correct format or correct version. This file will not be used.")
@@ -102,7 +103,7 @@ def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarra
 
     Args:
         inputArray (numpy.ndarray): A NumPy ndarray to normalize.
-        isColour (bool, optional): A boolean value to divide the ndarray to the LAS colour standards to 0. Defaults to False.  # noqa: E501
+        isColour (bool, optional): A boolean value to divide the ndarray to the LAS colour standards to 0. Defaults to False.
 
     Raises:
         TypeError: If the inputArray is not of the NumPy ndarray type, this error will be raised.
@@ -122,7 +123,8 @@ def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarra
 
 
 def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
-    """A function to open a window that allows the point clouds to be cropped. The export of the cropped clouds are in PLY format.  # noqa: E501
+    """A function to open a window that allows the point clouds to be cropped.
+    The export of the cropped clouds are in PLY format.
     It has to be noted that when exporting the cutouts to PLY format, Open3D will round off the colour values.
     This results in somewhat distorted colors when converting them back to LAS format.
 
@@ -143,7 +145,7 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
 def convert_ply_to_las(inputLasPath: str = None):
     """A function to convert a ply file to a LAS file, based on a given LAS input file.
     With this function the user is prompted to select a PLY file that will be converted to a LAS file.
-    If the function runs into an error during the conversion, no new LAS file will be created and the PLY file will be kept.  # noqa: E501
+    If the function runs into an error during the conversion, no new LAS file will be created and the PLY file will be kept.
 
     !!! NOTE: This function will delete the PLY file once it's converted to a LAS file, unless it runs into an error !!!
 
@@ -161,7 +163,7 @@ def convert_ply_to_las(inputLasPath: str = None):
         plyFile = PlyData.read(toConvertToLas, False)
         newLasFileName = os.path.splitext(toConvertToLas)[0] + ".las"
 
-        # if no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.  # noqa: E501
+        # if no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.
         if not inputLasPath:
             customHeader = laspy.LasHeader(version="1.2", point_format=3)
             LasHeaderPointFormat = customHeader.point_format
@@ -219,7 +221,7 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float =
 
 
 if __name__ == "__main__":
-    print("Be aware that files that are created with this application cannot be used again with this application.")  # noqa: E501
+    print("Be aware that files that are created with this application cannot be used again with this application.")
     print("NOTE: This application is not suited for very large files, try to use files that are 350MB or smaller.")
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
     pcd = readout_LAS_file(file_name)
