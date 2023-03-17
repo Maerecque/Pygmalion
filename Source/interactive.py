@@ -41,6 +41,12 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
     Args:
         filename (str): A PATH to a LAS/LAZ file to be converted.
 
+    Raises:
+        FileNotFoundError: If a given path does not exist.
+        noFileGivenError: If no file is selected.
+        FileFormatError: If the format of the given file is not supported.
+        laspy.errors.LaspyException: If Laspy runs into an error.
+
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: An Open3D point cloud containing the contents of the LAS/LAZ file.
     """
@@ -151,6 +157,9 @@ def convert_ply_to_las(inputLasPath: str = None):
 
     Args:
         inputLasPath (str): The path to the LAS file to be used as header template.
+
+    Raises:
+        noFileGivenError: If no file is selected.
     """
     try:
         print("Select your created ply file to convert it to a LAS file.")
