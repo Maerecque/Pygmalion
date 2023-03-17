@@ -1,6 +1,8 @@
 import os
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
+from sklearn.cluster import DBSCAN
+import matplotlib as plt
 
 import laspy
 import numpy as np
@@ -128,6 +130,26 @@ def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarra
         print("Given value is not the correct type; not a NumPy ndarray.")
 
 
+def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function to normalize the points in a point cloud over a grid.
+
+    Args:
+        pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud to be normalized.
+        voxelSize (float, optional): Distance between points that is allowed. Defaults to 0.05.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Down sampled point cloud with normalized point positions.
+    """
+    # Downsample the point cloud to a regular grid using voxel_down_sample
+    downsampled_pcd = pcd.voxel_down_sample(voxelSize)
+
+    # Normalize the point cloud using normalize_normals
+    o3d.geometry.PointCloud.estimate_normals(downsampled_pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    downsampled_pcd.normalize_normals()
+
+    return downsampled_pcd
+
+
 def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
     """A function to open a window that allows the point clouds to be cropped.
     The export of the cropped clouds are in PLY format.
@@ -209,24 +231,23 @@ def convert_ply_to_las(inputLasPath: str = None):
             print("No accompanying JSON file was found.")
 
 
-def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
-    """A function to normalize the points in a point cloud over a grid.
+def pointcloud_dbscan(pcd: o3d.cpu.pybind.geometry.PointCloud):
+    # Convert to numpy array
+    xyz = np.asarray(pcd.points)
 
-    Args:
-        pcd (o3d.cpu.pybind.geometry.PointCloud): _description_
-        voxelSize (float, optional): _description_. Defaults to 0.01.
+    # Perform DBSCAN clustering
+    dbscan = DBSCAN(eps=0.1, min_samples=20)
+    labels = dbscan.fit_predict(xyz)
 
-    Returns:
-        o3d.cpu.pybind.geometry.PointCloud: _description_
-    """
-    # Downsample the point cloud to a regular grid using voxel_down_sample
-    downsampled_pcd = pcd.voxel_down_sample(voxelSize)
+    # Create a color map for the clusters
+    max_label = labels.max()
+    colors = plt.cm.jet(labels / (max_label if max_label > 0 else 1))
 
-    # Normalize the point cloud using normalize_normals
-    o3d.geometry.PointCloud.estimate_normals(downsampled_pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-    downsampled_pcd.normalize_normals()
+    # Set colors for each point in the point cloud
+    pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
-    return downsampled_pcd
+    # Visualize the results
+    o3d.visualization.draw_geometries([pcd])
 
 
 if __name__ == "__main__":
@@ -237,6 +258,6 @@ if __name__ == "__main__":
 
     if pcd is not None:
         pcd = grid_subsampling(pcd)
-        open_point_cloud_editor(pcd)
+        pointcloud_dbscan(pcd)
 
     convert_ply_to_las(file_name)
