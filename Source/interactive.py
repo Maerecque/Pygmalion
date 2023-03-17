@@ -1,13 +1,13 @@
 import os
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
-from sklearn.cluster import DBSCAN
-import matplotlib as plt
 
 import laspy
+import matplotlib as plt
 import numpy as np
 import open3d as o3d
 from plyfile import PlyData
+from sklearn.cluster import DBSCAN
 
 
 class FileFormatError(Exception): pass
