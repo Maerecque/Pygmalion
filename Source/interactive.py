@@ -73,6 +73,7 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
 
         # With the line below the visualization will look "odd", but is needed for the export to PLY and turn back to the LAS format.
         geom.points = o3d.utility.Vector3dVector((pointData * las.header.scales) + las.header.offsets)
+        # geom.points = o3d.utility.Vector3dVector(pointData)
 
         # Assign the colours of the points to the Open3d model.
         # Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly.
@@ -167,7 +168,11 @@ def remove_noise_statistical(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud
     """
     cl, ind = inputPointCloud.remove_statistical_outlier(nb_neighbors, std_ratio)
 
-    print(str(len(inputPointCloud.points) - len(cl.points)) + " points were removed as they were identified as outliers.")
+    amount_removed_points = len(inputPointCloud.points) - len(cl.points)
+    if amount_removed_points < 1:
+        amount_removed_points = "No"
+
+    print(str(amount_removed_points) + " points were removed as outliers.")
 
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
@@ -177,22 +182,26 @@ def remove_noise_statistical(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud
     return cl
 
 
-def remove_noise_radius(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, showRemovedPoints: bool = False, nb_points: int = 20, radius: float = 2.0) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
+def remove_noise_radius(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, showRemovedPoints: bool = False, nb_points: int = 10, radius: float = 0.1) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
     """A function to remove noise from a point cloud. This removes points that have neighbors less than nb_points in a sphere of a given radius.
     !!! This function is still an experimental feature. !!!
 
     Args:
         inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
         showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False.
-        nb_points (int, optional): Number of points within the radius. Defaults to 20.
-        radius (float, optional): Radius of the sphere. Defaults to 2.0.
+        nb_points (int, optional): Number of points within the radius. Defaults to 16.
+        radius (float, optional): Radius of the sphere. Defaults to 0.05.
 
     Returns:
         open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
     """
     cl, ind = inputPointCloud.remove_radius_outlier(nb_points, radius)
 
-    print(str(len(inputPointCloud.points) - len(cl.points)) + " points were removed as they were identified as outliers.")
+    amount_removed_points = len(inputPointCloud.points) - len(cl.points)
+    if amount_removed_points < 1:
+        amount_removed_points = "No"
+
+    print(str(amount_removed_points) + " points were removed as outliers.")
 
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
@@ -302,8 +311,9 @@ def pointcloud_dbscan(pcd: o3d.cpu.pybind.geometry.PointCloud, eps: float = 0.1,
     xyz = np.asarray(pcd.points)
 
     # Perform DBSCAN clustering.
-    dbscan = DBSCAN(eps=0.1, min_samples=20)
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
     labels = dbscan.fit_predict(xyz)
+    print(str(len(np.unique(labels)) - 1) + " label(s) were made with dbscan")
 
     # Create a color map for the clusters.
     maxLabel = labels.max()
@@ -326,7 +336,9 @@ if __name__ == "__main__":
 
     if pcd is not None:
         pcd = grid_subsampling(pcd)
-        pcd = remove_noise_statistical(pcd, True)
-        pointcloud_dbscan(pcd, 0.2, 10)
+        pcd_radius = remove_noise_radius(pcd, True)
+        pcd_statistical = remove_noise_statistical(pcd, True)
+        pointcloud_dbscan(pcd, 0.3, 10)
+        open_point_cloud_editor(pcd)
 
     convert_ply_to_las(file_name)
