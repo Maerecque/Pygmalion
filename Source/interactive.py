@@ -198,33 +198,24 @@ def convert_ply_to_las(inputLasPath: str = None):
             print("No accompanying JSON file was found.")
 
 
-def grid_subsampling(points: laspy.LasReader, voxel_size: int) -> list:
-    """Define a function that takes as input an array of points, and a voxel size expressed in meters.
-    It returns the sampled point cloud.
-
-    Not sure if this function should be used, but the idea is very potential
+def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function to normalize the points in a point cloud over a grid.
 
     Args:
-        points (laspy.LasReader): _description_
-        voxel_size (int): _description_
+        pcd (o3d.cpu.pybind.geometry.PointCloud): _description_
+        voxelSize (float, optional): _description_. Defaults to 0.01.
 
     Returns:
-        list: _description_
+        o3d.cpu.pybind.geometry.PointCloud: _description_
     """
-    # nb_vox = np.ceil((np.max(points, axis=0) - np.min(points, axis=0)) / voxel_size)
-    non_empty_voxel_keys, inverse, nb_pts_per_voxel = np.unique(((points - np.min(points, axis=0)) // voxel_size).astype(int), axis=0, return_inverse=True, return_counts=True)  # noqa: E501
-    idx_pts_vox_sorted = np.argsort(inverse)
-    voxel_grid = {}
-    grid_barycenter, grid_candidate_center = [], []
-    last_seen = 0
+    # Downsample the point cloud to a regular grid using voxel_down_sample
+    downsampled_pcd = pcd.voxel_down_sample(voxelSize)
 
-    for idx, vox in enumerate(non_empty_voxel_keys):
-        voxel_grid[tuple(vox)] = points[idx_pts_vox_sorted[last_seen:last_seen + nb_pts_per_voxel[idx]]]
-        grid_barycenter.append(np.mean(voxel_grid[tuple(vox)], axis=0))
-        grid_candidate_center.append(voxel_grid[tuple(vox)][np.linalg.norm(voxel_grid[tuple(vox)] - np.mean(voxel_grid[tuple(vox)], axis=0), axis=1).argmin()])  # noqa: E501
-        last_seen += nb_pts_per_voxel[idx]
+    # Normalize the point cloud using normalize_normals
+    o3d.geometry.PointCloud.estimate_normals(downsampled_pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    downsampled_pcd.normalize_normals()
 
-    return grid_candidate_center
+    return downsampled_pcd
 
 
 if __name__ == "__main__":
@@ -234,6 +225,7 @@ if __name__ == "__main__":
     pcd = readout_LAS_file(file_name)
 
     if pcd is not None:
+        pcd = grid_subsampling(pcd)
         open_point_cloud_editor(pcd)
 
     convert_ply_to_las(file_name)
