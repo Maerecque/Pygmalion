@@ -70,6 +70,8 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
             las.Y,
             las.Z
         ], axis=0).transpose((1, 0))
+
+        # With the line below the visualization will look "odd", but is needed for the export to PLY and turn back to the LAS format.
         geom.points = o3d.utility.Vector3dVector((pointData * las.header.scales) + las.header.offsets)
 
         # Assign the colours of the points to the Open3d model.
