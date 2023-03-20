@@ -178,6 +178,9 @@ def remove_noise_statistical(
     if amount_removed_points < 1:
         amount_removed_points = "No"
 
+    if len(inputPointCloud.points) == len(cl.points):
+        amount_removed_points = f"All the ({len(cl.points)})"
+
     print(str(amount_removed_points) + " points were removed as outliers.")
 
     if showRemovedPoints:
@@ -211,6 +214,9 @@ def remove_noise_radius(
     amount_removed_points = len(inputPointCloud.points) - len(cl.points)
     if amount_removed_points < 1:
         amount_removed_points = "No"
+
+    if len(inputPointCloud.points) == len(cl.points):
+        amount_removed_points = f"All the ({len(cl.points)})"
 
     print(str(amount_removed_points) + " points were removed as outliers.")
 
