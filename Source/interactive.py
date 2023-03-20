@@ -298,11 +298,11 @@ def pointcloud_dbscan(
         rgb_colors = np.asarray(pcd.colors)
         points = np.column_stack((xyz_colors, rgb_colors))
 
-        # Define color to remove
-        color_to_remove = [0.0, 0.0, 0.5]
+        # Define color to keep
+        color_to_keep = [0.0, 0.0, 0.5]
 
-        # Create boolean mask for points with the color to remove
-        color_mask = np.all(points[:, 3:6] == color_to_remove, axis=1)
+        # Create boolean mask for points with the color to keep
+        color_mask = np.all(points[:, 3:6] == color_to_keep, axis=1)
 
         # Remove points that satisfy the mask
         filtered_points = points[color_mask]
