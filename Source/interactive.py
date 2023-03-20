@@ -153,7 +153,12 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float =
     return downsampled_pcd
 
 
-def remove_noise_statistical(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, showRemovedPoints: bool = False, nb_neighbors: int = 20, std_ratio: float = 2.0) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
+def remove_noise_statistical(
+    inputPointCloud: o3d.cpu.pybind.geometry.PointCloud,
+    showRemovedPoints: bool = False,
+    nb_neighbors: int = 20,
+    std_ratio: float = 2.0
+) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to remove noise from a point cloud. This removes points that are further away from their neighbors in average.
     !!! This function is still an experimental feature. !!!
 
@@ -181,7 +186,12 @@ def remove_noise_statistical(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud
     return cl
 
 
-def remove_noise_radius(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, showRemovedPoints: bool = False, nb_points: int = 10, radius: float = 0.1) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
+def remove_noise_radius(
+    inputPointCloud: o3d.cpu.pybind.geometry.PointCloud,
+    showRemovedPoints: bool = False,
+    nb_points: int = 10,
+    radius: float = 0.1
+) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to remove noise from a point cloud. This removes points that have neighbors less than nb_points in a sphere of a given radius.
     !!! This function is still an experimental feature. !!!
 
@@ -210,7 +220,12 @@ def remove_noise_radius(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, sho
     return cl
 
 
-def pointcloud_dbscan(pcd: o3d.cpu.pybind.geometry.PointCloud, eps: float = 0.1, min_samples: int = 20, visualize: bool = False, visualize_only_labels: bool = True) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
+def pointcloud_dbscan(
+    pcd: o3d.cpu.pybind.geometry.PointCloud,
+    eps: float = 0.1, min_samples: int = 20,
+    visualize: bool = False,
+    visualize_only_labels: bool = True
+) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to perform a DBScan on a point cloud.
 
     Args:
@@ -356,7 +371,8 @@ def batch_running(
     statistical_nb_neighbors: int = 20,
     statistical_std_ratio: int = 2,
     db_scan_eps: float = 0.1,
-    db_scan_min_sample: int = 20
+    db_scan_min_sample: int = 20,
+    vis_labels: bool = True
 ):
     """A function to run the dbscan in batches, to speed up the process of unit testing
 
@@ -368,6 +384,7 @@ def batch_running(
         statistical_std_ratio (int, optional): std_ratio hyperparameter for the statistical noise remover function. Defaults to 2.
         db_scan_eps (float, optional): eps hyperparameter for the db scan. Defaults to 0.1.
         db_scan_min_sample (int, optional): min_sample hyperparameter for the db scan. Defaults to 20.
+        vis_labels (bool, optional): Whether to visualize labels. Defaults to True.
     """
     for item in input_list:
         print(item)
