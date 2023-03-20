@@ -223,9 +223,11 @@ def remove_noise_radius(
 
 def pointcloud_dbscan(
     pcd: o3d.cpu.pybind.geometry.PointCloud,
-    eps: float = 0.1, min_samples: int = 20,
-    visualize: bool = False,
-    visualize_only_labels: bool = True
+    eps: float = 0.1,
+    min_samples: int = 20,
+    visualize_all: bool = False,
+    keep_only_labels: bool = True,
+    keep_no_labels: bool = False
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to perform a DBScan on a point cloud.
 
@@ -236,8 +238,9 @@ def pointcloud_dbscan(
             This is the most important DBSCAN parameter to choose appropriately for your data set and distance function. Defaults to 0.1.
         min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
             This includes the point itself. Defaults to 20.
-        visualize (bool, optional): A boolean parameter to toggle visualization. Defaults to False.
-        visualize_only_labels (bool, optional): A boolean parameter to toggle visualize only labels. Defaults to True.
+        visualize_all (bool, optional): A boolean parameter to toggle visualization. Defaults to False.
+        keep_only_labels (bool, optional): A boolean parameter to toggle keep only labels. Defaults to True.
+        keep_no_labels (bool, optional): A boolean parameter to toggle keep only points with no labels. Defaults to False.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Point cloud with DBScan performed on it.
@@ -258,10 +261,11 @@ def pointcloud_dbscan(
     # Set colors for each point in the point cloud.
     pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
-    if visualize:
+    if visualize_all:
         o3d.visualization.draw_geometries([pcd], window_name="DBScan result with everything in it.")
+        return pcd
 
-    if visualize_only_labels:
+    if keep_only_labels:
         xyz_colors = np.asarray(pcd.points)
         rgb_colors = np.asarray(pcd.colors)
         points = np.column_stack((xyz_colors, rgb_colors))
@@ -280,8 +284,28 @@ def pointcloud_dbscan(
         filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
         filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
         o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with only labels left")
+        return filtered_pcd
 
-    return pcd
+    if keep_no_labels:
+        xyz_colors = np.asarray(pcd.points)
+        rgb_colors = np.asarray(pcd.colors)
+        points = np.column_stack((xyz_colors, rgb_colors))
+
+        # Define color to remove
+        color_to_remove = [0.0, 0.0, 0.5]
+
+        # Create boolean mask for points with the color to remove
+        color_mask = np.all(points[:, 3:6] == color_to_remove, axis=1)
+
+        # Remove points that satisfy the mask
+        filtered_points = points[color_mask]
+
+        # Convert numpy array back to point cloud
+        filtered_pcd = o3d.geometry.PointCloud()
+        filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
+        filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
+        o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with no labels left")
+        return filtered_pcd
 
 
 def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
@@ -371,9 +395,10 @@ def batch_running(
     radius_radius: float = 0.1,
     statistical_nb_neighbors: int = 20,
     statistical_std_ratio: int = 2,
-    db_scan_eps: float = 0.1,
-    db_scan_min_sample: int = 20,
-    vis_labels: bool = True
+    dbscan_eps: float = 0.1,
+    dbscan_min_sample: int = 20,
+    dbscan_keep_only_labels: bool = True,
+    dbscan_keep_no_labels: bool = False,
 ):
     """A function to run the dbscan in batches, to speed up the process of unit testing
 
@@ -383,9 +408,10 @@ def batch_running(
         radius_radius (float, optional): radius hyperparameter for the radius noise remover function. Defaults to 0.1.
         statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function. Defaults to 20.
         statistical_std_ratio (int, optional): std_ratio hyperparameter for the statistical noise remover function. Defaults to 2.
-        db_scan_eps (float, optional): eps hyperparameter for the db scan. Defaults to 0.1.
-        db_scan_min_sample (int, optional): min_sample hyperparameter for the db scan. Defaults to 20.
-        vis_labels (bool, optional): Whether to visualize labels. Defaults to True.
+        dbscan_eps (float, optional): eps hyperparameter for the db scan. Defaults to 0.1.
+        dbscan_min_sample (int, optional): min_sample hyperparameter for the db scan. Defaults to 20.
+        dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan. Defaults to True.
+        dbscan_keep_no_labels (bool, optional): Whether to keep none of the labels from the dbscan. Defaults to False.
     """
     for item in input_list:
         print(item)
@@ -393,12 +419,24 @@ def batch_running(
         pcd = grid_subsampling(pcd)
         print("Doing radius")
         pcd_radius = remove_noise_radius(pcd, nb_points=radius_nb_points, radius=radius_radius)
-        pointcloud_dbscan(pcd_radius, eps=db_scan_eps, min_samples=db_scan_min_sample, visualize_only_labels=vis_labels)
+        pointcloud_dbscan(
+            pcd_radius,
+            eps=dbscan_eps,
+            min_samples=dbscan_min_sample,
+            keep_only_labels=dbscan_keep_only_labels,
+            keep_no_labels=dbscan_keep_no_labels
+        )
         pcd_radius = None
 
         print("Doing statistical")
         pcd_statistical = remove_noise_statistical(pcd, nb_neighbors=statistical_nb_neighbors, std_ratio=statistical_std_ratio)
-        pointcloud_dbscan(pcd_statistical, eps=db_scan_eps, min_samples=db_scan_min_sample, visualize_only_labels=vis_labels)
+        pointcloud_dbscan(
+            pcd_statistical,
+            eps=dbscan_eps,
+            min_samples=dbscan_min_sample,
+            keep_only_labels=dbscan_keep_only_labels,
+            keep_no_labels=dbscan_keep_no_labels
+        )
         pcd_statistical = None
     exit()
 
@@ -426,4 +464,4 @@ if __name__ == "__main__":
         "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las"  # noqa: E501
     ]
 
-    batch_running(file_list, db_scan_min_sample=25)
+    batch_running(file_list, dbscan_min_sample=30, dbscan_keep_no_labels=True, dbscan_keep_only_labels=False)
