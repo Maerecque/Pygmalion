@@ -12,6 +12,7 @@ from sklearn.cluster import DBSCAN
 
 class FileFormatError(Exception): pass
 class noFileGivenError(Exception): pass
+class emptyPointCloudError(Exception): pass
 
 
 def get_file_path(description: str, fileformat: any) -> str:
@@ -414,30 +415,49 @@ def batch_running(
         dbscan_keep_no_labels (bool, optional): Whether to keep none of the labels from the dbscan. Defaults to False.
     """
     for item in input_list:
-        print(item)
-        pcd = readout_LAS_file(item)
-        pcd = grid_subsampling(pcd)
-        print("Doing radius")
-        pcd_radius = remove_noise_radius(pcd, nb_points=radius_nb_points, radius=radius_radius)
-        pointcloud_dbscan(
-            pcd_radius,
-            eps=dbscan_eps,
-            min_samples=dbscan_min_sample,
-            keep_only_labels=dbscan_keep_only_labels,
-            keep_no_labels=dbscan_keep_no_labels
-        )
-        pcd_radius = None
+        try:
+            print(item)
+            pcd = readout_LAS_file(item)
+            pcd = grid_subsampling(pcd)
+            print("Doing radius")
+            pcd_radius = remove_noise_radius(pcd, nb_points=radius_nb_points, radius=radius_radius)
 
-        print("Doing statistical")
-        pcd_statistical = remove_noise_statistical(pcd, nb_neighbors=statistical_nb_neighbors, std_ratio=statistical_std_ratio)
-        pointcloud_dbscan(
-            pcd_statistical,
-            eps=dbscan_eps,
-            min_samples=dbscan_min_sample,
-            keep_only_labels=dbscan_keep_only_labels,
-            keep_no_labels=dbscan_keep_no_labels
-        )
-        pcd_statistical = None
+            # Check if the point cloud is empty after the noise has been removed.
+            if len(pcd_radius.points) == 0:
+                raise emptyPointCloudError
+            else:
+                pointcloud_dbscan(
+                    pcd_radius,
+                    eps=dbscan_eps,
+                    min_samples=dbscan_min_sample,
+                    keep_only_labels=dbscan_keep_only_labels,
+                    keep_no_labels=dbscan_keep_no_labels
+                )
+                pcd_radius = None
+
+        except emptyPointCloudError:
+            print("After the removal of outliers in the point cloud, nothing was left, therefore no DBScan was performed.")
+
+        try:
+            print("Doing statistical")
+            pcd_statistical = remove_noise_statistical(pcd, nb_neighbors=statistical_nb_neighbors, std_ratio=statistical_std_ratio)
+
+            # Check if the point cloud is empty after the noise has been removed.
+            if len(pcd_statistical.points) == 0:
+                raise emptyPointCloudError
+            else:
+                pointcloud_dbscan(
+                    pcd_statistical,
+                    eps=dbscan_eps,
+                    min_samples=dbscan_min_sample,
+                    keep_only_labels=dbscan_keep_only_labels,
+                    keep_no_labels=dbscan_keep_no_labels
+                )
+                pcd_statistical = None
+
+        except emptyPointCloudError:
+            print("After the removal of outliers in the point cloud, nothing was left, therefore no DBScan was performed.")
+
     exit()
 
 
