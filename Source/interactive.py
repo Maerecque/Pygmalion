@@ -182,7 +182,8 @@ def remove_noise_statistical(
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
         outlier_cloud.paint_uniform_color([1, 0, 0])
-        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45)
+        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45, window_name="Remove noise with statistical")
+
     return cl
 
 
@@ -215,7 +216,7 @@ def remove_noise_radius(
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
         outlier_cloud.paint_uniform_color([1, 0, 0])
-        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45)
+        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45, window_name="Remove noise with radius")
 
     return cl
 
@@ -258,7 +259,7 @@ def pointcloud_dbscan(
     pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
     if visualize:
-        o3d.visualization.draw_geometries([pcd])
+        o3d.visualization.draw_geometries([pcd], window_name="DBScan result with everything in it.")
 
     if visualize_only_labels:
         xyz_colors = np.asarray(pcd.points)
@@ -278,7 +279,7 @@ def pointcloud_dbscan(
         filtered_pcd = o3d.geometry.PointCloud()
         filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
         filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
-        o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45)
+        o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with only labels left")
 
     return pcd
 
@@ -392,12 +393,12 @@ def batch_running(
         pcd = grid_subsampling(pcd)
         print("Doing radius")
         pcd_radius = remove_noise_radius(pcd, nb_points=radius_nb_points, radius=radius_radius)
-        pointcloud_dbscan(pcd_radius, eps=db_scan_eps, min_samples=db_scan_min_sample)
+        pointcloud_dbscan(pcd_radius, eps=db_scan_eps, min_samples=db_scan_min_sample, visualize_only_labels=vis_labels)
         pcd_radius = None
 
         print("Doing statistical")
         pcd_statistical = remove_noise_statistical(pcd, nb_neighbors=statistical_nb_neighbors, std_ratio=statistical_std_ratio)
-        pointcloud_dbscan(pcd_statistical, eps=db_scan_eps, min_samples=db_scan_min_sample)
+        pointcloud_dbscan(pcd_statistical, eps=db_scan_eps, min_samples=db_scan_min_sample, visualize_only_labels=vis_labels)
         pcd_statistical = None
     exit()
 
@@ -405,8 +406,17 @@ def batch_running(
 if __name__ == "__main__":
     print("Be aware that files that are created with this application cannot be used again with this application.")
     print("NOTE: This application is not suited for very large files, try to use files that are 350MB or smaller.")
-    file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
-    pcd = readout_LAS_file(file_name)
+    # file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
+    # pcd = readout_LAS_file(file_name)
+
+    # if pcd is not None:
+    #     pcd = grid_subsampling(pcd)
+    #     pcd = remove_noise_radius(pcd)
+    #     # pcd = remove_noise_statistical(pcd)
+    #     pointcloud_dbscan(pcd, eps=0.2)
+    # #     open_point_cloud_editor(pcd)
+
+    # # convert_ply_to_las(file_name)
 
     file_list = [
         "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room1.las",  # noqa: E501
