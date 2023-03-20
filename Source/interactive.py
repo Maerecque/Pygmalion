@@ -188,8 +188,8 @@ def remove_noise_radius(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, sho
     Args:
         inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
         showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False.
-        nb_points (int, optional): Number of points within the radius. Defaults to 16.
-        radius (float, optional): Radius of the sphere. Defaults to 0.05.
+        nb_points (int, optional): Number of points within the radius. Defaults to 10.
+        radius (float, optional): Radius of the sphere. Defaults to 0.1.
 
     Returns:
         open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
