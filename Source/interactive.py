@@ -177,8 +177,7 @@ def remove_noise_statistical(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
         outlier_cloud.paint_uniform_color([1, 0, 0])
-        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud])
-
+        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45)
     return cl
 
 
@@ -206,7 +205,7 @@ def remove_noise_radius(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, sho
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
         outlier_cloud.paint_uniform_color([1, 0, 0])
-        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud])
+        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45)
 
     return cl
 
