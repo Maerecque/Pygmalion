@@ -210,6 +210,64 @@ def remove_noise_radius(inputPointCloud: o3d.cpu.pybind.geometry.PointCloud, sho
     return cl
 
 
+def pointcloud_dbscan(pcd: o3d.cpu.pybind.geometry.PointCloud, eps: float = 0.1, min_samples: int = 20, visualize: bool = False, visualize_only_labels: bool = True) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
+    """A function to perform a DBScan on a point cloud.
+
+    Args:
+        pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud that will be used as input for the DBScan.
+        eps (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+            This is not a maximum bound on the distances of points within a cluster.
+            This is the most important DBSCAN parameter to choose appropriately for your data set and distance function. Defaults to 0.1.
+        min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+            This includes the point itself. Defaults to 20.
+        visualize (bool, optional): A boolean parameter to toggle visualization. Defaults to False.
+        visualize_only_labels (bool, optional): A boolean parameter to toggle visualize only labels. Defaults to True.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Point cloud with DBScan performed on it.
+    """
+    # Convert points to a numpy array.
+    xyz = np.asarray(pcd.points)
+
+    # Perform DBSCAN clustering.
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    labels = dbscan.fit_predict(xyz)
+
+    print(str(len(np.unique(labels)) - 1) + " label(s) were made with dbscan")
+
+    # Create a color map for the clusters.
+    maxLabel = labels.max()
+    colors = plt.cm.jet(labels / (maxLabel if maxLabel > 0 else 1))
+
+    # Set colors for each point in the point cloud.
+    pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
+
+    if visualize:
+        o3d.visualization.draw_geometries([pcd])
+
+    if visualize_only_labels:
+        xyz_colors = np.asarray(pcd.points)
+        rgb_colors = np.asarray(pcd.colors)
+        points = np.column_stack((xyz_colors, rgb_colors))
+
+        # Define color to remove
+        color_to_remove = [0.0, 0.0, 0.5]
+
+        # Create boolean mask for points with the color to remove
+        color_mask = np.all(points[:, 3:6] == color_to_remove, axis=1)
+
+        # Remove points that satisfy the mask
+        filtered_points = points[~color_mask]
+
+        # Convert numpy array back to point cloud
+        filtered_pcd = o3d.geometry.PointCloud()
+        filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
+        filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
+        o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45)
+
+    return pcd
+
+
 def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
     """A function to open a window that allows the point clouds to be cropped.
     The export of the cropped clouds are in PLY format.
@@ -291,40 +349,40 @@ def convert_ply_to_las(inputLasPath: str = None):
             print("No accompanying JSON file was found.")
 
 
-def pointcloud_dbscan(pcd: o3d.cpu.pybind.geometry.PointCloud, eps: float = 0.1, min_samples: int = 20, visualize: bool = True) -> o3d.cpu.pybind.geometry.PointCloud:  # noqa: E501
-    """A function to perform a DBScan on a point cloud.
+def batch_running(
+    input_list: list,
+    radius_nb_points: int = 10,
+    radius_radius: float = 0.1,
+    statistical_nb_neighbors: int = 20,
+    statistical_std_ratio: int = 2,
+    db_scan_eps: float = 0.1,
+    db_scan_min_sample: int = 20
+):
+    """A function to run the dbscan in batches, to speed up the process of unit testing
 
     Args:
-        pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud that will be used as input for the DBScan.
-        eps (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
-            This is not a maximum bound on the distances of points within a cluster.
-            This is the most important DBSCAN parameter to choose appropriately for your data set and distance function. Defaults to 0.1.
-        min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
-            This includes the point itself. Defaults to 20.
-        visualize (bool, optional): A boolean parameter to toggle visualization. Defaults to True.
-
-    Returns:
-        o3d.cpu.pybind.geometry.PointCloud: Point cloud with DBScan performed on it.
+        input_list (list): List to be used as input, contains path locations of files to be scanned.
+        radius_nb_points (int, optional): nb_points hyperparameter for the radius noise remover function. Defaults to 10.
+        radius_radius (float, optional): radius hyperparameter for the radius noise remover function. Defaults to 0.1.
+        statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function. Defaults to 20.
+        statistical_std_ratio (int, optional): std_ratio hyperparameter for the statistical noise remover function. Defaults to 2.
+        db_scan_eps (float, optional): eps hyperparameter for the db scan. Defaults to 0.1.
+        db_scan_min_sample (int, optional): min_sample hyperparameter for the db scan. Defaults to 20.
     """
-    # Convert points to a numpy array.
-    xyz = np.asarray(pcd.points)
+    for item in input_list:
+        print(item)
+        pcd = readout_LAS_file(item)
+        pcd = grid_subsampling(pcd)
+        print("Doing radius")
+        pcd_radius = remove_noise_radius(pcd, nb_points=radius_nb_points, radius=radius_radius)
+        pointcloud_dbscan(pcd_radius, eps=db_scan_eps, min_samples=db_scan_min_sample)
+        pcd_radius = None
 
-    # Perform DBSCAN clustering.
-    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-    labels = dbscan.fit_predict(xyz)
-    print(str(len(np.unique(labels)) - 1) + " label(s) were made with dbscan")
-
-    # Create a color map for the clusters.
-    maxLabel = labels.max()
-    colors = plt.cm.jet(labels / (maxLabel if maxLabel > 0 else 1))
-
-    # Set colors for each point in the point cloud.
-    pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
-
-    if visualize:
-        o3d.visualization.draw_geometries([pcd])
-
-    return pcd
+        print("Doing statistical")
+        pcd_statistical = remove_noise_statistical(pcd, nb_neighbors=statistical_nb_neighbors, std_ratio=statistical_std_ratio)
+        pointcloud_dbscan(pcd_statistical, eps=db_scan_eps, min_samples=db_scan_min_sample)
+        pcd_statistical = None
+    exit()
 
 
 if __name__ == "__main__":
@@ -333,11 +391,12 @@ if __name__ == "__main__":
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
     pcd = readout_LAS_file(file_name)
 
-    if pcd is not None:
-        pcd = grid_subsampling(pcd)
-        pcd_radius = remove_noise_radius(pcd, True)
-        pcd_statistical = remove_noise_statistical(pcd, True)
-        pointcloud_dbscan(pcd, 0.3, 10)
-        open_point_cloud_editor(pcd)
+    file_list = [
+        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room1.las",  # noqa: E501
+        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room2.las",  # noqa: E501
+        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room3.las",  # noqa: E501
+        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room4.las",  # noqa: E501
+        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las"  # noqa: E501
+    ]
 
-    convert_ply_to_las(file_name)
+    batch_running(file_list, db_scan_min_sample=25)
