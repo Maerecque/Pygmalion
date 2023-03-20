@@ -484,4 +484,14 @@ if __name__ == "__main__":
         "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las"  # noqa: E501
     ]
 
-    batch_running(file_list, dbscan_min_sample=30, dbscan_keep_no_labels=True, dbscan_keep_only_labels=False)
+    batch_running(
+        file_list,
+        dbscan_min_sample=25,
+        dbscan_eps=0.1,
+        radius_nb_points=20,
+        radius_radius=0.05,
+        statistical_nb_neighbors=25,
+        statistical_std_ratio=2.75,
+        dbscan_keep_no_labels=False,
+        dbscan_keep_only_labels=True
+    )
