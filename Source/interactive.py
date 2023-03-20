@@ -394,7 +394,7 @@ def batch_running(
     radius_nb_points: int = 10,
     radius_radius: float = 0.1,
     statistical_nb_neighbors: int = 20,
-    statistical_std_ratio: int = 2,
+    statistical_std_ratio: float = 2.0,
     dbscan_eps: float = 0.1,
     dbscan_min_sample: int = 20,
     dbscan_keep_only_labels: bool = True,
@@ -407,7 +407,7 @@ def batch_running(
         radius_nb_points (int, optional): nb_points hyperparameter for the radius noise remover function. Defaults to 10.
         radius_radius (float, optional): radius hyperparameter for the radius noise remover function. Defaults to 0.1.
         statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function. Defaults to 20.
-        statistical_std_ratio (int, optional): std_ratio hyperparameter for the statistical noise remover function. Defaults to 2.
+        statistical_std_ratio (float, optional): std_ratio hyperparameter for the statistical noise remover function. Defaults to 2.0.
         dbscan_eps (float, optional): eps hyperparameter for the db scan. Defaults to 0.1.
         dbscan_min_sample (int, optional): min_sample hyperparameter for the db scan. Defaults to 20.
         dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan. Defaults to True.
