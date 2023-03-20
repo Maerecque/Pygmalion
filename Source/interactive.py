@@ -495,10 +495,10 @@ if __name__ == "__main__":
         file_list,
         dbscan_min_sample=25,
         dbscan_eps=0.1,
-        radius_nb_points=20,
-        radius_radius=0.05,
-        statistical_nb_neighbors=25,
-        statistical_std_ratio=2.75,
+        radius_nb_points=10,
+        radius_radius=0.1,
+        statistical_nb_neighbors=20,
+        statistical_std_ratio=2,
         dbscan_keep_no_labels=False,
         dbscan_keep_only_labels=True
     )
