@@ -4,12 +4,12 @@ import os
 print(os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 
-from Source.dbscanPointCloud import pointcloud_dbscan  
-from Source.fileHandler import (  
+from Source.dbscanPointCloud import pointcloud_dbscan
+from Source.fileHandler import (
     convert_ply_to_las,
     get_file_path,
     readout_LAS_file)
-from Source.pointCloudAltering import (  
+from Source.pointCloudAltering import (
     grid_subsampling,
     remove_noise_radius,
     remove_noise_statistical)
