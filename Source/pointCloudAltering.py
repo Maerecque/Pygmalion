@@ -1,0 +1,95 @@
+import open3d as o3d
+
+
+def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function to normalize the points in a point cloud over a grid.
+
+    Args:
+        pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud to be normalized.
+        voxelSize (float, optional): Distance between points that is allowed. Defaults to 0.05.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Down sampled point cloud with normalized point positions.
+    """
+    # Downsample the point cloud to a regular grid using voxel_down_sample
+    downsampled_pcd = pcd.voxel_down_sample(voxelSize)
+
+    # Normalize the point cloud using normalize_normals
+    o3d.geometry.PointCloud.estimate_normals(downsampled_pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    downsampled_pcd.normalize_normals()
+
+    return downsampled_pcd
+
+
+def remove_noise_statistical(
+    inputPointCloud: o3d.cpu.pybind.geometry.PointCloud,
+    showRemovedPoints: bool = False,
+    nb_neighbors: int = 20,
+    std_ratio: float = 2.0
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function to remove noise from a point cloud. This removes points that are further away from their neighbors in average.
+    !!! This function is still an experimental feature. !!!
+
+    Args:
+        inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
+        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False.
+        nb_neighbors (int, optional): Number of neighbors around the target point. Defaults to 20.
+        std_ratio (float, optional): Standard deviation ratio. Defaults to 2.0.
+
+    Returns:
+        open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
+    """
+    cl, ind = inputPointCloud.remove_statistical_outlier(nb_neighbors, std_ratio)
+
+    amount_removed_points = len(inputPointCloud.points) - len(cl.points)
+    if amount_removed_points < 1:
+        amount_removed_points = "No"
+
+    if len(inputPointCloud.points) == len(cl.points):
+        amount_removed_points = f"All the ({len(cl.points)})"
+
+    print(str(amount_removed_points) + " points were removed as outliers.")
+
+    if showRemovedPoints:
+        outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45, window_name="Remove noise with statistical")
+
+    return cl
+
+
+def remove_noise_radius(
+    inputPointCloud: o3d.cpu.pybind.geometry.PointCloud,
+    showRemovedPoints: bool = False,
+    nb_points: int = 10,
+    radius: float = 0.1
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function to remove noise from a point cloud. This removes points that have neighbors less than nb_points in a sphere of a given radius.
+    !!! This function is still an experimental feature. !!!
+
+    Args:
+        inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
+        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False.
+        nb_points (int, optional): Number of points within the radius. Defaults to 10.
+        radius (float, optional): Radius of the sphere. Defaults to 0.1.
+
+    Returns:
+        open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
+    """
+    cl, ind = inputPointCloud.remove_radius_outlier(nb_points, radius)
+
+    amount_removed_points = len(inputPointCloud.points) - len(cl.points)
+    if amount_removed_points < 1:
+        amount_removed_points = "No"
+
+    if len(inputPointCloud.points) == len(cl.points):
+        amount_removed_points = f"All the ({len(cl.points)})"
+
+    print(str(amount_removed_points) + " points were removed as outliers.")
+
+    if showRemovedPoints:
+        outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45, window_name="Remove noise with radius")
+
+    return cl

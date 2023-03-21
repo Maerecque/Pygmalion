@@ -1,2 +1,3 @@
 /Werfkelderscans
 /.vscode
+*/__pycache__
