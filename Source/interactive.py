@@ -269,7 +269,7 @@ def pointcloud_dbscan(
     pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
     if visualize_all:
-        o3d.visualization.draw_geometries([pcd], window_name="DBScan result with everything in it.")
+        o3d.visualization.draw_geometries([pcd], left=0, top=45, window_name="DBScan result with everything in it.")
         return pcd
 
     if keep_only_labels:
@@ -406,6 +406,7 @@ def batch_running(
     dbscan_min_sample: int = 20,
     dbscan_keep_only_labels: bool = True,
     dbscan_keep_no_labels: bool = False,
+    dbscan_visualize_all: bool = False
 ):
     """A function to run the dbscan in batches, to speed up the process of unit testing
 
@@ -419,6 +420,7 @@ def batch_running(
         dbscan_min_sample (int, optional): min_sample hyperparameter for the db scan. Defaults to 20.
         dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan. Defaults to True.
         dbscan_keep_no_labels (bool, optional): Whether to keep none of the labels from the dbscan. Defaults to False.
+        dbscan_visualize_all (bool, optional): Whether to visualize all labels. Defaults to False.
     """
     for item in input_list:
         try:
@@ -437,7 +439,8 @@ def batch_running(
                     eps=dbscan_eps,
                     min_samples=dbscan_min_sample,
                     keep_only_labels=dbscan_keep_only_labels,
-                    keep_no_labels=dbscan_keep_no_labels
+                    keep_no_labels=dbscan_keep_no_labels,
+                    visualize_all=dbscan_visualize_all
                 )
                 pcd_radius = None
 
@@ -457,7 +460,8 @@ def batch_running(
                     eps=dbscan_eps,
                     min_samples=dbscan_min_sample,
                     keep_only_labels=dbscan_keep_only_labels,
-                    keep_no_labels=dbscan_keep_no_labels
+                    keep_no_labels=dbscan_keep_no_labels,
+                    visualize_all=dbscan_visualize_all
                 )
                 pcd_statistical = None
 
@@ -493,12 +497,13 @@ if __name__ == "__main__":
 
     batch_running(
         file_list,
-        dbscan_min_sample=25,
-        dbscan_eps=0.1,
+        dbscan_min_sample=5,
+        dbscan_eps=0.05,
         radius_nb_points=10,
         radius_radius=0.1,
         statistical_nb_neighbors=20,
-        statistical_std_ratio=2,
+        statistical_std_ratio=2.0,
         dbscan_keep_no_labels=False,
-        dbscan_keep_only_labels=True
+        dbscan_keep_only_labels=True,
+        dbscan_visualize_all=False
     )
