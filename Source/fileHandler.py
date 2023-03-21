@@ -5,7 +5,6 @@ from tkinter.filedialog import askopenfilename
 import laspy
 import numpy as np
 import open3d as o3d
-# from . import arrayNormalizer
 from arrayNormalizer import normalize_array
 from plyfile import PlyData
 
