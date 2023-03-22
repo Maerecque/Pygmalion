@@ -63,7 +63,8 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
 
         # check if LAS file is in the correct format
         if "<LasData(1.2, point fmt: <PointFormat(3," not in str(las):
-            raise FileFormatError
+            if len(las.points) < 15000000:
+                raise FileFormatError
 
         geom = o3d.geometry.PointCloud()
 
