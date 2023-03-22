@@ -1,3 +1,5 @@
+import os
+
 from dbscanPointCloud import pointcloud_dbscan
 from fileHandler import readout_LAS_file
 from pointCloudAltering import (
@@ -88,13 +90,19 @@ if __name__ == "__main__":
     print("Be aware that files that are created with this application cannot be used again with this application.")
     print("NOTE: This application is not suited for very large files, try to use files that are 350MB or smaller.")
 
-    file_list = [
-        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room1.las",  # noqa: E501
-        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room2.las",  # noqa: E501
-        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room3.las",  # noqa: E501
-        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room4.las",  # noqa: E501
-        "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las",  # noqa: E501
-        # "D:/Schoolmappen/Afstuderen/Gemeente Utrecht/Code/Productcode/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4.laz"  # noqa: E501
+    head_folder = os.path.join(os.path.realpath(os.path.dirname(__file__)), '..')
+
+    file_list_hand_scans = [
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room1.las",  # noqa: E501
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room2.las",  # noqa: E501
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room3.las",  # noqa: E501
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room4.las",  # noqa: E501
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las",  # noqa: E501
+        # head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4.laz"  # noqa: E501
+    ]
+
+    file_list_static_scans = [
+        head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room1.las",  # noqa: E501
     ]
 
     batch_running(
