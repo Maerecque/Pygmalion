@@ -25,9 +25,13 @@ def get_file_path(description: str, fileformat: any) -> str:
     """
     root = Tk()
     root.withdraw()  # we don't want a full GUI, so keep the root window from appearing
-    root.iconbitmap(os.path.realpath(os.path.dirname(__file__)) + "\\support_files\\logo.ico")
+    current_folder = os.path.realpath(os.path.dirname(__file__))
+    root.iconbitmap(current_folder + "\\support_files\\logo.ico")
     # show an "Open" dialog box and return the path to the selected file
-    filename = askopenfilename(filetypes=[(description, fileformat)])
+    filename = askopenfilename(
+        filetypes=[(description, fileformat)],
+        initialdir=os.path.join(current_folder, '..')
+    )
     if filename:
         print("The following file was selected: \n" + filename)
         return filename
