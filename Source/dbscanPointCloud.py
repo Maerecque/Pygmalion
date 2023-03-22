@@ -28,6 +28,7 @@ def pointcloud_dbscan(
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Point cloud with DBScan performed on it.
     """
+    print("Starting DBScan.")
     # Convert points to a numpy array.
     xyz = np.asarray(pcd.points)
 
@@ -35,7 +36,7 @@ def pointcloud_dbscan(
     dbscan = DBSCAN(eps=eps, min_samples=min_samples)
     labels = dbscan.fit_predict(xyz)
 
-    print(str(len(np.unique(labels)) - 1) + " label(s) were made with dbscan")
+    print(str(len(np.unique(labels)) - 1) + " label(s) were made with DBScan.")
 
     # Create a color map for the clusters.
     maxLabel = labels.max()

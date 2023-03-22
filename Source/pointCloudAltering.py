@@ -31,6 +31,7 @@ def remove_noise_statistical(
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to remove noise from a point cloud. This removes points that are further away from their neighbors in average.
     !!! This function is still an experimental feature. !!!
+    This function seems to perform much better on removing noise without altering any hyperparameters from both mobile and static scans.
 
     Args:
         inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
