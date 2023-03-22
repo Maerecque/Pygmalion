@@ -2,7 +2,6 @@ import sys
 import os
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
-print(os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 
 from Source.dbscanPointCloud import pointcloud_dbscan
