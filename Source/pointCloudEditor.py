@@ -18,4 +18,4 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud) -> None:
     print("4) Press 'C' to get a selected geometry")
     print("5) Press 'S' to save the selected geometry")
     print("6) Press 'F' to switch to freeview mode")
-    o3d.visualization.draw_geometries_with_editing([pcd])
+    o3d.visualization.draw_geometries_with_editing([pcd], left=0, top=45)
