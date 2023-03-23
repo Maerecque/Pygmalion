@@ -90,3 +90,5 @@ def pointcloud_dbscan(
         filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
         o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with no labels left")
         return filtered_pcd
+
+    return pcd
