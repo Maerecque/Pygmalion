@@ -67,7 +67,10 @@ def batch_running(
             This includes the point itself. Defaults to 20.
         dbscan_metric (str, optional): The metric to use when calculating distance between instances in a feature array.
             It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
-            The following metrics can be used: [`cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`].
+            The following metrics can be used: ['cosine', 'correlation', 'cityblock', 'kulsinski', 'mahalanobis', 'sokalmichener', 'l2',
+            'rogerstanimoto', 'hamming', 'l1', 'sokalsneath', 'euclidean', 'wminkowski', 'canberra', 'matching', 'manhattan', 'seuclidean',
+            'sqeuclidean', 'precomputed', 'braycurtis', 'nan_euclidean', 'haversine', 'minkowski', 'chebyshev', 'dice', 'russellrao', 'yule',
+            'jaccard'].
             Defaults to 'euclidean'.
         dbscan_algorithm (str, optional): The algorithm used by NearestNeighbors module to compute pointwise distances and find nearest neighbors.
             See NearestNeighbors module documentation for details.
