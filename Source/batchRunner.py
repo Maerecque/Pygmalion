@@ -44,7 +44,7 @@ def batch_running(
     dbscan_metric: Union[str, list[str]] = 'euclidean',
     dbscan_algorithm: Union[str, list[str]] = 'auto',
     dbscan_leaf_size: Union[int, list[int]] = 30,
-    dbscan_p: Union[float, list[float]] = None,
+    dbscan_minkowski_p: Union[None, float, list[float]] = None,
     dbscan_keep_only_labels: bool = True,
     dbscan_keep_no_labels: bool = False,
     dbscan_visualize_all: bool = False
@@ -89,10 +89,9 @@ def batch_running(
 
         dbscan_metric (str or list[str], optional): The metric to use when calculating distance between instances in a feature array.
             It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
-            The following metrics can be used: ['cosine', 'correlation', 'cityblock', 'kulsinski', 'mahalanobis', 'sokalmichener', 'l2',
-            'rogerstanimoto', 'hamming', 'l1', 'sokalsneath', 'euclidean', 'wminkowski', 'canberra', 'matching', 'manhattan', 'seuclidean',
-            'sqeuclidean', 'precomputed', 'braycurtis', 'nan_euclidean', 'haversine', 'minkowski', 'chebyshev', 'dice', 'russellrao', 'yule',
-            'jaccard'].
+            The following metrics can be used: ['braycurtis','canberra','chebyshev','cityblock','correlation','dice','euclidean','hamming',
+            'haversine','jaccard''kulsinski','l1','l2','mahalanobis','manhattan','matching','minkowski','nan_euclidean','precomputed',
+            'rogerstanimoto','russellrao','seuclidean','sokalmichener','sokalsneath','sqeuclidean','wminkowski','yule',].
             Defaults to 'euclidean'.
 
         dbscan_algorithm (str or list[str], optional): The algorithm used by NearestNeighbors module to compute pointwise distances
@@ -100,12 +99,12 @@ def batch_running(
             The following metrics can be used: ['auto', 'ball_tree', 'kd_tree', 'brute'].
             Defaults to 'auto'.
 
-        dbscan_leaf_size (int or list[int], optional): Leaf size passed to BallTree or cKDTree.
+        dbscan_leaf_size (int or list[int], optional): Leaf size passed to *BallTree* or *cKDTree*.
             This can affect the speed of the construction and query, as well as the memory required to store the tree.
             The optimal value depends on the nature of the problem.
             Defaults to 30.
 
-        dbscan_p (float or list[float], optional): The power of the Minkowski metric to be used to calculate distance between points.
+        dbscan_minkowski_p (None, float or list[float], optional): The power of the Minkowski metric to be used to calculate distance between points.
             If None, then ``p=2`` (equivalent to the Euclidean distance).
             Defaults to None.
 
@@ -137,7 +136,7 @@ def batch_running(
                     dbscan_metric,
                     dbscan_algorithm,
                     dbscan_leaf_size,
-                    dbscan_p
+                    dbscan_minkowski_p
                 ]
                 combined_parameter_list = combination_maker(parameter_list)
                 for combination in combined_parameter_list:
@@ -179,7 +178,7 @@ def batch_running(
                             metric=combination[4],
                             algorithm=combination[5],
                             leaf_size=combination[6],
-                            p=combination[7]
+                            minkowski_p=combination[7]
                         )
                         pcd_radius = None
                         print("\n")
@@ -197,7 +196,7 @@ def batch_running(
                     dbscan_metric,
                     dbscan_algorithm,
                     dbscan_leaf_size,
-                    dbscan_p
+                    dbscan_minkowski_p
                 ]
                 combined_parameter_list = combination_maker(parameter_list)
                 for combination in combined_parameter_list:
@@ -239,7 +238,7 @@ def batch_running(
                             metric=combination[4],
                             algorithm=combination[5],
                             leaf_size=combination[6],
-                            p=combination[7]
+                            minkowski_p=combination[7]
                         )
                         pcd_statistical = None
 

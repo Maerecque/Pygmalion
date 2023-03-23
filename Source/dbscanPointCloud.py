@@ -11,7 +11,7 @@ def pointcloud_dbscan(
     metric: str = 'euclidean',
     algorithm: str = 'auto',
     leaf_size: int = 30,
-    p: float = None,
+    minkowski_p: float = None,
     visualize_all: bool = False,
     keep_only_labels: bool = True,
     keep_no_labels: bool = False
@@ -27,10 +27,9 @@ def pointcloud_dbscan(
             This includes the point itself. Defaults to 20.
         metric (str, optional): The metric to use when calculating distance between instances in a feature array.
             It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
-            The following metrics can be used: ['cosine', 'correlation', 'cityblock', 'kulsinski', 'mahalanobis', 'sokalmichener', 'l2',
-            'rogerstanimoto', 'hamming', 'l1', 'sokalsneath', 'euclidean', 'wminkowski', 'canberra', 'matching', 'manhattan', 'seuclidean',
-            'sqeuclidean', 'precomputed', 'braycurtis', 'nan_euclidean', 'haversine', 'minkowski', 'chebyshev', 'dice', 'russellrao', 'yule',
-            'jaccard'].
+            The following metrics can be used: ['braycurtis','canberra','chebyshev','cityblock','correlation','dice','euclidean','hamming',
+            'haversine','jaccard''kulsinski','l1','l2','mahalanobis','manhattan','matching','minkowski','nan_euclidean','precomputed',
+            'rogerstanimoto','russellrao','seuclidean','sokalmichener','sokalsneath','sqeuclidean','wminkowski','yule',].
             Defaults to 'euclidean'.
         algorithm (str, optional): The algorithm to be used by the NearestNeighbors module to compute pointwise distances and find nearest neighbors.
             See NearestNeighbors module documentation for details.
@@ -40,7 +39,7 @@ def pointcloud_dbscan(
             This can affect the speed of the construction and query, as well as the memory required to store the tree.
             The optimal value depends on the nature of the problem.
             Defaults to 30.
-        p (float, optional):
+        minkowski_p (float, optional):
             The power of the Minkowski metric to be used to calculate distance between points.
             If None, then ``p=2`` (equivalent to the Euclidean distance).
             Defaults to None.
@@ -62,7 +61,7 @@ def pointcloud_dbscan(
             metric=metric,
             algorithm=algorithm,
             leaf_size=leaf_size,
-            p=p
+            p=minkowski_p
         )
         labels = dbscan.fit_predict(xyz)
 
