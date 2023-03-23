@@ -23,6 +23,10 @@ def batch_running(
     visualize_noise: bool = False,
     dbscan_eps: float = 0.1,
     dbscan_min_sample: int = 20,
+    dbscan_metric: str = 'euclidean',
+    dbscan_algorithm: str = 'auto',
+    dbscan_leaf_size: int = 30,
+    dbscan_p: float = None,
     dbscan_keep_only_labels: bool = True,
     dbscan_keep_no_labels: bool = False,
     dbscan_visualize_all: bool = False
@@ -39,11 +43,33 @@ def batch_running(
         statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function. Defaults to 20.
         statistical_std_ratio (float, optional): std_ratio hyperparameter for the statistical noise remover function. Defaults to 2.0.
         visualize_noise (bool, optional): Wether to visualize the noise that will be removed from the point clouds. Defaults to False.
-        dbscan_eps (float, optional): eps hyperparameter for the db scan. Defaults to 0.1.
-        dbscan_min_sample (int, optional): min_sample hyperparameter for the db scan. Defaults to 20.
+        dbscan_eps (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+            This is not a maximum bound on the distances of points within a cluster.
+            This is the most important DBSCAN parameter to choose appropriately for your data set and distance function. Defaults to 0.1.
+        dbscan_min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+            This includes the point itself. Defaults to 20.
+        dbscan_metric (str, optional): The metric to use when calculating distance between instances in a feature array.
+            It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
+            The following metrics can be used: [`cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`].
+            Defaults to 'euclidean'.
+        dbscan_algorithm (str, optional): The algorithm used by NearestNeighbors module to compute pointwise distances and find nearest neighbors.
+            See NearestNeighbors module documentation for details.
+            The following metrics can be used: [`auto`, `ball_tree`, `kd_tree`, `brute`].
+            Defaults to 'auto'.
+        dbscan_leaf_size (int, optional): Leaf size passed to BallTree or cKDTree.
+            This can affect the speed of the construction and query, as well as the memory required to store the tree.
+            The optimal value depends on the nature of the problem.
+            Defaults to 30.
+        dbscan_p (float, optional):
+            The power of the Minkowski metric to be used to calculate distance between points.
+            If None, then ``p=2`` (equivalent to the Euclidean distance).
+            Defaults to None.
         dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan. Defaults to True.
         dbscan_keep_no_labels (bool, optional): Whether to keep none of the labels from the dbscan. Defaults to False.
         dbscan_visualize_all (bool, optional): Whether to visualize all labels. Defaults to False.
+
+    Raises:
+        emptyPointCloudError: This error will be raised if the given point cloud is empty after noise removal.
     """
     print("Batch runner starting.")
     print(f"{len(input_list)} files will be processed in this batch.")
@@ -64,6 +90,7 @@ def batch_running(
                 # Check if the point cloud is empty after the noise has been removed.
                 if len(pcd_radius.points) == 0:
                     raise emptyPointCloudError
+
                 else:
                     pointcloud_dbscan(
                         pcd_radius,
@@ -71,7 +98,11 @@ def batch_running(
                         min_samples=dbscan_min_sample,
                         keep_only_labels=dbscan_keep_only_labels,
                         keep_no_labels=dbscan_keep_no_labels,
-                        visualize_all=dbscan_visualize_all
+                        visualize_all=dbscan_visualize_all,
+                        metric=dbscan_metric,
+                        algorithm=dbscan_algorithm,
+                        leaf_size=dbscan_leaf_size,
+                        p=dbscan_p
                     )
                     pcd_radius = None
 
@@ -91,6 +122,7 @@ def batch_running(
                 # Check if the point cloud is empty after the noise has been removed.
                 if len(pcd_statistical.points) == 0:
                     raise emptyPointCloudError
+
                 else:
                     pointcloud_dbscan(
                         pcd_statistical,
@@ -98,7 +130,11 @@ def batch_running(
                         min_samples=dbscan_min_sample,
                         keep_only_labels=dbscan_keep_only_labels,
                         keep_no_labels=dbscan_keep_no_labels,
-                        visualize_all=dbscan_visualize_all
+                        visualize_all=dbscan_visualize_all,
+                        metric=dbscan_metric,
+                        algorithm=dbscan_algorithm,
+                        leaf_size=dbscan_leaf_size,
+                        p=dbscan_p
                     )
                     pcd_statistical = None
 
@@ -132,14 +168,10 @@ if __name__ == "__main__":
     batch_running(
         file_list_static_scans,
         do_radius=False,
-        voxel_size=0.05,
-        dbscan_min_sample=30,
-        dbscan_eps=0.1,
-        radius_nb_points=10,
-        radius_radius=0.1,
+        voxel_size=0.025,
+        dbscan_min_sample=2,
+        dbscan_eps=0.005,
         statistical_nb_neighbors=20,
         statistical_std_ratio=2.0,
-        dbscan_keep_no_labels=False,
-        dbscan_keep_only_labels=True,
-        dbscan_visualize_all=False
+        dbscan_keep_only_labels=True
     )

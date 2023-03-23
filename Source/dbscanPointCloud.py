@@ -8,6 +8,10 @@ def pointcloud_dbscan(
     pcd: o3d.cpu.pybind.geometry.PointCloud,
     eps: float = 0.1,
     min_samples: int = 20,
+    metric: str = 'euclidean',
+    algorithm: str = 'auto',
+    leaf_size: int = 30,
+    p: float = None,
     visualize_all: bool = False,
     keep_only_labels: bool = True,
     keep_no_labels: bool = False
@@ -21,6 +25,22 @@ def pointcloud_dbscan(
             This is the most important DBSCAN parameter to choose appropriately for your data set and distance function. Defaults to 0.1.
         min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
             This includes the point itself. Defaults to 20.
+        metric (str, optional): The metric to use when calculating distance between instances in a feature array.
+            It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
+            The following metrics can be used: [`cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`].
+            Defaults to 'euclidean'.
+        algorithm (str, optional): The algorithm to be used by the NearestNeighbors module to compute pointwise distances and find nearest neighbors.
+            See NearestNeighbors module documentation for details.
+            The following metrics can be used: [`auto`, `ball_tree`, `kd_tree`, `brute`].
+            Defaults to 'auto'.
+        leaf_size (int, optional): Leaf size passed to BallTree or cKDTree.
+            This can affect the speed of the construction and query, as well as the memory required to store the tree.
+            The optimal value depends on the nature of the problem.
+            Defaults to 30.
+        p (float, optional):
+            The power of the Minkowski metric to be used to calculate distance between points.
+            If None, then ``p=2`` (equivalent to the Euclidean distance).
+            Defaults to None.
         visualize_all (bool, optional): A boolean parameter to toggle visualization. Defaults to False.
         keep_only_labels (bool, optional): A boolean parameter to toggle keep only labels. Defaults to True.
         keep_no_labels (bool, optional): A boolean parameter to toggle keep only points with no labels. Defaults to False.
@@ -33,7 +53,14 @@ def pointcloud_dbscan(
     xyz = np.asarray(pcd.points)
 
     # Perform DBSCAN clustering.
-    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    dbscan = DBSCAN(
+        eps=eps,
+        min_samples=min_samples,
+        metric=metric,
+        algorithm=algorithm,
+        leaf_size=leaf_size,
+        p=p
+    )
     labels = dbscan.fit_predict(xyz)
 
     print(str(len(np.unique(labels)) - 1) + " label(s) were made with DBScan.")
