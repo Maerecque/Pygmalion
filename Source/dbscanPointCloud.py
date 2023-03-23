@@ -54,71 +54,78 @@ def pointcloud_dbscan(
     print("Starting DBScan.")
     # Convert points to a numpy array.
     xyz = np.asarray(pcd.points)
+    try:
+        # Perform DBSCAN clustering.
+        dbscan = DBSCAN(
+            eps=eps,
+            min_samples=min_samples,
+            metric=metric,
+            algorithm=algorithm,
+            leaf_size=leaf_size,
+            p=p
+        )
+        labels = dbscan.fit_predict(xyz)
 
-    # Perform DBSCAN clustering.
-    dbscan = DBSCAN(
-        eps=eps,
-        min_samples=min_samples,
-        metric=metric,
-        algorithm=algorithm,
-        leaf_size=leaf_size,
-        p=p
-    )
-    labels = dbscan.fit_predict(xyz)
+        print(str(len(np.unique(labels)) - 1) + " label(s) were made with DBScan.")
 
-    print(str(len(np.unique(labels)) - 1) + " label(s) were made with DBScan.")
+        # Create a color map for the clusters.
+        maxLabel = labels.max()
+        colors = plt.cm.jet(labels / (maxLabel if maxLabel > 0 else 1))
 
-    # Create a color map for the clusters.
-    maxLabel = labels.max()
-    colors = plt.cm.jet(labels / (maxLabel if maxLabel > 0 else 1))
+        # Set colors for each point in the point cloud.
+        pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
-    # Set colors for each point in the point cloud.
-    pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
+        if visualize_all:
+            o3d.visualization.draw_geometries([pcd], left=0, top=45, window_name="DBScan result with everything in it.")
+            return pcd
 
-    if visualize_all:
-        o3d.visualization.draw_geometries([pcd], left=0, top=45, window_name="DBScan result with everything in it.")
+        if keep_only_labels:
+            xyz_colors = np.asarray(pcd.points)
+            rgb_colors = np.asarray(pcd.colors)
+            points = np.column_stack((xyz_colors, rgb_colors))
+
+            # Define color to remove
+            color_to_remove = [0.0, 0.0, 0.5]
+
+            # Create boolean mask for points with the color to remove
+            color_mask = np.all(points[:, 3:6] == color_to_remove, axis=1)
+
+            # Remove points that satisfy the mask
+            filtered_points = points[~color_mask]
+
+            # Convert numpy array back to point cloud
+            filtered_pcd = o3d.geometry.PointCloud()
+            filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
+            filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
+            o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with only labels left")
+            return filtered_pcd
+
+        if keep_no_labels:
+            xyz_colors = np.asarray(pcd.points)
+            rgb_colors = np.asarray(pcd.colors)
+            points = np.column_stack((xyz_colors, rgb_colors))
+
+            # Define color to keep
+            color_to_keep = [0.0, 0.0, 0.5]
+
+            # Create boolean mask for points with the color to keep
+            color_mask = np.all(points[:, 3:6] == color_to_keep, axis=1)
+
+            # Remove points that satisfy the mask
+            filtered_points = points[color_mask]
+
+            # Convert numpy array back to point cloud
+            filtered_pcd = o3d.geometry.PointCloud()
+            filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
+            filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
+            o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with no labels left")
+            return filtered_pcd
+
         return pcd
 
-    if keep_only_labels:
-        xyz_colors = np.asarray(pcd.points)
-        rgb_colors = np.asarray(pcd.colors)
-        points = np.column_stack((xyz_colors, rgb_colors))
+    except MemoryError:
+        print("Yooo the code ran out of memory. No dbscan done 💀")
 
-        # Define color to remove
-        color_to_remove = [0.0, 0.0, 0.5]
-
-        # Create boolean mask for points with the color to remove
-        color_mask = np.all(points[:, 3:6] == color_to_remove, axis=1)
-
-        # Remove points that satisfy the mask
-        filtered_points = points[~color_mask]
-
-        # Convert numpy array back to point cloud
-        filtered_pcd = o3d.geometry.PointCloud()
-        filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
-        filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
-        o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with only labels left")
-        return filtered_pcd
-
-    if keep_no_labels:
-        xyz_colors = np.asarray(pcd.points)
-        rgb_colors = np.asarray(pcd.colors)
-        points = np.column_stack((xyz_colors, rgb_colors))
-
-        # Define color to keep
-        color_to_keep = [0.0, 0.0, 0.5]
-
-        # Create boolean mask for points with the color to keep
-        color_mask = np.all(points[:, 3:6] == color_to_keep, axis=1)
-
-        # Remove points that satisfy the mask
-        filtered_points = points[color_mask]
-
-        # Convert numpy array back to point cloud
-        filtered_pcd = o3d.geometry.PointCloud()
-        filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
-        filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
-        o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with no labels left")
-        return filtered_pcd
-
-    return pcd
+    except Exception as err:
+        print("The code ran into an unexpected error see below: \n")
+        print(err)
