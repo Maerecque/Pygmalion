@@ -23,14 +23,14 @@ if __name__ == "__main__":
     pcd = readout_LAS_file(file_name)
 
     if pcd is not None:
-        pcd = grid_subsampling(pcd, 0.01)
+        pcd = grid_subsampling(pcd, 0.05)
         pcd_stat = remove_noise_statistical(pcd, True)
         pointcloud_dbscan(
             pcd_stat,
-            eps=0.5,
-            min_samples=5,
+            eps=0.1,
+            min_samples=20,
             keep_only_labels=False,
-            keep_no_labels=True
+            visualize_all=True
         )
         open_point_cloud_editor(pcd)
 
