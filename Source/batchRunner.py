@@ -124,69 +124,124 @@ def batch_running(
     print("Batch runner starting.")
     print(f"{len(input_list)} files will be processed in this batch.")
     for item in input_list:
-        print(item)
+        print(item, "\n")
         pcd = readout_LAS_file(item)
         pcd = grid_subsampling(pcd, voxel_size)
         if do_radius:
             try:
-                print("Doing radius")
-                pcd_radius = remove_noise_radius(
-                    pcd,
-                    visualize_noise,
-                    nb_points=radius_nb_points,
-                    radius=radius_radius
-                )
+                parameter_list = [
+                    radius_nb_points,
+                    radius_radius,
+                    dbscan_eps,
+                    dbscan_min_sample,
+                    dbscan_metric,
+                    dbscan_algorithm,
+                    dbscan_leaf_size,
+                    dbscan_p
+                ]
+                combined_parameter_list = combination_maker(parameter_list)
+                for combination in combined_parameter_list:
+                    print("\n")
+                    print(f"File: {item}")
+                    print("\n\n Doing radius")
+                    print("The following settings will be ran:")
+                    print(f"Voxel size:{voxel_size}")
+                    print(f"NB_points:{combination[0]}")
+                    print(f"Radius:{combination[1]}")
+                    print(f"EPS:{combination[2]}")
+                    print(f"Min_sample:{combination[3]}")
+                    print(f"Metric:{combination[4]}")
+                    print(f"Algorithm:{combination[5]}")
+                    print(f"Leaf size:{combination[6]}")
+                    print(f"P:{combination[7]}")
 
-                # Check if the point cloud is empty after the noise has been removed.
-                if len(pcd_radius.points) == 0:
-                    raise emptyPointCloudError
+                    print(f"Amount of points: {len(pcd.points)}")
 
-                else:
-                    pointcloud_dbscan(
-                        pcd_radius,
-                        eps=dbscan_eps,
-                        min_samples=dbscan_min_sample,
-                        keep_only_labels=dbscan_keep_only_labels,
-                        keep_no_labels=dbscan_keep_no_labels,
-                        visualize_all=dbscan_visualize_all,
-                        metric=dbscan_metric,
-                        algorithm=dbscan_algorithm,
-                        leaf_size=dbscan_leaf_size,
-                        p=dbscan_p
+                    pcd_radius = remove_noise_radius(
+                        pcd,
+                        visualize_noise,
+                        nb_points=combination[0],
+                        radius=combination[1]
                     )
-                    pcd_radius = None
+
+                    # Check if the point cloud is empty after the noise has been removed.
+                    if len(pcd_radius.points) == 0:
+                        raise emptyPointCloudError
+
+                    else:
+                        pointcloud_dbscan(
+                            pcd_radius,
+                            eps=combination[2],
+                            min_samples=combination[3],
+                            keep_only_labels=dbscan_keep_only_labels,
+                            keep_no_labels=dbscan_keep_no_labels,
+                            visualize_all=dbscan_visualize_all,
+                            metric=combination[4],
+                            algorithm=combination[5],
+                            leaf_size=combination[6],
+                            p=combination[7]
+                        )
+                        pcd_radius = None
+                        print("\n")
 
             except emptyPointCloudError:
                 print("After the removal of outliers in the point cloud, nothing was left, therefore no DBScan was performed.")
 
         if do_statistical:
             try:
-                print("Doing statistical")
-                pcd_statistical = remove_noise_statistical(
-                    pcd,
-                    visualize_noise,
-                    nb_neighbors=statistical_nb_neighbors,
-                    std_ratio=statistical_std_ratio
-                )
+                parameter_list = [
+                    statistical_nb_neighbors,
+                    statistical_std_ratio,
+                    dbscan_eps,
+                    dbscan_min_sample,
+                    dbscan_metric,
+                    dbscan_algorithm,
+                    dbscan_leaf_size,
+                    dbscan_p
+                ]
+                combined_parameter_list = combination_maker(parameter_list)
+                for combination in combined_parameter_list:
+                    print("\n")
+                    print(f"File: {item}")
+                    print("Doing statistical")
+                    print("The following settings will be ran:")
+                    print(f"Voxel size:{voxel_size}")
+                    print(f"NB_neighbours:{combination[0]}")
+                    print(f"Std_ratio:{combination[1]}")
+                    print(f"EPS:{combination[2]}")
+                    print(f"Min_sample:{combination[3]}")
+                    print(f"Metric:{combination[4]}")
+                    print(f"Algorithm:{combination[5]}")
+                    print(f"Leaf size:{combination[6]}")
+                    print(f"P:{combination[7]}")
 
-                # Check if the point cloud is empty after the noise has been removed.
-                if len(pcd_statistical.points) == 0:
-                    raise emptyPointCloudError
+                    print(f"Amount of points: {len(pcd.points)}")
 
-                else:
-                    pointcloud_dbscan(
-                        pcd_statistical,
-                        eps=dbscan_eps,
-                        min_samples=dbscan_min_sample,
-                        keep_only_labels=dbscan_keep_only_labels,
-                        keep_no_labels=dbscan_keep_no_labels,
-                        visualize_all=dbscan_visualize_all,
-                        metric=dbscan_metric,
-                        algorithm=dbscan_algorithm,
-                        leaf_size=dbscan_leaf_size,
-                        p=dbscan_p
+                    pcd_statistical = remove_noise_statistical(
+                        pcd,
+                        visualize_noise,
+                        nb_neighbors=combination[0],
+                        std_ratio=combination[1]
                     )
-                    pcd_statistical = None
+
+                    # Check if the point cloud is empty after the noise has been removed.
+                    if len(pcd_statistical.points) == 0:
+                        raise emptyPointCloudError
+
+                    else:
+                        pointcloud_dbscan(
+                            pcd_statistical,
+                            eps=combination[2],
+                            min_samples=combination[3],
+                            keep_only_labels=dbscan_keep_only_labels,
+                            keep_no_labels=dbscan_keep_no_labels,
+                            visualize_all=dbscan_visualize_all,
+                            metric=combination[4],
+                            algorithm=combination[5],
+                            leaf_size=combination[6],
+                            p=combination[7]
+                        )
+                        pcd_statistical = None
 
             except emptyPointCloudError:
                 print("After the removal of outliers in the point cloud, nothing was left, therefore no DBScan was performed.")
@@ -216,12 +271,38 @@ if __name__ == "__main__":
     ]
 
     batch_running(
-        file_list_static_scans,
+        file_list_hand_scans,
         do_radius=False,
-        voxel_size=0.025,
-        dbscan_min_sample=2,
-        dbscan_eps=0.005,
-        statistical_nb_neighbors=20,
-        statistical_std_ratio=2.0,
-        dbscan_keep_only_labels=True
+        dbscan_metric=[
+            'braycurtis',
+            'canberra',
+            'chebyshev',
+            'cityblock',
+            'correlation',
+            'dice',
+            'euclidean',
+            'hamming',
+            'haversine',
+            'jaccard'
+            'kulsinski',
+            'l1',
+            'l2',
+            'mahalanobis',
+            'manhattan',
+            'matching',
+            'minkowski',
+            'nan_euclidean',
+            'precomputed',
+            'rogerstanimoto',
+            'russellrao',
+            'seuclidean',
+            'sokalmichener',
+            'sokalsneath',
+            'sqeuclidean',
+            'wminkowski',
+            'yule',
+        ],
+        dbscan_keep_only_labels=False,
+        dbscan_visualize_all=False,
+        dbscan_algorithm=['auto', 'ball_tree', 'kd_tree', 'brute']
     )
