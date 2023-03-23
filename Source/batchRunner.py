@@ -1,4 +1,5 @@
 import os
+import itertools
 
 from dbscanPointCloud import pointcloud_dbscan
 from fileHandler import readout_LAS_file
@@ -9,6 +10,22 @@ from pointCloudAltering import (
 
 
 class emptyPointCloudError(Exception): pass
+
+
+def combination_maker(lst: list) -> list[tuple]:
+    """A function to make all possible combination for the batch runner when multiple options are given.
+
+    Args:
+        lst (list): list of items to be combined.
+
+    Returns:
+        list: A list of tuples with every combination of the list that has been given.
+    """
+    for index, item in enumerate(lst):
+        if type(item) != list:
+            lst[index] = [item]
+    output_lst = list(itertools.product(*lst))
+    return output_lst
 
 
 def batch_running(
