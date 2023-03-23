@@ -1,4 +1,5 @@
 import os
+from typing import Union
 import itertools
 
 from dbscanPointCloud import pointcloud_dbscan
@@ -33,17 +34,17 @@ def batch_running(
     do_radius: bool = True,
     do_statistical: bool = True,
     voxel_size: float = 0.05,
-    radius_nb_points: int = 10,
-    radius_radius: float = 0.1,
-    statistical_nb_neighbors: int = 20,
-    statistical_std_ratio: float = 2.0,
+    radius_nb_points: Union[int, list[int]] = 10,
+    radius_radius: Union[float, list[float]] = 0.1,
+    statistical_nb_neighbors: Union[int, list[int]] = 20,
+    statistical_std_ratio: Union[float, list[float]] = 2.0,
     visualize_noise: bool = False,
-    dbscan_eps: float = 0.1,
-    dbscan_min_sample: int = 20,
-    dbscan_metric: str = 'euclidean',
-    dbscan_algorithm: str = 'auto',
-    dbscan_leaf_size: int = 30,
-    dbscan_p: float = None,
+    dbscan_eps: Union[float, list[float]] = 0.1,
+    dbscan_min_sample: Union[int, list[int]] = 20,
+    dbscan_metric: Union[str, list[str]] = 'euclidean',
+    dbscan_algorithm: Union[str, list[str]] = 'auto',
+    dbscan_leaf_size: Union[int, list[int]] = 30,
+    dbscan_p: Union[float, list[float]] = None,
     dbscan_keep_only_labels: bool = True,
     dbscan_keep_no_labels: bool = False,
     dbscan_visualize_all: bool = False
@@ -52,41 +53,70 @@ def batch_running(
 
     Args:
         input_list (list): List to be used as input, contains path locations of files to be scanned.
-        do_radius (bool, optional): Whether to do radius noise removal. Defaults to True.
-        do_statistical (bool, optional): Whether to do statistical noise removal. Defaults to True.
-        voxel_size (float, optional): Distance between points that is allowed. Defaults to 0.05.
-        radius_nb_points (int, optional): nb_points hyperparameter for the radius noise remover function. Defaults to 10.
-        radius_radius (float, optional): radius hyperparameter for the radius noise remover function. Defaults to 0.1.
-        statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function. Defaults to 20.
-        statistical_std_ratio (float, optional): std_ratio hyperparameter for the statistical noise remover function. Defaults to 2.0.
-        visualize_noise (bool, optional): Wether to visualize the noise that will be removed from the point clouds. Defaults to False.
-        dbscan_eps (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
-            This is not a maximum bound on the distances of points within a cluster.
-            This is the most important DBSCAN parameter to choose appropriately for your data set and distance function. Defaults to 0.1.
-        dbscan_min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
-            This includes the point itself. Defaults to 20.
-        dbscan_metric (str, optional): The metric to use when calculating distance between instances in a feature array.
+
+        do_radius (bool, optional): Whether to do radius noise removal.
+            Defaults to True.
+
+        do_statistical (bool, optional): Whether to do statistical noise removal.
+            Defaults to True.
+
+        voxel_size (float, optional): Distance between points that is allowed.
+            Defaults to 0.05.
+
+        radius_nb_points (int, optional): nb_points hyperparameter for the radius noise remover function.
+            Defaults to 10.
+
+        radius_radius (float or list[float], optional): radius hyperparameter for the radius noise remover function.
+            Defaults to 0.1.
+
+        statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function.
+            Defaults to 20.
+
+        statistical_std_ratio (float or list[float], optional): std_ratio hyperparameter for the statistical noise remover function.
+            Defaults to 2.0.
+
+        visualize_noise (bool, optional): Wether to visualize the noise that will be removed from the point clouds.
+            Defaults to False.
+
+        dbscan_eps (float or list[float], optional): The maximum distance between two samples for one to be considered as in the neighborhood of
+            the other. This is not a maximum bound on the distances of points within a cluster.
+            This is the most important DBSCAN parameter to choose appropriately for your data set and distance function.
+            Defaults to 0.1.
+
+        dbscan_min_sample (int or list[int], optional): The number of samples (or total weight) in a neighborhood for a point to be considered as
+            a core point. This includes the point itself.
+            Defaults to 20.
+
+        dbscan_metric (str or list[str], optional): The metric to use when calculating distance between instances in a feature array.
             It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
             The following metrics can be used: ['cosine', 'correlation', 'cityblock', 'kulsinski', 'mahalanobis', 'sokalmichener', 'l2',
             'rogerstanimoto', 'hamming', 'l1', 'sokalsneath', 'euclidean', 'wminkowski', 'canberra', 'matching', 'manhattan', 'seuclidean',
             'sqeuclidean', 'precomputed', 'braycurtis', 'nan_euclidean', 'haversine', 'minkowski', 'chebyshev', 'dice', 'russellrao', 'yule',
             'jaccard'].
             Defaults to 'euclidean'.
-        dbscan_algorithm (str, optional): The algorithm used by NearestNeighbors module to compute pointwise distances and find nearest neighbors.
-            See NearestNeighbors module documentation for details.
-            The following metrics can be used: [`auto`, `ball_tree`, `kd_tree`, `brute`].
+
+        dbscan_algorithm (str or list[str], optional): The algorithm used by NearestNeighbors module to compute pointwise distances
+            and find nearest neighbors. See NearestNeighbors module documentation for details.
+            The following metrics can be used: ['auto', 'ball_tree', 'kd_tree', 'brute'].
             Defaults to 'auto'.
-        dbscan_leaf_size (int, optional): Leaf size passed to BallTree or cKDTree.
+
+        dbscan_leaf_size (int or list[int], optional): Leaf size passed to BallTree or cKDTree.
             This can affect the speed of the construction and query, as well as the memory required to store the tree.
             The optimal value depends on the nature of the problem.
             Defaults to 30.
-        dbscan_p (float, optional):
-            The power of the Minkowski metric to be used to calculate distance between points.
+
+        dbscan_p (float or list[float], optional): The power of the Minkowski metric to be used to calculate distance between points.
             If None, then ``p=2`` (equivalent to the Euclidean distance).
             Defaults to None.
-        dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan. Defaults to True.
-        dbscan_keep_no_labels (bool, optional): Whether to keep none of the labels from the dbscan. Defaults to False.
-        dbscan_visualize_all (bool, optional): Whether to visualize all labels. Defaults to False.
+
+        dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan.
+            Defaults to True.
+
+        dbscan_keep_no_labels (bool, optional): Whether to keep none of the labels from the dbscan.
+            Defaults to False.
+
+        dbscan_visualize_all (bool, optional): Whether to visualize all labels.
+            Defaults to False.
 
     Raises:
         emptyPointCloudError: This error will be raised if the given point cloud is empty after noise removal.
