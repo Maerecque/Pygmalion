@@ -118,7 +118,6 @@ def batch_running(
     print("Batch runner starting.")
     print(f"{len(input_list)} files will be processed in this batch.")
     for item in input_list:
-        print(item, "\n")
         pcd = readout_LAS_file(item)
         pcd = grid_subsampling(pcd, voxel_size)
         if do_radius:
@@ -259,7 +258,7 @@ if __name__ == "__main__":
     ]
 
     batch_running(
-        file_list_hand_scans,
+        file_list_static_scans,
         do_radius=False,
         dbscan_metric=[
             'canberra',         # Memory leak issue
