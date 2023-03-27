@@ -292,5 +292,10 @@ if __name__ == "__main__":
         ],
         dbscan_keep_only_labels=False,
         dbscan_visualize_all=False,
-        dbscan_algorithm=['auto', 'ball_tree', 'kd_tree', 'brute']
+        dbscan_algorithm=[
+            'auto',
+            'ball_tree',
+            'kd_tree',
+            'brute'           # Very powerful method, crashes most of the time and takes very longs
+        ],
     )
