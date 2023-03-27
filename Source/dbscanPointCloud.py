@@ -11,7 +11,6 @@ def pointcloud_dbscan(
     metric: str = 'euclidean',
     algorithm: str = 'auto',
     leaf_size: int = 30,
-    minkowski_p: float = None,
     visualize_all: bool = False,
     keep_only_labels: bool = True,
     keep_no_labels: bool = False
@@ -39,10 +38,6 @@ def pointcloud_dbscan(
             This can affect the speed of the construction and query, as well as the memory required to store the tree.
             The optimal value depends on the nature of the problem.
             Defaults to 30.
-        minkowski_p (float, optional):
-            The power of the Minkowski metric to be used to calculate distance between points.
-            If None, then ``p=2`` (equivalent to the Euclidean distance).
-            Defaults to None.
         visualize_all (bool, optional): A boolean parameter to toggle visualization. Defaults to False.
         keep_only_labels (bool, optional): A boolean parameter to toggle keep only labels. Defaults to True.
         keep_no_labels (bool, optional): A boolean parameter to toggle keep only points with no labels. Defaults to False.
@@ -61,7 +56,6 @@ def pointcloud_dbscan(
             metric=metric,
             algorithm=algorithm,
             leaf_size=leaf_size,
-            p=minkowski_p
         )
         labels = dbscan.fit_predict(xyz)
 

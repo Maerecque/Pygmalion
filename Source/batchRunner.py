@@ -44,7 +44,6 @@ def batch_running(
     dbscan_metric: Union[str, list[str]] = 'euclidean',
     dbscan_algorithm: Union[str, list[str]] = 'auto',
     dbscan_leaf_size: Union[int, list[int]] = 30,
-    dbscan_minkowski_p: Union[None, float, list[float]] = None,
     dbscan_keep_only_labels: bool = True,
     dbscan_keep_no_labels: bool = False,
     dbscan_visualize_all: bool = False
@@ -104,10 +103,6 @@ def batch_running(
             The optimal value depends on the nature of the problem.
             Defaults to 30.
 
-        dbscan_minkowski_p (None, float or list[float], optional): The power of the Minkowski metric to be used to calculate distance between points.
-            If None, then ``p=2`` (equivalent to the Euclidean distance).
-            Defaults to None.
-
         dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan.
             Defaults to True.
 
@@ -135,8 +130,7 @@ def batch_running(
                     dbscan_min_sample,
                     dbscan_metric,
                     dbscan_algorithm,
-                    dbscan_leaf_size,
-                    dbscan_minkowski_p
+                    dbscan_leaf_size
                 ]
                 combined_parameter_list = combination_maker(parameter_list)
                 for combination in combined_parameter_list:
@@ -152,7 +146,6 @@ def batch_running(
                     print(f"Metric:{combination[4]}")
                     print(f"Algorithm:{combination[5]}")
                     print(f"Leaf size:{combination[6]}")
-                    print(f"P:{combination[7]}")
 
                     print(f"Amount of points: {len(pcd.points)}")
 
@@ -178,7 +171,6 @@ def batch_running(
                             metric=combination[4],
                             algorithm=combination[5],
                             leaf_size=combination[6],
-                            minkowski_p=combination[7]
                         )
                         pcd_radius = None
                         print("\n")
@@ -195,8 +187,7 @@ def batch_running(
                     dbscan_min_sample,
                     dbscan_metric,
                     dbscan_algorithm,
-                    dbscan_leaf_size,
-                    dbscan_minkowski_p
+                    dbscan_leaf_size
                 ]
                 combined_parameter_list = combination_maker(parameter_list)
                 for combination in combined_parameter_list:
@@ -212,7 +203,6 @@ def batch_running(
                     print(f"Metric:{combination[4]}")
                     print(f"Algorithm:{combination[5]}")
                     print(f"Leaf size:{combination[6]}")
-                    print(f"P:{combination[7]}")
 
                     print(f"Amount of points: {len(pcd.points)}")
 
@@ -237,8 +227,7 @@ def batch_running(
                             visualize_all=dbscan_visualize_all,
                             metric=combination[4],
                             algorithm=combination[5],
-                            leaf_size=combination[6],
-                            minkowski_p=combination[7]
+                            leaf_size=combination[6]
                         )
                         pcd_statistical = None
 
