@@ -262,33 +262,22 @@ if __name__ == "__main__":
         file_list_hand_scans,
         do_radius=False,
         dbscan_metric=[
-            'braycurtis',
-            'canberra',
+            'canberra',         # Memory leak issue
             'chebyshev',
             'cityblock',
-            'correlation',
-            'dice',
+            'correlation',      # Memory leak issue
+            'dice',             # Memory leak issue
             'euclidean',
             'hamming',
-            'haversine',
-            'jaccard'
-            'kulsinski',
-            'l1',
-            'l2',
-            'mahalanobis',
-            'manhattan',
-            'matching',
-            'minkowski',
+            'jaccard',          # Memory leak issue
+            'kulsinski',        # Memory leak issue
+            'matching',         # Memory leak issue
             'nan_euclidean',
-            'precomputed',
-            'rogerstanimoto',
-            'russellrao',
-            'seuclidean',
-            'sokalmichener',
-            'sokalsneath',
+            'rogerstanimoto',   # Memory leak issue
+            'russellrao',       # Memory leak issue
+            'sokalmichener',    # Memory leak issue
+            'sokalsneath',      # Memory leak issue
             'sqeuclidean',
-            'wminkowski',
-            'yule',
         ],
         dbscan_keep_only_labels=False,
         dbscan_visualize_all=False,
