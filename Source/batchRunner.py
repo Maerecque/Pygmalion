@@ -30,6 +30,37 @@ def combination_maker(lst: list) -> list[tuple]:
     return output_lst
 
 
+def print_combination(
+    method: str,
+    item: str,
+    voxel_size: int,
+    combination: tuple,
+    amount_of_points: int
+):
+    """Literally a function to just print all of the parameters used in a scan.
+
+    Args:
+        method (str): Method used for noise removal.
+        item (str): Path of the file that was used.
+        voxel_size (int): Voxel size used during normalization.
+        combination (tuple): Combination of the parameters used during scan.
+        amount_of_points (int): Amount of points that were in the point cloud.
+    """
+    print("\n")
+    print(f"File: {item}")
+    print(f"Doing {method}")
+    print("The following settings will be ran:")
+    print(f"Voxel size:{voxel_size}")
+    print(f"NB_points:{combination[0]}")
+    print(f"Radius:{combination[1]}")
+    print(f"EPS:{combination[2]}")
+    print(f"Min_sample:{combination[3]}")
+    print(f"Metric:{combination[4]}")
+    print(f"Algorithm:{combination[5]}")
+    print(f"Leaf size:{combination[6]}")
+    print(f"Amount of points: {amount_of_points}")
+
+
 def batch_running(
     input_list: list,
     do_radius: bool = False,
@@ -136,20 +167,7 @@ def batch_running(
                 ]
                 combined_parameter_list = combination_maker(parameter_list)
                 for combination in combined_parameter_list:
-                    print("\n")
-                    print(f"File: {item}")
-                    print("\n\n Doing radius")
-                    print("The following settings will be ran:")
-                    print(f"Voxel size:{voxel_size}")
-                    print(f"NB_points:{combination[0]}")
-                    print(f"Radius:{combination[1]}")
-                    print(f"EPS:{combination[2]}")
-                    print(f"Min_sample:{combination[3]}")
-                    print(f"Metric:{combination[4]}")
-                    print(f"Algorithm:{combination[5]}")
-                    print(f"Leaf size:{combination[6]}")
-
-                    print(f"Amount of points: {len(pcd.points)}")
+                    print_combination("Radius", item, voxel_size, combination, len(pcd.points))
 
                     pcd_radius = remove_noise_radius(
                         pcd,
@@ -193,20 +211,7 @@ def batch_running(
                 ]
                 combined_parameter_list = combination_maker(parameter_list)
                 for combination in combined_parameter_list:
-                    print("\n")
-                    print(f"File: {item}")
-                    print("Doing statistical")
-                    print("The following settings will be ran:")
-                    print(f"Voxel size:{voxel_size}")
-                    print(f"NB_neighbours:{combination[0]}")
-                    print(f"Std_ratio:{combination[1]}")
-                    print(f"EPS:{combination[2]}")
-                    print(f"Min_sample:{combination[3]}")
-                    print(f"Metric:{combination[4]}")
-                    print(f"Algorithm:{combination[5]}")
-                    print(f"Leaf size:{combination[6]}")
-
-                    print(f"Amount of points: {len(pcd.points)}")
+                    print_combination("Statistical", item, voxel_size, combination, len(pcd.points))
 
                     pcd_statistical = remove_noise_statistical(
                         pcd,
