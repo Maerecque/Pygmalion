@@ -31,7 +31,7 @@ def combination_maker(lst: list) -> list[tuple]:
 
 def batch_running(
     input_list: list,
-    do_radius: bool = True,
+    do_radius: bool = False,
     do_statistical: bool = True,
     voxel_size: float = 0.05,
     radius_nb_points: Union[int, list[int]] = 10,
@@ -54,7 +54,7 @@ def batch_running(
         input_list (list): List to be used as input, contains path locations of files to be scanned.
 
         do_radius (bool, optional): Whether to do radius noise removal.
-            Defaults to True.
+            Defaults to False.
 
         do_statistical (bool, optional): Whether to do statistical noise removal.
             Defaults to True.
