@@ -8,6 +8,7 @@ from pointCloudAltering import (
     grid_subsampling,
     remove_noise_radius,
     remove_noise_statistical)
+from pointCloudEditor import open_point_cloud_editor
 
 
 class emptyPointCloudError(Exception): pass
@@ -46,7 +47,8 @@ def batch_running(
     dbscan_leaf_size: Union[int, list[int]] = 30,
     dbscan_keep_only_labels: bool = True,
     dbscan_keep_no_labels: bool = False,
-    dbscan_visualize_all: bool = False
+    dbscan_visualize_all: bool = False,
+    dbscan_visualize_end_result: bool = False
 ):
     """A function to run the dbscan in batches, to speed up the process of unit testing
 
@@ -108,6 +110,9 @@ def batch_running(
             Defaults to False.
 
         dbscan_visualize_all (bool, optional): Whether to visualize all labels.
+            Defaults to False.
+
+        dbscan_visualize_end_result (bool, optional): Whether to visualize end result with original pointcloud and labels.
             Defaults to False.
 
     Raises:
@@ -215,7 +220,7 @@ def batch_running(
                         raise emptyPointCloudError
 
                     else:
-                        pointcloud_dbscan(
+                        pcd_cluster = pointcloud_dbscan(
                             pcd_statistical,
                             eps=combination[2],
                             min_samples=combination[3],
@@ -226,6 +231,16 @@ def batch_running(
                             algorithm=combination[5],
                             leaf_size=combination[6]
                         )
+
+                        if dbscan_visualize_end_result:
+                            pcd_combined = pcd_cluster + remove_noise_statistical(
+                                pcd,
+                                visualize_noise,
+                                nb_neighbors=combination[0],
+                                std_ratio=combination[1]
+                            )
+                            open_point_cloud_editor(pcd_combined)
+
                         pcd_statistical = None
 
             except emptyPointCloudError:
