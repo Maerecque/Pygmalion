@@ -244,7 +244,7 @@ def batch_running(
                                 nb_neighbors=combination[0],
                                 std_ratio=combination[1]
                             )
-                            open_point_cloud_editor(pcd_combined)
+                            open_point_cloud_editor(pcd_combined, False)
 
                         pcd_statistical = None
 
