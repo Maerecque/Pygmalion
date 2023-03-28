@@ -26,9 +26,7 @@ def pointcloud_dbscan(
             This includes the point itself. Defaults to 20.
         metric (str, optional): The metric to use when calculating distance between instances in a feature array.
             It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
-            The following metrics can be used: ['braycurtis','canberra','chebyshev','cityblock','correlation','dice','euclidean','hamming',
-            'haversine','jaccard''kulsinski','l1','l2','mahalanobis','manhattan','matching','minkowski','nan_euclidean','precomputed',
-            'rogerstanimoto','russellrao','seuclidean','sokalmichener','sokalsneath','sqeuclidean','wminkowski','yule',].
+            The following metrics can be used: ['chebyshev','cityblock','euclidean','hamming','nan_euclidean','sqeuclidean'].
             Defaults to 'euclidean'.
         algorithm (str, optional): The algorithm to be used by the NearestNeighbors module to compute pointwise distances and find nearest neighbors.
             See NearestNeighbors module documentation for details.

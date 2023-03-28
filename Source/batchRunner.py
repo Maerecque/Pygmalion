@@ -88,9 +88,7 @@ def batch_running(
 
         dbscan_metric (str or list[str], optional): The metric to use when calculating distance between instances in a feature array.
             It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
-            The following metrics can be used: ['braycurtis','canberra','chebyshev','cityblock','correlation','dice','euclidean','hamming',
-            'haversine','jaccard''kulsinski','l1','l2','mahalanobis','manhattan','matching','minkowski','nan_euclidean','precomputed',
-            'rogerstanimoto','russellrao','seuclidean','sokalmichener','sokalsneath','sqeuclidean','wminkowski','yule',].
+            The following metrics can be used: ['chebyshev','cityblock','euclidean','hamming','nan_euclidean','sqeuclidean'].
             Defaults to 'euclidean'.
 
         dbscan_algorithm (str or list[str], optional): The algorithm used by NearestNeighbors module to compute pointwise distances
@@ -261,21 +259,11 @@ if __name__ == "__main__":
         file_list_static_scans,
         do_radius=False,
         dbscan_metric=[
-            'canberra',         # Memory leak issue
             'chebyshev',
             'cityblock',
-            'correlation',      # Memory leak issue
-            'dice',             # Memory leak issue
             'euclidean',
             'hamming',
-            'jaccard',          # Memory leak issue
-            'kulsinski',        # Memory leak issue
-            'matching',         # Memory leak issue
             'nan_euclidean',
-            'rogerstanimoto',   # Memory leak issue
-            'russellrao',       # Memory leak issue
-            'sokalmichener',    # Memory leak issue
-            'sokalsneath',      # Memory leak issue
             'sqeuclidean',
         ],
         dbscan_keep_only_labels=False,
