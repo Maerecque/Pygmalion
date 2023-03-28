@@ -277,21 +277,12 @@ if __name__ == "__main__":
 
     batch_running(
         file_list_static_scans,
-        do_radius=False,
-        dbscan_metric=[
-            'chebyshev',
-            'cityblock',
-            'euclidean',
-            'hamming',
-            'nan_euclidean',
-            'sqeuclidean',
-        ],
-        dbscan_keep_only_labels=False,
-        dbscan_visualize_all=False,
-        dbscan_algorithm=[
-            'auto',
-            'ball_tree',
-            'kd_tree',
-            'brute'           # Very powerful method, crashes most of the time and takes very longs
-        ],
+        voxel_size=0.025,
+        dbscan_eps=0.03,
+        dbscan_min_sample=[10, 5],
+
+        dbscan_metric='chebyshev',
+        dbscan_keep_only_labels=True,
+        dbscan_visualize_end_result=True,
+        dbscan_algorithm='auto',
     )
