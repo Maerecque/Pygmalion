@@ -13,7 +13,9 @@ def pointcloud_dbscan(
     leaf_size: int = 30,
     visualize_all: bool = False,
     keep_only_labels: bool = True,
-    keep_no_labels: bool = False
+    visualize_only_labels: bool = False,
+    keep_no_labels: bool = False,
+    visualize_no_labels: bool = False,
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to perform a DBScan on a point cloud.
 
@@ -38,7 +40,9 @@ def pointcloud_dbscan(
             Defaults to 30.
         visualize_all (bool, optional): A boolean parameter to toggle visualization. Defaults to False.
         keep_only_labels (bool, optional): A boolean parameter to toggle keep only labels. Defaults to True.
+        visualize_only_labels (bool, optional): A boolean parameter to toggle visualization of labels. Defaults to False.
         keep_no_labels (bool, optional): A boolean parameter to toggle keep only points with no labels. Defaults to False.
+        visualize_keep_no_labels (bool, optional): A boolean parameter to toggle visualization of points with no labels. Defaults to False.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Point cloud with DBScan performed on it.
@@ -88,7 +92,8 @@ def pointcloud_dbscan(
             filtered_pcd = o3d.geometry.PointCloud()
             filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
             filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
-            o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with only labels left")
+            if visualize_only_labels:
+                o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with only labels left")
             return filtered_pcd
 
         if keep_no_labels:
@@ -109,7 +114,8 @@ def pointcloud_dbscan(
             filtered_pcd = o3d.geometry.PointCloud()
             filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
             filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
-            o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with no labels left")
+            if visualize_no_labels:
+                o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with no labels left")
             return filtered_pcd
 
         return pcd

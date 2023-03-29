@@ -78,7 +78,9 @@ def batch_running(
     dbscan_algorithm: Union[str, list[str]] = 'auto',
     dbscan_leaf_size: Union[int, list[int]] = 30,
     dbscan_keep_only_labels: bool = True,
+    dbscan_visualize_only_labels: bool = False,
     dbscan_keep_no_labels: bool = False,
+    dbscan_visualize_no_labels: bool = False,
     dbscan_visualize_all: bool = False,
     dbscan_visualize_end_result: bool = False
 ):
@@ -138,7 +140,13 @@ def batch_running(
         dbscan_keep_only_labels (bool, optional): Whether to keep only the labels from the dbscan.
             Defaults to True.
 
+        dbscan_visualize_only_labels (bool, optional): A boolean parameter to toggle visualization of labels.
+            Defaults to False.
+
         dbscan_keep_no_labels (bool, optional): Whether to keep none of the labels from the dbscan.
+            Defaults to False.
+
+        dbscan_visualize_no_labels (bool, optional): A boolean parameter to toggle visualization of points with no labels.
             Defaults to False.
 
         dbscan_visualize_all (bool, optional): Whether to visualize all labels.
@@ -231,7 +239,9 @@ def batch_running(
                             eps=combination[2],
                             min_samples=combination[3],
                             keep_only_labels=dbscan_keep_only_labels,
+                            visualize_only_labels=dbscan_visualize_only_labels,
                             keep_no_labels=dbscan_keep_no_labels,
+                            visualize_no_labels=dbscan_visualize_no_labels,
                             visualize_all=dbscan_visualize_all,
                             metric=combination[4],
                             algorithm=combination[5],
