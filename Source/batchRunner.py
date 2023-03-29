@@ -7,7 +7,8 @@ from fileHandler import readout_LAS_file
 from pointCloudAltering import (
     grid_subsampling,
     remove_noise_radius,
-    remove_noise_statistical)
+    remove_noise_statistical,
+    combine_point_cloud)
 from pointCloudEditor import open_point_cloud_editor
 
 
@@ -238,12 +239,16 @@ def batch_running(
                         )
 
                         if dbscan_visualize_end_result:
-                            pcd_combined = pcd_cluster + remove_noise_statistical(
-                                pcd,
-                                visualize_noise,
-                                nb_neighbors=combination[0],
-                                std_ratio=combination[1]
+                            pcd_combined = combine_point_cloud(
+                                remove_noise_statistical(
+                                    pcd,
+                                    visualize_noise,
+                                    nb_neighbors=combination[0],
+                                    std_ratio=combination[1]
+                                ),
+                                pcd_cluster
                             )
+
                             open_point_cloud_editor(pcd_combined, False)
 
                         pcd_statistical = None

@@ -1,4 +1,5 @@
 import open3d as o3d
+import numpy as np
 
 
 def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
@@ -96,3 +97,24 @@ def remove_noise_radius(
         o3d.visualization.draw_geometries([outlier_cloud, inputPointCloud], left=0, top=45, window_name="Remove noise with radius")
 
     return cl
+
+
+def combine_point_cloud(
+    inputPointCloud: o3d.cpu.pybind.geometry.PointCloud,
+    classifiedPointCloud: o3d.cpu.pybind.geometry.PointCloud
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function made to remove any points that were found in the DBScan from the original scan.
+    This is made mainly for visualizing the results of the remaining points.
+
+    Args:
+        inputPointCloud (o3d.cpu.pybind.geometry.PointCloud): Pointcloud with the base scan in it.
+        classifiedPointCloud (o3d.cpu.pybind.geometry.PointCloud): Pointcloud after the classification with points to be removed.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Pointcloud without any points that were in the given classification pointcloud.
+    """
+    distances = inputPointCloud.compute_point_cloud_distance(classifiedPointCloud)
+    distances_np = np.asarray(distances)
+    zero_distance_mask = (distances_np == 0)
+    pcd1_without_duplicates = inputPointCloud.select_by_index(np.where(zero_distance_mask == False)[0])
+    return pcd1_without_duplicates
