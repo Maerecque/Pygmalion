@@ -7,7 +7,9 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float =
 
     Args:
         pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud to be normalized.
-        voxelSize (float, optional): Distance between points that is allowed. Defaults to 0.05.
+
+        voxelSize (float, optional): Distance between points that is allowed.
+            Defaults to 0.05.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Down sampled point cloud with normalized point positions.
@@ -36,9 +38,13 @@ def remove_noise_statistical(
 
     Args:
         inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
-        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False.
-        nb_neighbors (int, optional): Number of neighbors around the target point. Defaults to 20.
-        std_ratio (float, optional): Standard deviation ratio. Defaults to 2.0.
+
+        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red.
+            Defaults to False.
+        nb_neighbors (int, optional): Number of neighbors around the target point.
+            Defaults to 20.
+        std_ratio (float, optional): Standard deviation ratio.
+            Defaults to 2.0.
 
     Returns:
         open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
@@ -73,9 +79,13 @@ def remove_noise_radius(
 
     Args:
         inputPointCloud (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
-        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red. Defaults to False.
-        nb_points (int, optional): Number of points within the radius. Defaults to 10.
-        radius (float, optional): Radius of the sphere. Defaults to 0.1.
+
+        showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red.
+            Defaults to False.
+        nb_points (int, optional): Number of points within the radius.
+            Defaults to 10.
+        radius (float, optional): Radius of the sphere.
+            Defaults to 0.1.
 
     Returns:
         open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
@@ -108,6 +118,7 @@ def combine_point_cloud(
 
     Args:
         inputPointCloud (o3d.cpu.pybind.geometry.PointCloud): Pointcloud with the base scan in it.
+
         classifiedPointCloud (o3d.cpu.pybind.geometry.PointCloud): Pointcloud after the classification with points to be removed.
 
     Returns:

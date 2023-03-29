@@ -6,7 +6,9 @@ def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarra
 
     Args:
         inputArray (numpy.ndarray): A NumPy ndarray to normalize.
-        isColour (bool, optional): A boolean value to divide the ndarray to the LAS colour standards to 0. Defaults to False.
+
+        isColour (bool, optional): A boolean value to divide the ndarray to the LAS colour standards to 0.
+            Defaults to False.
 
     Raises:
         TypeError: If the inputArray is not of the NumPy ndarray type, this error will be raised.

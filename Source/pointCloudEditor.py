@@ -9,7 +9,9 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud, show_help: 
 
     Args:
         pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be edited.
-        show_help (bool): Whether to show help messages. Defaults to True.
+
+        show_help (bool): Whether to show help messages.
+            Defaults to True.
     """
     if show_help:
         print("\n")  # noqa: E303

@@ -18,6 +18,7 @@ def get_file_path(description: str, fileformat: any) -> str:
 
     Args:
         description (str): Description of the to be selected file format.
+
         fileformat (any): Either a string of one specified file format or a list of file formats. e.g. "*.txt" or ["*.txt", "*.docx"].
 
     Returns:
@@ -48,9 +49,13 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
 
     Raises:
         FileNotFoundError: If a given path does not exist.
+
         noFileGivenError: If no file is selected.
+
         FileFormatError: If the format of the given file is not supported.
+
         laspy.errors.LaspyException: If Laspy runs into an error.
+
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: An Open3D point cloud containing the contents of the LAS/LAZ file.

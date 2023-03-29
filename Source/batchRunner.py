@@ -42,9 +42,13 @@ def print_combination(
 
     Args:
         method (str): Method used for noise removal.
+
         item (str): Path of the file that was used.
+
         voxel_size (int): Voxel size used during normalization.
+
         combination (tuple): Combination of the parameters used during scan.
+
         amount_of_points (int): Amount of points that were in the point cloud.
     """
     print("\n")
