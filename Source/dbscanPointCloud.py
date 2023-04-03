@@ -2,6 +2,7 @@ import matplotlib as plt
 import numpy as np
 import open3d as o3d
 from sklearn.cluster import DBSCAN
+from pointCloudEditor import open_point_cloud_editor
 
 
 def pointcloud_dbscan(
@@ -89,7 +90,7 @@ def pointcloud_dbscan(
         pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
         if visualize_all:
-            o3d.visualization.draw_geometries([pcd], left=0, top=45, window_name="DBScan result with everything in it.")
+            open_point_cloud_editor(pcd, False)
             return pcd
 
         if keep_only_labels:
@@ -111,7 +112,7 @@ def pointcloud_dbscan(
             filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
             filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
             if visualize_only_labels:
-                o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with only labels left")
+                open_point_cloud_editor(filtered_pcd, False)
             return filtered_pcd
 
         if keep_no_labels:
@@ -133,7 +134,7 @@ def pointcloud_dbscan(
             filtered_pcd.points = o3d.utility.Vector3dVector(filtered_points[:, :3])
             filtered_pcd.colors = o3d.utility.Vector3dVector(filtered_points[:, 3:6])
             if visualize_no_labels:
-                o3d.visualization.draw_geometries([filtered_pcd], left=0, top=45, window_name="DBScan result with no labels left")
+                open_point_cloud_editor(filtered_pcd, False)
             return filtered_pcd
 
         return pcd
