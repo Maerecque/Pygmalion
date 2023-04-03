@@ -43,8 +43,10 @@ def remove_noise_statistical(
 
         showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red.
             Defaults to False.
+
         nb_neighbors (int, optional): Number of neighbors around the target point.
             Defaults to 20.
+
         std_ratio (float, optional): Standard deviation ratio.
             Defaults to 2.0.
 
@@ -84,8 +86,10 @@ def remove_noise_radius(
 
         showRemovedPoints (bool, optional): Boolean to show an example with the removed points from the cloud marked in red.
             Defaults to False.
+
         nb_points (int, optional): Number of points within the radius.
             Defaults to 10.
+
         radius (float, optional): Radius of the sphere.
             Defaults to 0.1.
 
