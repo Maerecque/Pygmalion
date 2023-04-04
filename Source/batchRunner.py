@@ -299,10 +299,11 @@ if __name__ == "__main__":
         file_list_static_scans,
         voxel_size=0.025,
         dbscan_eps=0.03,
-        dbscan_min_sample=[10, 5],
+        dbscan_min_sample=10,
 
         dbscan_metric='chebyshev',
         dbscan_keep_only_labels=True,
+        dbscan_visualize_only_labels=True,
         dbscan_visualize_end_result=True,
         dbscan_algorithm='auto',
     )
