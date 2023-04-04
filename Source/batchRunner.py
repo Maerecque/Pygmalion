@@ -295,6 +295,22 @@ if __name__ == "__main__":
         head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - Cut.laz"
     ]
 
+    file_list_krommenieuwegracht_hand_scans = [
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/Krommenieuwegracht/121601-GeoSLAM-KrommeNieuwegracht - CUT.las"
+    ]
+
+    file_list_rigid_hand_scans = [
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/2022-12-16_16-16-30-utrecht-scan2_rigid_colour - CUT.laz"
+    ]
+
+    file_list_oud_kerkhof_hand_scans = [
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/OudKerkhof/121601-GeoSLAM-OudKerkhof5 - CUT.las"
+    ]
+
+    file_list_oud_tivoli_hand_scans = [
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/OudTivoli/121601-GeoSLAM-OudTivoli-5-Marc.laz"
+    ]
+
     batch_running(
         file_list_static_scans,
         voxel_size=0.025,
