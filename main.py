@@ -12,7 +12,8 @@ from Source.fileHandler import (
 from Source.pointCloudAltering import (  # noqa: F401
     grid_subsampling,
     remove_noise_radius,
-    remove_noise_statistical)
+    remove_noise_statistical,
+    combine_point_cloud)
 from Source.pointCloudEditor import open_point_cloud_editor
 
 
@@ -32,7 +33,7 @@ if __name__ == "__main__":
             metric="chebyshev"
         )
 
-        pcd_combined = pcd_cluster + remove_noise_statistical(pcd)
+        pcd_combined = combine_point_cloud(remove_noise_statistical(pcd, False), pcd_cluster)
         open_point_cloud_editor(pcd_combined)
 
     convert_ply_to_las(file_name)
