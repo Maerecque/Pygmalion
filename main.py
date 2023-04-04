@@ -22,14 +22,14 @@ if __name__ == "__main__":
     pcd = readout_LAS_file(file_name)
 
     if pcd is not None:
-        pcd = grid_subsampling(pcd, 0.05)
+        pcd = grid_subsampling(pcd, 0.025)
         pcd_stat = remove_noise_statistical(pcd, True)
         pcd_cluster = pointcloud_dbscan(
             pcd_stat,
-            eps=0.1,
-            min_samples=20,
-            keep_only_labels=True,
-            visualize_all=True,
+            eps=0.03,
+            min_samples=10,
+            keep_no_labels=True,
+            visualize_only_labels=True,
             metric="chebyshev"
         )
 
