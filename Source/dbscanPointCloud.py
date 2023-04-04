@@ -140,7 +140,7 @@ def pointcloud_dbscan(
         return pcd
 
     except MemoryError:
-        print("Yooo the code ran out of memory. No dbscan done 💀")
+        print("Yooo the code ran out of memory. No dbscan done 💀 \n Skill based issue if you ask me.")
 
     except Exception as err:
         print("The code ran into an unexpected error see below: \n")
