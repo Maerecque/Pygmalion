@@ -23,7 +23,7 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float =
     o3d.geometry.PointCloud.estimate_normals(downsampled_pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     downsampled_pcd.normalize_normals()
 
-    print(f'The point cloud has been resized after grid normalization from {len(pcd.points):,} to {len(downsampled_pcd.points):,}')
+    print('The point cloud has been resized after grid normalization from {} to {}'.format(len(pcd.points), len(downsampled_pcd.points)))
 
     return downsampled_pcd
 

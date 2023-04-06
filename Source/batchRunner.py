@@ -15,7 +15,7 @@ from pointCloudEditor import open_point_cloud_editor
 class emptyPointCloudError(Exception): pass
 
 
-def combination_maker(lst: list) -> list[tuple]:
+def combination_maker(lst) -> list:
     """A function to make all possible combination for the batch runner when multiple options are given.
 
     Args:
@@ -52,18 +52,18 @@ def print_combination(
         amount_of_points (int): Amount of points that were in the point cloud.
     """
     print("\n")
-    print(f"File: {item}")
-    print(f"Doing {method}")
+    print("File: {}".format(item))
+    print("Doing {}".format(method))
     print("The following settings will be ran:")
-    print(f"Voxel size:{voxel_size}")
-    print(f"NB_points:{combination[0]}")
-    print(f"Radius:{combination[1]}")
-    print(f"EPS:{combination[2]}")
-    print(f"Min_sample:{combination[3]}")
-    print(f"Metric:{combination[4]}")
-    print(f"Algorithm:{combination[5]}")
-    print(f"Leaf size:{combination[6]}")
-    print(f"Amount of points: {amount_of_points}")
+    print("Voxel size:{}".format(voxel_size))
+    print("NB_points:{}".format(combination[0]))
+    print("Radius:{}".format(combination[1]))
+    print("EPS:{}".format(combination[2]))
+    print("Min_sample:{}".format(combination[3]))
+    print("Metric:{}".format(combination[4]))
+    print("Algorithm:{}".format(combination[5]))
+    print("Leaf size:{}".format(combination[6]))
+    print("Amount of points: {}".format(amount_of_points))
 
 
 def batch_running(
@@ -71,16 +71,16 @@ def batch_running(
     do_radius: bool = False,
     do_statistical: bool = True,
     voxel_size: float = 0.05,
-    radius_nb_points: Union[int, list[int]] = 10,
-    radius_radius: Union[float, list[float]] = 0.1,
-    statistical_nb_neighbors: Union[int, list[int]] = 20,
-    statistical_std_ratio: Union[float, list[float]] = 2.0,
+    radius_nb_points: Union[int, list] = 10,
+    radius_radius: Union[float, list] = 0.1,
+    statistical_nb_neighbors: Union[int, list] = 20,
+    statistical_std_ratio: Union[float, list] = 2.0,
     visualize_noise: bool = False,
-    dbscan_eps: Union[float, list[float]] = 0.1,
-    dbscan_min_sample: Union[int, list[int]] = 20,
-    dbscan_metric: Union[str, list[str]] = 'euclidean',
-    dbscan_algorithm: Union[str, list[str]] = 'auto',
-    dbscan_leaf_size: Union[int, list[int]] = 30,
+    dbscan_eps: Union[float, list] = 0.1,
+    dbscan_min_sample: Union[int, list] = 20,
+    dbscan_metric: Union[str, list] = 'euclidean',
+    dbscan_algorithm: Union[str, list] = 'auto',
+    dbscan_leaf_size: Union[int, list] = 30,
     dbscan_keep_only_labels: bool = True,
     dbscan_visualize_only_labels: bool = False,
     dbscan_keep_no_labels: bool = False,
@@ -163,7 +163,7 @@ def batch_running(
         emptyPointCloudError: This error will be raised if the given point cloud is empty after noise removal.
     """
     print("Batch runner starting.")
-    print(f"{len(input_list)} files will be processed in this batch.")
+    print("{} files will be processed in this batch.".format(len(input_list)))
     for item in input_list:
         pcd = readout_LAS_file(item)
         pcd = grid_subsampling(pcd, voxel_size)
@@ -278,10 +278,10 @@ if __name__ == "__main__":
 
     file_list_hand_scans = [
         head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room1.las",
-        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room2.las",
-        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room3.las",
-        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room4.las",
-        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room2.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room3.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room4.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las",
         # head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4.laz"
     ]
 
@@ -312,7 +312,7 @@ if __name__ == "__main__":
     ]
 
     batch_running(
-        file_list_static_scans,
+        file_list_hand_scans,
         voxel_size=0.025,
         dbscan_eps=0.03,
         dbscan_min_sample=10,
