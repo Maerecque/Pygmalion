@@ -282,16 +282,16 @@ if __name__ == "__main__":
         head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room3.las",
         head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room4.las",
         head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4 - room5.las",
-        head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4.laz"
+        # head_folder + "/Werfkelderscans/Geomaat/Handscanner/GerritGeoSlam/121601-GeoSLAM-Gerrit-4.laz"
     ]
 
     file_list_static_scans = [
-        head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room1.las",
-        head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room2.las",
-        head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room3.las",
-        head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room4.las",
-        head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room5.las",
-        head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room6.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room1.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room2.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room3.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room4.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room5.las",
+        # head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - room6.las",
         head_folder + "/Werfkelderscans/Geomaat/Statisch/121602-Kelder van Gerrit 1 - Cut.laz"
     ]
 
@@ -299,12 +299,12 @@ if __name__ == "__main__":
         head_folder + "/Werfkelderscans/Geomaat/Handscanner/Krommenieuwegracht/121601-GeoSLAM-KrommeNieuwegracht - CUT.las"
     ]
 
-    file_list_rigid_hand_scans = [
-        head_folder + "/Werfkelderscans/Geomaat/Handscanner/2022-12-16_16-16-30-utrecht-scan2_rigid_colour - CUT.laz"
-    ]
-
     file_list_oud_kerkhof_hand_scans = [
         head_folder + "/Werfkelderscans/Geomaat/Handscanner/OudKerkhof/121601-GeoSLAM-OudKerkhof5 - CUT.las"
+    ]
+
+    file_list_rigid_hand_scans = [
+        head_folder + "/Werfkelderscans/Geomaat/Handscanner/2022-12-16_16-16-30-utrecht-scan2_rigid_colour - CUT.laz"
     ]
 
     file_list_oud_tivoli_hand_scans = [
@@ -321,5 +321,6 @@ if __name__ == "__main__":
         dbscan_keep_only_labels=True,
         dbscan_visualize_only_labels=True,
         dbscan_visualize_end_result=True,
-        dbscan_algorithm='auto',
+        # dbscan_algorithm=['auto','ball_tree','kd_tree'],
+        dbscan_algorithm='auto'
     )
