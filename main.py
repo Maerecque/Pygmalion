@@ -15,6 +15,10 @@ from Source.pointCloudAltering import (  # noqa: F401
     remove_noise_statistical,
     combine_point_cloud)
 from Source.pointCloudEditor import open_point_cloud_editor
+from Source.shape_utils import (  # noqa: F401
+    find_alpha_shapes,
+    find_outside_pointcloud,
+    keep_points_in_view)
 
 
 if __name__ == "__main__":
@@ -34,6 +38,7 @@ if __name__ == "__main__":
         )
 
         pcd_combined = combine_point_cloud(remove_noise_statistical(pcd, False, print_removal_amount=False), pcd_cluster)
+
         open_point_cloud_editor(pcd_combined)
 
     convert_ply_to_las(file_name)
