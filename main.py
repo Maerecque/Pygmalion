@@ -33,7 +33,7 @@ if __name__ == "__main__":
             metric="chebyshev"
         )
 
-        pcd_combined = combine_point_cloud(remove_noise_statistical(pcd, False), pcd_cluster)
+        pcd_combined = combine_point_cloud(remove_noise_statistical(pcd, False, print_removal_amount=False), pcd_cluster)
         open_point_cloud_editor(pcd_combined)
 
     convert_ply_to_las(file_name)

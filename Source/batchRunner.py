@@ -258,7 +258,8 @@ def batch_running(
                                     pcd,
                                     visualize_noise,
                                     nb_neighbors=combination[0],
-                                    std_ratio=combination[1]
+                                    std_ratio=combination[1],
+                                    print_removal_amount=False
                                 ),
                                 pcd_cluster
                             )

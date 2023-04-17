@@ -32,7 +32,8 @@ def remove_noise_statistical(
     inputPointCloud: o3d.cpu.pybind.geometry.PointCloud,
     showRemovedPoints: bool = False,
     nb_neighbors: int = 20,
-    std_ratio: float = 2.0
+    std_ratio: float = 2.0,
+    print_removal_amount: bool = True,
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to remove noise from a point cloud. This removes points that are further away from their neighbors in average.
     !!! This function is still an experimental feature. !!!
@@ -50,6 +51,10 @@ def remove_noise_statistical(
         std_ratio (float, optional): Standard deviation ratio.
             Defaults to 2.0.
 
+        print_removal_amount (bool, optional):
+            Boolean to print the amount of points that were removed.
+            Defaults to True.
+
     Returns:
         open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
     """
@@ -62,7 +67,7 @@ def remove_noise_statistical(
     if len(inputPointCloud.points) == len(cl.points):
         amount_removed_points = f"All the ({len(cl.points)})"
 
-    print(str(amount_removed_points) + " points were removed as outliers.")
+    if print_removal_amount: print(str(amount_removed_points) + " points were removed as outliers.")
 
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
