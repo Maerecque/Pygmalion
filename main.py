@@ -22,6 +22,9 @@ from Source.shape_utils import (  # noqa: F401
 
 
 if __name__ == "__main__":
+    print("Starting DBScan module")
+    term_size = os.get_terminal_size()
+    print(u'\u2500' * term_size.columns)
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
     pcd = readout_LAS_file(file_name)
 
@@ -40,5 +43,9 @@ if __name__ == "__main__":
         pcd_combined = combine_point_cloud(remove_noise_statistical(pcd, False, print_removal_amount=False), pcd_cluster)
 
         open_point_cloud_editor(pcd_combined)
+
+    print("\n")
+    print("Starting PLY module")
+    print(u'\u2500' * term_size.columns)
 
     convert_ply_to_las(file_name)
