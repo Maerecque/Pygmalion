@@ -19,15 +19,22 @@ from Source.shape_utils import (  # noqa: F401
     find_alpha_shapes,
     find_outside_pointcloud,
     keep_points_in_view,
-    detect_planar_patches)
+    detect_planar_patches,
+    segment_plane)
 
 
 if __name__ == "__main__":
     print("Starting DBScan module")
+
+    # Print a nice line over the width of the terminal
     term_size = os.get_terminal_size()
     print(u'\u2500' * term_size.columns)
+
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
     pcd = readout_LAS_file(file_name)
+
+    # Yeah I know this value is not used, but I'll get to it later
+    plane_from_pcd = segment_plane(pcd)  # noqa: E303
 
     if pcd is not None:
         pcd = grid_subsampling(pcd, 0.05)
@@ -48,6 +55,8 @@ if __name__ == "__main__":
     # When the point cloud alterations are done, the point cloud is saved as a PLY file or no LAS file is given, this part will start.
     print("\n")
     print("Starting PLY module")
+
+    # Print a nice line over the width of the terminal
     print(u'\u2500' * term_size.columns)
 
     convert_ply_to_las(file_name)
