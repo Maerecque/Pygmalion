@@ -29,6 +29,8 @@ def find_alpha_shapes(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cp
 def find_outside_pointcloud(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to find the points that are outside the convex hull of a point cloud.
     !!DOES NOT WORK AS INTENDED!!
+    With does not work as intended I meant: It works, but the shape of the convex hull is too basic, so it doesn't work for complex shapes
+    *(which are the scans we use for this)* 🤡
 
     Args:
         point_cloud (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be processed.
@@ -37,7 +39,7 @@ def find_outside_pointcloud(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> 
         o3d.cpu.pybind.geometry.PointCloud: The points that are outside the convex hull of the point cloud.
     """
     # Compute the convex hull of the point cloud
-    hull, _ = point_cloud.compute_convex_hull()
+    hull, _ = point_cloud.compute_convex_hull(joggle_inputs=True)  # Joggle_inputs doesn't seem to do anything...
 
     # Get the vertices of the convex hull
     hull_vertices = hull.vertices
@@ -97,3 +99,27 @@ def keep_points_in_view(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.
 
     pcd = point_cloud.select_by_index(pt_map)
     o3d.visualization.draw_geometries([pcd])
+
+
+def detect_planar_patches(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
+    # Estimate normals for the point cloud
+    point_cloud.estimate_normals()
+
+    # Define the distance threshold for plane segmentation
+    distance_threshold = 0.01
+
+    # Define the minimum number of points required for a plane
+    min_inliers = 1000
+
+    # My brother in christ, I will just call on this to find out what I can do with this function
+    help(o3d.cpu.pybind.geometry.PointCloud)
+
+    # Use RANSAC to segment the point cloud into planes
+    # Planar patches exists in documentation online, but not in the help function or in the source code.
+    planes = o3d.geometry.PointCloud.detect_planar_patches(point_cloud, distance_threshold, min_inliers)
+
+    # Print the number of planes found
+    print(f"Found {len(planes)} planes")
+
+    # Visualize the point cloud with the segmented planes
+    o3d.visualization.draw_geometries([point_cloud, *planes])
