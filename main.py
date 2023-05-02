@@ -18,7 +18,8 @@ from Source.pointCloudEditor import open_point_cloud_editor
 from Source.shape_utils import (  # noqa: F401
     find_alpha_shapes,
     find_outside_pointcloud,
-    keep_points_in_view)
+    keep_points_in_view,
+    detect_planar_patches)
 
 
 if __name__ == "__main__":
@@ -29,21 +30,22 @@ if __name__ == "__main__":
     pcd = readout_LAS_file(file_name)
 
     if pcd is not None:
-        pcd = grid_subsampling(pcd, 0.025)
+        pcd = grid_subsampling(pcd, 0.05)
         pcd_stat = remove_noise_statistical(pcd, True)
         pcd_cluster = pointcloud_dbscan(
             pcd_stat,
-            eps=0.03,
-            min_samples=10,
+            eps=0.1,
+            min_samples=20,
             keep_no_labels=True,
             visualize_only_labels=True,
-            metric="chebyshev"
+            metric="cityblock"
         )
 
         pcd_combined = combine_point_cloud(remove_noise_statistical(pcd, False, print_removal_amount=False), pcd_cluster)
 
         open_point_cloud_editor(pcd_combined)
 
+    # When the point cloud alterations are done, the point cloud is saved as a PLY file or no LAS file is given, this part will start.
     print("\n")
     print("Starting PLY module")
     print(u'\u2500' * term_size.columns)
