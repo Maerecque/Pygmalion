@@ -1,5 +1,6 @@
 import open3d as o3d
 import numpy as np
+import copy
 
 
 def merge_pcd(pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
@@ -121,25 +122,27 @@ def expand_plane(
 
     while True:
         # Segment the point cloud into a plane and the leftover points
-        plane_pcd, leftover_pcd = segment_plane(pcd, distance_threshold, ransac_n, num_iterations)
+        plane_pcd, leftover_pcd = segment_plane(pcd, False, False, distance_threshold, ransac_n, num_iterations)
 
         # Save the current plane equation as the new previous plane
         previous_plane = current_plane
         # Save the new plane equation as the current plane
         current_plane = plane_pcd
 
-        # Color the new found plane red
-        coloured_plane_pcd = plane_pcd.paint_uniform_color([1.0, 0, 0])
+        # Copy and color the new found plane red
+        copy_plane_pcd = copy.deepcopy(plane_pcd)
+        coloured_plane_pcd = copy_plane_pcd.paint_uniform_color([1.0, 0, 0])
         visualize_list = [coloured_plane_pcd, leftover_pcd]
 
         # If there is a previous plane, color it green and add it to the list of point clouds to visualize
         if previous_plane is not None:
-            coloured_previous_plane = previous_plane.paint_uniform_color([0, 1.0, 0])
+            copy_previous_plane = copy.deepcopy(previous_plane)
+            coloured_previous_plane = copy_previous_plane.paint_uniform_color([0, 1.0, 0])
             # Add the previous plane to the list of point clouds to visualize
             visualize_list.append(coloured_previous_plane)
 
         # Visualize the current plane with inlier points
-        o3d.visualization.draw_geometries(visualize_list)
+        o3d.visualization.draw_geometries(visualize_list, left=0, top=45)
 
         # Ask the user for input on whether to expand the plane or stop and return the current plane
         user_input = input("Enter 'e' to expand the plane, 'u' to undo the last expansion, 'p' to export the previous plane or any other key to accept the current plane: ")  # noqa: E501
@@ -155,6 +158,10 @@ def expand_plane(
         elif user_input == "p":
             # Keep the previous plane and return it as the output
             return previous_plane
+        elif user_input == "r":
+            # Retry and find a new plane
+            current_plane = previous_plane
+            pcd = leftover_pcd
         else:
             # Accept the current plane and return it as the output
-            return current_plane
+            return merge_pcd(current_plane, previous_plane)
