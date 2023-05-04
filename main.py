@@ -15,12 +15,7 @@ from Source.pointCloudAltering import (  # noqa: F401
     remove_noise_statistical,
     combine_point_cloud)
 from Source.pointCloudEditor import open_point_cloud_editor
-from Source.shape_utils import (  # noqa: F401
-    find_alpha_shapes,
-    find_outside_pointcloud,
-    keep_points_in_view,
-    detect_planar_patches,
-    segment_plane)
+from Source.shape_utils import expand_plane
 
 
 if __name__ == "__main__":
@@ -30,8 +25,9 @@ if __name__ == "__main__":
     term_size = os.get_terminal_size()
     print(u'\u2500' * term_size.columns)
 
-    file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
-    pcd = readout_LAS_file(file_name)
+    # Yeees, my genius is sometimes frightening.
+    plane_from_pcd = expand_plane(pcd)
+    open_point_cloud_editor(plane_from_pcd)
 
     # Yeah I know this value is not used, but I'll get to it later
     plane_from_pcd = segment_plane(pcd)  # noqa: E303
