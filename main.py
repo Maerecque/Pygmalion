@@ -19,7 +19,10 @@ from Source.shape_utils import expand_plane
 
 
 if __name__ == "__main__":
-    print("Starting DBScan module")
+    file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
+    pcd = readout_LAS_file(file_name)
+
+    print("\n Starting DBScan module")
 
     # Print a nice line over the width of the terminal
     term_size = os.get_terminal_size()
