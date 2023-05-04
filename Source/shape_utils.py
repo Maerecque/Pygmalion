@@ -5,6 +5,7 @@ import numpy as np
 def find_alpha_shapes(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.TriangleMesh:
     """A function to find the alpha shapes of a point cloud.
     DON'T WORK :(
+    If it don't work then why it here?!
 
     Args:
         point_cloud (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be processed.
@@ -31,6 +32,7 @@ def find_outside_pointcloud(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> 
     !!DOES NOT WORK AS INTENDED!!
     With does not work as intended I meant: It works, but the shape of the convex hull is too basic, so it doesn't work for complex shapes
     *(which are the scans we use for this)* 🤡
+    So again if it don't work then why it here?!
 
     Args:
         point_cloud (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be processed.
@@ -68,6 +70,7 @@ def find_outside_pointcloud(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> 
 def keep_points_in_view(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
     """_summary_
     I still don't know how to get this function to work.
+    For the last time, if it don't work then why it here?! 🤡
 
     Args:
         point_cloud (o3d.cpu.pybind.geometry.PointCloud): _description_
