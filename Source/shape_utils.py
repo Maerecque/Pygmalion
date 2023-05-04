@@ -133,6 +133,9 @@ def keep_points_in_view(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.
 
 
 def detect_planar_patches(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
+    # I uhh don't know what this is or why it's here, but I'm not gonna delete it because I might need it later.
+    # **** Man I'm so tired of this, my onsetting alzheimers is really messing this up****
+
     # Estimate normals for the point cloud
     point_cloud.estimate_normals()
 
