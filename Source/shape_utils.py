@@ -90,9 +90,6 @@ def segment_plane(
 
 
 def expand_plane(point_cloud: o3d.cpu.pybind.geometry.PointCloud):
-    # A function that will take a point cloud and allow the user to extract a plane from it.
-    # By user-input the user can decide to expand the plane with the segment_plane function or to stop and return the plane that was last accepted.
-    # The user can also decide to undo the last expansion and return to the previous plane.
     """
     Extracts a plane from a point cloud based on user input.
 
