@@ -89,15 +89,29 @@ def segment_plane(
     return extracted_points, not_extracted_points
 
 
-def expand_plane(point_cloud: o3d.cpu.pybind.geometry.PointCloud):
+def expand_plane(
+    point_cloud: o3d.cpu.pybind.geometry.PointCloud,
+    distance_threshold: float = 0.01,
+    ransac_n: int = 3,
+    num_iterations: int = 10000
+) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     Extracts a plane from a point cloud based on user input.
 
     Args:
         pcd (open3d.geometry.PointCloud): The point cloud to extract the plane from.
 
+        distance_threshold (float, optional): The maximum distance a point can be from the plane to be considered an inlier.
+            Defaults to 0.01.
+
+        ransac_n (int, optional): The number of points to sample for each iteration of RANSAC.
+            Defaults to 3.
+
+        num_iterations (int, optional): The number of iterations to run RANSAC.
+            Defaults to 10000.
+
     Returns:
-        open3d.geometry.PlaneEquation: The extracted plane equation.
+        open3d.geometry.PointCloud: The extracted plane equation.
     """
     pcd = point_cloud
 
@@ -107,7 +121,7 @@ def expand_plane(point_cloud: o3d.cpu.pybind.geometry.PointCloud):
 
     while True:
         # Segment the point cloud into a plane and the leftover points
-        plane_pcd, leftover_pcd = segment_plane(pcd)
+        plane_pcd, leftover_pcd = segment_plane(pcd, distance_threshold, ransac_n, num_iterations)
 
         # Save the current plane equation as the new previous plane
         previous_plane = current_plane
