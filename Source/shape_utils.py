@@ -2,18 +2,32 @@ import open3d as o3d
 import numpy as np
 
 
-def extract_and_not_extracted_points(point_cloud: o3d.cpu.pybind.geometry.PointCloud, inliers: list) -> list:
-    """Make a list of the extracted points and a list of the not extracted points.
+def merge_pcd(pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
+    """Function to merge two point clouds into one.
+    Past me: Idea to use a list of point clouds and then merge them all at once using some sort of loop.
 
     Args:
-        point_cloud (open3d.cpu.pybind.geometry.PointCloud): Point cloud to be processed.
-        inliers (list): List index points of the inliers from the point cloud.
+        pcd1 (o3d.cpu.pybind.geometry.PointCloud): Point cloud 1.
+        pcd2 (o3d.cpu.pybind.geometry.PointCloud): Point cloud 2.
 
     Returns:
-        list: List of the extracted points.
-        list: List of the not extracted points.
+        o3d.cpu.pybind.geometry.PointCloud: Point cloud 1 and 2 merged into one.
     """
-    return [point_cloud.points[index] for index in inliers], [point_cloud.points[index] for index in range(len(point_cloud.points)) if index not in inliers]  # noqa: E501
+    # Merge the points of the two point clouds
+    p1_load = np.asarray(pcd1.points)
+    p2_load = np.asarray(pcd2.points)
+    p3_load = np.concatenate((p1_load, p2_load), axis=0)
+
+    # The colours of the points are also merged below
+    p1_color = np.asarray(pcd1.colors)
+    p2_color = np.asarray(pcd2.colors)
+    p3_color = np.concatenate((p1_color, p2_color), axis=0)
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(p3_load)
+    pcd.colors = o3d.utility.Vector3dVector(p3_color)
+
+    return pcd
 
 
 def find_alpha_shapes(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.TriangleMesh:
