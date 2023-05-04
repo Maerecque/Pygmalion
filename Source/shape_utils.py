@@ -2,6 +2,9 @@ import open3d as o3d
 import numpy as np
 import copy
 
+# Set the verbosity level of Open3D to only print severe errors
+o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
+
 
 def merge_pcd(pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
     """Function to merge two point clouds into one.
@@ -98,6 +101,7 @@ def expand_plane(
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     Extracts a plane from a point cloud based on user input.
+    Note: This function is kind of slow with large point clouds, but it works.
 
     Args:
         pcd (open3d.geometry.PointCloud): The point cloud to extract the plane from.
@@ -152,16 +156,23 @@ def expand_plane(
             if previous_plane is not None:
                 # If there is a previous plane, add it to the current plane
                 current_plane = merge_pcd(current_plane, previous_plane)
+
+        # Maybe this is redundant, but I'm gonna keep it in here for now
         elif user_input == "u":
             # Undo the last expansion by restoring the previous plane and point cloud
             current_plane = previous_plane
+
         elif user_input == "p":
             # Keep the previous plane and return it as the output
             return previous_plane
+
         elif user_input == "r":
             # Retry and find a new plane
             current_plane = previous_plane
             pcd = leftover_pcd
+
         else:
             # Accept the current plane and return it as the output
-            return merge_pcd(current_plane, previous_plane)
+            if previous_plane is not None:
+                return merge_pcd(current_plane, previous_plane)
+            return current_plane
