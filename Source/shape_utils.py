@@ -197,38 +197,79 @@ def segment_plane(
         num_iterations=num_iterations
     )
 
-    extracted_points = []
-    not_extracted_points = []
+    extracted_points = point_cloud.select_by_index(inliers)
+    not_extracted_points = point_cloud.select_by_index(inliers, invert=True)
 
-    # Extract the inliers from the point cloud and add them to the extracted points list
-    # Also add the outliers to the not extracted points list
-    extracted_points, not_extracted_points = extract_and_not_extracted_points(point_cloud, inliers)
-
-    # extracted_points = [point_cloud.points[index] for index in inliers]
-    # not_extracted_points = [point_cloud.points[index] for index in range(len(point_cloud.points)) if index not in inliers]
-
-    print(f"Extracted a plane with {len(extracted_points)} points from the point cloud")
-    print(f"Kept {len(not_extracted_points)} points in the point cloud")
-
-    # Create a new point cloud from the extracted plane points
-    extracted_plane_pcd = o3d.geometry.PointCloud()
-    extracted_plane_pcd.points = o3d.utility.Vector3dVector(extracted_points)
-
-    # Create a new point cloud from the points that were not extracted (just the leftover points of the original point cloud)
-    not_extracted_points_pcd = o3d.geometry.PointCloud()
-    not_extracted_points_pcd.points = o3d.utility.Vector3dVector(not_extracted_points)
+    print(f"Extracted a plane with {len(extracted_points.points)} points from the point cloud")
+    print(f"Kept {len(not_extracted_points.points)} points in the point cloud")
 
     if visualize_plane:
         # Visualize the extracted plane
-        o3d.visualization.draw_geometries([extracted_plane_pcd])
+        o3d.visualization.draw_geometries([extracted_points])
 
     if visualize_leftovers:
         # Visualize the leftover points
-        o3d.visualization.draw_geometries([not_extracted_points_pcd])
+        o3d.visualization.draw_geometries([not_extracted_points])
 
     # Return the extracted plane and the leftover points
-    return extracted_plane_pcd, not_extracted_points_pcd
+    return extracted_points, not_extracted_points
 
 
+def expand_plane(point_cloud: o3d.cpu.pybind.geometry.PointCloud):
+    # A function that will take a point cloud and allow the user to extract a plane from it.
+    # By user-input the user can decide to expand the plane with the segment_plane function or to stop and return the plane that was last accepted.
+    # The user can also decide to undo the last expansion and return to the previous plane.
+    """
+    Extracts a plane from a point cloud based on user input.
 
-    return extracted_pcd
+    Args:
+        pcd (open3d.geometry.PointCloud): The point cloud to extract the plane from.
+
+    Returns:
+        open3d.geometry.PlaneEquation: The extracted plane equation.
+    """
+    pcd = point_cloud
+
+    # Initialize variables
+    current_plane = None
+    previous_plane = None
+
+    while True:
+        # Segment the point cloud into a plane and the leftover points
+        plane_pcd, leftover_pcd = segment_plane(pcd)
+
+        # Save the current plane equation as the new previous plane
+        previous_plane = current_plane
+        # Save the new plane equation as the current plane
+        current_plane = plane_pcd
+
+        # Color the new found plane red
+        coloured_plane_pcd = plane_pcd.paint_uniform_color([1.0, 0, 0])
+        visualize_list = [coloured_plane_pcd, leftover_pcd]
+
+        # If there is a previous plane, color it green and add it to the list of point clouds to visualize
+        if previous_plane is not None:
+            coloured_previous_plane = previous_plane.paint_uniform_color([0, 1.0, 0])
+            # Add the previous plane to the list of point clouds to visualize
+            visualize_list.append(coloured_previous_plane)
+
+        # Visualize the current plane with inlier points
+        o3d.visualization.draw_geometries(visualize_list)
+
+        # Ask the user for input on whether to expand the plane or stop and return the current plane
+        user_input = input("Enter 'e' to expand the plane, 'u' to undo the last expansion, 'p' to export the previous plane or any other key to accept the current plane: ")  # noqa: E501
+        if user_input == "e":
+            # Expand the plane by removing inliers from the point cloud
+            pcd = leftover_pcd
+            if previous_plane is not None:
+                # If there is a previous plane, add it to the current plane
+                current_plane = merge_pcd(current_plane, previous_plane)
+        elif user_input == "u":
+            # Undo the last expansion by restoring the previous plane and point cloud
+            current_plane = previous_plane
+        elif user_input == "p":
+            # Keep the previous plane and return it as the output
+            return previous_plane
+        else:
+            # Accept the current plane and return it as the output
+            return current_plane
