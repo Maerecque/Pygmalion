@@ -2,6 +2,20 @@ import open3d as o3d
 import numpy as np
 
 
+def extract_and_not_extracted_points(point_cloud: o3d.cpu.pybind.geometry.PointCloud, inliers: list) -> list:
+    """Make a list of the extracted points and a list of the not extracted points.
+
+    Args:
+        point_cloud (open3d.cpu.pybind.geometry.PointCloud): Point cloud to be processed.
+        inliers (list): List index points of the inliers from the point cloud.
+
+    Returns:
+        list: List of the extracted points.
+        list: List of the not extracted points.
+    """
+    return [point_cloud.points[index] for index in inliers], [point_cloud.points[index] for index in range(len(point_cloud.points)) if index not in inliers]  # noqa: E501
+
+
 def find_alpha_shapes(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.TriangleMesh:
     """A function to find the alpha shapes of a point cloud.
     DON'T WORK :(
@@ -131,6 +145,10 @@ def detect_planar_patches(point_cloud: o3d.cpu.pybind.geometry.PointCloud) -> o3
 def segment_plane(
     point_cloud: o3d.cpu.pybind.geometry.PointCloud,
     visualize_plane: bool = False,
+    visualize_leftovers: bool = False,
+    distance_threshold: float = 0.01,
+    ransac_n: int = 3,
+    num_iterations: int = 10000,
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to extract a plane from a point cloud.
     Eyo this actually works, I'm so happy with this. I'm gonna use this for the next step in the pipeline.
@@ -138,16 +156,26 @@ def segment_plane(
 
     Args:
         point_cloud (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be processed.
-        visualize_plane (bool, optional): A boolean to determine whether or not to visualize the extracted plane. Defaults to False.
+
+        visualize_plane (bool, optional): A boolean to determine whether or not to visualize the extracted plane.
+            Defaults to False.
+
+        visualize_leftovers (bool, optional): A boolean to determine whether or not to visualize the points that are not in the extracted plane.
+            Defaults to False.
+
+        distance_threshold (float, optional): The maximum distance a point can be from the plane to be considered an inlier.
+            Defaults to 0.01.
+
+        ransac_n (int, optional): The number of points to sample for each iteration of RANSAC.
+            Defaults to 3.
+
+        num_iterations (int, optional): The number of iterations to run RANSAC.
+            Defaults to 10000.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: The extracted plane in point cloud format.
+        o3d.cpu.pybind.geometry.PointCloud: The points that are not in the extracted plane.
     """
-    # Define the parameters for plane segmentation
-    distance_threshold = 0.01
-    ransac_n = 3
-    num_iterations = 10000
-
     # Use RANSAC to segment the point cloud into planes
     plane_model, inliers = point_cloud.segment_plane(
         distance_threshold=distance_threshold,
@@ -155,17 +183,38 @@ def segment_plane(
         num_iterations=num_iterations
     )
 
-    # Extract the points at the specified indices in a for loop
     extracted_points = []
-    for index in inliers:
-        extracted_points.append(point_cloud.points[index])
+    not_extracted_points = []
 
-    # Create a new point cloud from the extracted points
-    extracted_pcd = o3d.geometry.PointCloud()
-    extracted_pcd.points = o3d.utility.Vector3dVector(extracted_points)
+    # Extract the inliers from the point cloud and add them to the extracted points list
+    # Also add the outliers to the not extracted points list
+    extracted_points, not_extracted_points = extract_and_not_extracted_points(point_cloud, inliers)
+
+    # extracted_points = [point_cloud.points[index] for index in inliers]
+    # not_extracted_points = [point_cloud.points[index] for index in range(len(point_cloud.points)) if index not in inliers]
+
+    print(f"Extracted a plane with {len(extracted_points)} points from the point cloud")
+    print(f"Kept {len(not_extracted_points)} points in the point cloud")
+
+    # Create a new point cloud from the extracted plane points
+    extracted_plane_pcd = o3d.geometry.PointCloud()
+    extracted_plane_pcd.points = o3d.utility.Vector3dVector(extracted_points)
+
+    # Create a new point cloud from the points that were not extracted (just the leftover points of the original point cloud)
+    not_extracted_points_pcd = o3d.geometry.PointCloud()
+    not_extracted_points_pcd.points = o3d.utility.Vector3dVector(not_extracted_points)
 
     if visualize_plane:
         # Visualize the extracted plane
-        o3d.visualization.draw_geometries([extracted_pcd])
+        o3d.visualization.draw_geometries([extracted_plane_pcd])
+
+    if visualize_leftovers:
+        # Visualize the leftover points
+        o3d.visualization.draw_geometries([not_extracted_points_pcd])
+
+    # Return the extracted plane and the leftover points
+    return extracted_plane_pcd, not_extracted_points_pcd
+
+
 
     return extracted_pcd
