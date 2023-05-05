@@ -15,7 +15,7 @@ from Source.pointCloudAltering import (  # noqa: F401
     remove_noise_statistical,
     combine_point_cloud)
 from Source.pointCloudEditor import open_point_cloud_editor
-from Source.shape_utils import expand_plane
+from Source.shape_utils import expand_plane, create_alpha_shape
 
 
 if __name__ == "__main__":
@@ -47,6 +47,8 @@ if __name__ == "__main__":
         # Yeees, my genius is sometimes frightening.
         plane_from_pcd = expand_plane(pcd)
         open_point_cloud_editor(plane_from_pcd)
+
+        create_alpha_shape(pcd, visualize=True)
 
 
     # ____________________________ PLY MODULE ____________________________ # noqa: E303
