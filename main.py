@@ -48,7 +48,8 @@ if __name__ == "__main__":
         plane_from_pcd = expand_plane(pcd)
         open_point_cloud_editor(plane_from_pcd)
 
-        create_alpha_shape(pcd, visualize=True)
+        # With these parameters, just try higher NN and depth and lower quantile value (and maybe scale)
+        create_alpha_shape(pcd, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
 
 
     # ____________________________ PLY MODULE ____________________________ # noqa: E303
