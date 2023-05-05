@@ -18,13 +18,6 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float =
     """
     # Downsample the point cloud to a regular grid using voxel_down_sample
     downsampled_pcd = pcd.voxel_down_sample(voxelSize)
-
-    # Normalize the point cloud using normalize_normals
-    # So fun-fact, I only found out after starting to work on room completion what the 2 lines below do and what affect the parameters have.
-    # Basicly, this part of the code was to my (future) knowledge not needed in this function.
-    o3d.geometry.PointCloud.estimate_normals(downsampled_pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-    downsampled_pcd.normalize_normals()
-
     print(f'The point cloud has been resized after grid normalization from {len(pcd.points):,} to {len(downsampled_pcd.points):,}')
 
     return downsampled_pcd
