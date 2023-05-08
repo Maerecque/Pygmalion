@@ -15,7 +15,7 @@ from Source.pointCloudAltering import (  # noqa: F401
     remove_noise_statistical,
     combine_point_cloud)
 from Source.pointCloudEditor import open_point_cloud_editor
-from Source.shape_utils import expand_plane, create_alpha_shape
+from Source.shape_utils import find_plane_module, repair_point_cloud_module
 
 
 if __name__ == "__main__":
@@ -45,11 +45,11 @@ if __name__ == "__main__":
         open_point_cloud_editor(pcd_combined)
 
         # Yeees, my genius is sometimes frightening.
-        plane_from_pcd = expand_plane(pcd)
+        plane_from_pcd = find_plane_module(pcd)
         open_point_cloud_editor(plane_from_pcd)
 
         # With these parameters, just try higher NN and depth and lower quantile value (and maybe scale)
-        create_alpha_shape(pcd, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
+        repair_point_cloud_module(pcd, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
 
 
     # ____________________________ PLY MODULE ____________________________ # noqa: E303

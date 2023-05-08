@@ -93,7 +93,7 @@ def segment_plane(
     return extracted_points, not_extracted_points
 
 
-def expand_plane(
+def find_plane_module(
     point_cloud: o3d.cpu.pybind.geometry.PointCloud,
     distance_threshold: float = 0.01,
     ransac_n: int = 3,
@@ -178,7 +178,7 @@ def expand_plane(
             return current_plane
 
 
-def create_alpha_shape(
+def repair_point_cloud_module(
     input_point_cloud: o3d.cpu.pybind.geometry.PointCloud,
     kdtree_radius: float = 0.1,
     kdtree_max_nn: int = 30,
