@@ -149,7 +149,7 @@ def find_plane_module(
         o3d.visualization.draw_geometries(visualize_list, left=0, top=45)
 
         # Ask the user for input on whether to expand the plane or stop and return the current plane
-        user_input = input("Enter 'e' to expand the plane, 'u' to undo the last expansion, 'p' to export the previous plane or any other key to accept the current plane: ")  # noqa: E501
+        user_input = input("Enter 'e' to expand the plane, 'u' to undo the last expansion, 'p' to export the previous plane, 'r' to skip the current plane and find a new one or any other key to accept the current plane: ")  # noqa: E501
         if user_input == "e":
             # Expand the plane by removing inliers from the point cloud
             pcd = leftover_pcd
@@ -234,3 +234,26 @@ def repair_point_cloud_module(
         o3d.visualization.draw_geometries([mesh, input_point_cloud], mesh_show_back_face=True, left=0, top=45)
 
     return mesh
+
+
+def transform_mesh_to_pcd(
+    mesh: o3d.cpu.pybind.geometry.TriangleMesh,
+    original_pcd: o3d.cpu.pybind.geometry.PointCloud
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function that will transform a mesh to a point cloud.
+
+    Args:
+        mesh (o3d.cpu.pybind.geometry.TriangleMesh): The mesh to transform.
+        original_pcd (o3d.cpu.pybind.geometry.PointCloud): The original point cloud that the mesh was generated from.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: The transformed point cloud.
+    """
+    # calculate overall density of the point cloud
+    original_point_mahalanobis_distance = o3d.geometry.PointCloud.compute_mahalanobis_distance(original_pcd)
+    density = len(original_pcd.points) / np.sum(original_point_mahalanobis_distance)
+
+    # Calculate roughly how many points the mesh will add compared to the original point cloud
+    mesh_to_pcd = mesh.sample_points_uniformly(int(len(original_pcd.points) * density))
+
+    return mesh_to_pcd
