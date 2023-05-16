@@ -179,8 +179,7 @@ def ransac_plane_finder(
         return su.merge_pcd(current_plane, previous_plane)
 
     if current_plane is not None:
-        # return current_plane
-        current_plane
+        return current_plane
 
     return None
 
