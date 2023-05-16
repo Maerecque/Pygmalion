@@ -64,6 +64,8 @@ def remove_noise_statistical(
 
     if print_removal_amount: print(str(amount_removed_points) + " points were removed as outliers.")
 
+    # So there is a bug with this if statement.
+    # For some unknown reason, the outlier_cloud will not be coloured red. This wil happen randomly with the same settings in the same point cloud.
     if showRemovedPoints:
         outlier_cloud = inputPointCloud.select_by_index(ind, invert=True)
         outlier_cloud.paint_uniform_color([1, 0, 0])
