@@ -98,7 +98,7 @@ def segment_plane(
     return extracted_points, not_extracted_points
 
 
-def find_plane_module(
+def find_plane_module_manual(
     point_cloud: o3d.cpu.pybind.geometry.PointCloud,
     distance_threshold: float = 0.01,
     ransac_n: int = 3,
