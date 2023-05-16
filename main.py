@@ -9,13 +9,17 @@ from Source.fileHandler import (
     convert_ply_to_las,
     get_file_path,
     readout_LAS_file)
-from Source.pointCloudAltering import (  # noqa: F401
+from Source.pointCloudAltering import (
     grid_subsampling,
     remove_noise_radius,
     remove_noise_statistical,
     combine_point_cloud)
 from Source.pointCloudEditor import open_point_cloud_editor
-from Source.shape_utils import find_plane_module, repair_point_cloud_module
+from Source.shape_utils import (
+    find_plane_module_manual,
+    repair_point_cloud_module,
+    transform_mesh_to_pcd)
+import Source.zigZagRansac as zzr
 
 
 if __name__ == "__main__":
@@ -29,8 +33,21 @@ if __name__ == "__main__":
     print(u'\u2500' * term_size.columns)
 
     if pcd is not None:
-        pcd = grid_subsampling(pcd, 0.05)
+        # Downsample the point cloud.
+        pcd = grid_subsampling(pcd, 0.025)
+        open_point_cloud_editor(pcd)
+
+        # Remove noise from the point cloud
         pcd_stat = remove_noise_statistical(pcd, True)
+
+        # Divide the pointcloud into a 3d grid
+        grid = zzr.divide_pointcloud_into_grid(pcd_stat, 1, 0)
+
+        plane_pointcloud = zzr.walk_through_grid(pcd_stat, grid, 250, 500)
+
+        open_point_cloud_editor(plane_pointcloud, False)
+
+
         # # Make a DBScan cluster of the point cloud.
         # pcd_cluster = pointcloud_dbscan(
         #     pcd_stat,
