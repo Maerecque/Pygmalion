@@ -41,6 +41,7 @@ def segment_plane(
     distance_threshold: float = 0.01,
     ransac_n: int = 3,
     num_iterations: int = 10000,
+    print_bool: bool = False
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to extract a plane from a point cloud.
     Eyo this actually works, I'm so happy with this. I'm gonna use this for the next step in the pipeline.
@@ -64,6 +65,9 @@ def segment_plane(
         num_iterations (int, optional): The number of iterations to run RANSAC.
             Defaults to 10000.
 
+        print_bool (bool, optional): A boolean to toggle print statement the number of points in the extracted plane and the leftover points.
+            Defaults to False.
+
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: The extracted plane in point cloud format.
         o3d.cpu.pybind.geometry.PointCloud: The points that are not in the extracted plane.
@@ -78,8 +82,9 @@ def segment_plane(
     extracted_points = point_cloud.select_by_index(inliers)
     not_extracted_points = point_cloud.select_by_index(inliers, invert=True)
 
-    print(f"Extracted a plane with {len(extracted_points.points)} points from the point cloud")
-    print(f"Kept {len(not_extracted_points.points)} points in the point cloud")
+    if print_bool:
+        print(f"Extracted a plane with {len(extracted_points.points)} points from the point cloud")
+        print(f"Kept {len(not_extracted_points.points)} points in the point cloud")
 
     if visualize_plane:
         # Visualize the extracted plane
