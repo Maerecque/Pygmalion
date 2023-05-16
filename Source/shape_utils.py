@@ -1,6 +1,7 @@
 import open3d as o3d
 import numpy as np
 import copy
+from tqdm import tqdm
 
 # Set the verbosity level of Open3D to only print severe errors
 o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
@@ -30,6 +31,24 @@ def merge_pcd(pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geo
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(p3_load)
     pcd.colors = o3d.utility.Vector3dVector(p3_color)
+
+    return pcd
+
+
+def merge_list_of_pointclouds(pcd_list: list) -> o3d.cpu.pybind.geometry.PointCloud:
+    """Function to merge a list of point clouds into one.
+
+    Args:
+        pcd_list (list): List of point clouds to be merged.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Point clouds merged into one.
+    """
+    # Add each point cloud from the list to a new point cloud
+    pcd = o3d.geometry.PointCloud()
+    print("Merging point clouds...")
+    for i in tqdm(range(len(pcd_list))):
+        pcd = merge_pcd(pcd, pcd_list[i])
 
     return pcd
 
