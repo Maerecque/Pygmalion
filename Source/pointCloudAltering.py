@@ -1,6 +1,9 @@
 import open3d as o3d
 import numpy as np
 
+import fileHandler as fh
+import pointCloudEditor as pce
+
 
 def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxelSize: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to normalize the points in a point cloud over a grid.
@@ -137,3 +140,43 @@ def combine_point_cloud(
     zero_distance_mask = (distances_np == 0)
     pcd1_without_duplicates = inputPointCloud.select_by_index(np.where(zero_distance_mask == False)[0])
     return pcd1_without_duplicates
+
+
+def get_difference_point_cloud(
+    inputPointCloud: o3d.cpu.pybind.geometry.PointCloud,
+    classifiedPointCloud: o3d.cpu.pybind.geometry.PointCloud
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function made to keep any points that were not found in the DBScan from the original scan.
+    This is made mainly for visualizing the results of the non-remaining points.
+
+    Args:
+        inputPointCloud (o3d.cpu.pybind.geometry.PointCloud): Pointcloud with the base scan in it.
+
+        classifiedPointCloud (o3d.cpu.pybind.geometry.PointCloud): Pointcloud after the classification with points to be removed.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Pointcloud without any points that were in the given classification pointcloud.
+    """
+    distances = inputPointCloud.compute_point_cloud_distance(classifiedPointCloud)
+    distances_np = np.asarray(distances)
+    non_zero_distance_mask = (distances_np != 0)
+    pcd1_without_duplicates = inputPointCloud.select_by_index(np.where(non_zero_distance_mask)[0])
+    return pcd1_without_duplicates
+
+
+if __name__ == "__main__":
+    # Get the path to the LAS/LAZ file
+    filename = fh.get_file_path("Select a LAS or LAZ file", ["*.las", "*.laz"])
+
+    # Read the LAS/LAZ file
+    pointcloud = fh.readout_LAS_file(filename)
+
+    # Other pointclouds
+    filename2 = fh.get_file_path("Select a LAS or LAZ file", ["*.las", "*.laz"])
+
+    # Read the LAS/LAZ file
+    pointcloud2 = fh.readout_LAS_file(filename2)
+
+    new_pcd = get_difference_point_cloud(pointcloud, pointcloud2)
+
+    pce.open_point_cloud_editor(new_pcd)
