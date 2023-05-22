@@ -77,49 +77,6 @@ def remove_noise_statistical(
     return cl
 
 
-def remove_noise_radius(
-    input_pcd: o3d.cpu.pybind.geometry.PointCloud,
-    show_removed_points: bool = False,
-    nb_points: int = 10,
-    radius: float = 0.1
-) -> o3d.cpu.pybind.geometry.PointCloud:
-    """A function to remove noise from a point cloud. This removes points that have neighbors less than nb_points in a sphere of a given radius.
-    !!! This function is still an experimental feature. !!!
-
-    Args:
-        input_pcd (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
-
-        show_removed_points (bool, optional): Boolean to show an example with the removed points from the cloud marked in red.
-            Defaults to False.
-
-        nb_points (int, optional): Number of points within the radius.
-            Defaults to 10.
-
-        radius (float, optional): Radius of the sphere.
-            Defaults to 0.1.
-
-    Returns:
-        open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
-    """
-    cl, ind = input_pcd.remove_radius_outlier(nb_points, radius)
-
-    amount_removed_points = len(input_pcd.points) - len(cl.points)
-    if amount_removed_points < 1:
-        amount_removed_points = "No"
-
-    if len(input_pcd.points) == len(cl.points):
-        amount_removed_points = f"All the ({len(cl.points)})"
-
-    print(str(amount_removed_points) + " points were removed as outliers.")
-
-    if show_removed_points:
-        outlier_cloud = input_pcd.select_by_index(ind, invert=True)
-        outlier_cloud.paint_uniform_color([1, 0, 0])
-        o3d.visualization.draw_geometries([outlier_cloud, input_pcd], left=0, top=45, window_name="Remove noise with radius")
-
-    return cl
-
-
 def combine_point_cloud(
     input_pcd: o3d.cpu.pybind.geometry.PointCloud,
     classified_pcd: o3d.cpu.pybind.geometry.PointCloud
