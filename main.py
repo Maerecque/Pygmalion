@@ -16,11 +16,11 @@ from Source.pointCloudAltering import (
     # combine_point_cloud
 )
 from Source.pointCloudEditor import open_point_cloud_editor
-from Source.shape_utils import (
+from Source.shapeUtils import (
     repair_point_cloud_module,
     transform_mesh_to_pcd
 )
-import Source.zigZagRansac as zzr
+import Source.gridRansacModule as zzr
 
 
 if __name__ == "__main__":
