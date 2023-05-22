@@ -10,9 +10,6 @@ import fileHandler as fh
 import shape_utils as su
 from tqdm import tqdm
 
-# temp
-import pointCloudEditor as pce
-
 
 def divide_pointcloud_into_grid(
     pointcloud: o3d.geometry.PointCloud,
