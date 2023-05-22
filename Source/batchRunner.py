@@ -5,7 +5,7 @@ from typing import Union
 from dbscanPointCloud import pointcloud_dbscan
 from fileHandler import readout_LAS_file
 from pointCloudAltering import (combine_point_cloud, grid_subsampling,
-                                remove_noise_radius, remove_noise_statistical)
+                                remove_noise_statistical)
 from pointCloudEditor import open_point_cloud_editor
 
 
@@ -65,11 +65,8 @@ def print_combination(
 
 def batch_running(
     input_list: list,
-    do_radius: bool = False,
     do_statistical: bool = True,
     voxel_size: float = 0.05,
-    radius_nb_points: Union[int, list[int]] = 10,
-    radius_radius: Union[float, list[float]] = 0.1,
     statistical_nb_neighbors: Union[int, list[int]] = 20,
     statistical_std_ratio: Union[float, list[float]] = 2.0,
     visualize_noise: bool = False,
@@ -90,20 +87,11 @@ def batch_running(
     Args:
         input_list (list): List to be used as input, contains path locations of files to be scanned.
 
-        do_radius (bool, optional): Whether to do radius noise removal.
-            Defaults to False.
-
         do_statistical (bool, optional): Whether to do statistical noise removal.
             Defaults to True.
 
         voxel_size (float, optional): Distance between points that is allowed.
             Defaults to 0.05.
-
-        radius_nb_points (int, optional): nb_points hyperparameter for the radius noise remover function.
-            Defaults to 10.
-
-        radius_radius (float or list[float], optional): radius hyperparameter for the radius noise remover function.
-            Defaults to 0.1.
 
         statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function.
             Defaults to 20.
@@ -164,49 +152,6 @@ def batch_running(
     for item in input_list:
         pcd = readout_LAS_file(item)
         pcd = grid_subsampling(pcd, voxel_size)
-        if do_radius:
-            try:
-                parameter_list = [
-                    radius_nb_points,
-                    radius_radius,
-                    dbscan_eps,
-                    dbscan_min_sample,
-                    dbscan_metric,
-                    dbscan_algorithm,
-                    dbscan_leaf_size
-                ]
-                combined_parameter_list = combination_maker(parameter_list)
-                for combination in combined_parameter_list:
-                    print_combination("Radius", item, voxel_size, combination, len(pcd.points))
-
-                    pcd_radius = remove_noise_radius(
-                        pcd,
-                        visualize_noise,
-                        nb_points=combination[0],
-                        radius=combination[1]
-                    )
-
-                    # Check if the point cloud is empty after the noise has been removed.
-                    if len(pcd_radius.points) == 0:
-                        raise emptyPointCloudError
-
-                    else:
-                        pointcloud_dbscan(
-                            pcd_radius,
-                            eps=combination[2],
-                            min_samples=combination[3],
-                            keep_only_labels=dbscan_keep_only_labels,
-                            keep_no_labels=dbscan_keep_no_labels,
-                            visualize_all=dbscan_visualize_all,
-                            metric=combination[4],
-                            algorithm=combination[5],
-                            leaf_size=combination[6],
-                        )
-                        pcd_radius = None
-                        print("\n")
-
-            except emptyPointCloudError:
-                print("After the removal of outliers in the point cloud, nothing was left, therefore no DBScan was performed.")
 
         if do_statistical:
             try:
