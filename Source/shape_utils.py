@@ -254,8 +254,8 @@ def repair_point_cloud_module(
     mesh.remove_vertices_by_mask(vertices_to_remove)
 
     if visualize:
-        # Show original point cloud and the reconstructed mesh
-        o3d.visualization.draw_geometries([mesh, input_point_cloud], mesh_show_back_face=True, left=0, top=45)
+        # Show only the reconstructed mesh
+        o3d.visualization.draw_geometries([mesh], mesh_show_back_face=True, left=0, top=45)
 
     return mesh
 
