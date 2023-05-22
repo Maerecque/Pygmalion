@@ -1,14 +1,11 @@
+import itertools
 import os
 from typing import Union
-import itertools
 
 from dbscanPointCloud import pointcloud_dbscan
 from fileHandler import readout_LAS_file
-from pointCloudAltering import (
-    grid_subsampling,
-    remove_noise_radius,
-    remove_noise_statistical,
-    combine_point_cloud)
+from pointCloudAltering import (combine_point_cloud, grid_subsampling,
+                                remove_noise_radius, remove_noise_statistical)
 from pointCloudEditor import open_point_cloud_editor
 
 

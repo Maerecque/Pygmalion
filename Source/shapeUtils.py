@@ -1,6 +1,7 @@
-import open3d as o3d
-import numpy as np
 import copy
+
+import numpy as np
+import open3d as o3d
 from tqdm import tqdm
 
 # Set the verbosity level of Open3D to only print severe errors

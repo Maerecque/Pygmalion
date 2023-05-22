@@ -1,8 +1,8 @@
 import matplotlib as plt
 import numpy as np
 import open3d as o3d
-from sklearn.cluster import DBSCAN
 from pointCloudEditor import open_point_cloud_editor
+from sklearn.cluster import DBSCAN
 
 
 def pointcloud_dbscan(

@@ -1,27 +1,23 @@
-import sys
 import os
+import sys
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 
 # from Source.dbscanPointCloud import pointcloud_dbscan
+import Source.gridRansacModule as grm
 from Source.fileHandler import (
     # convert_ply_to_las,
     get_file_path,
     readout_LAS_file
 )
 from Source.pointCloudAltering import (
+    # combine_point_cloud,
     grid_subsampling,
-    remove_noise_statistical,
-    # combine_point_cloud
+    remove_noise_statistical
 )
 from Source.pointCloudEditor import open_point_cloud_editor
-from Source.shapeUtils import (
-    repair_point_cloud_module,
-    transform_mesh_to_pcd
-)
-import Source.gridRansacModule as zzr
-
+from Source.shapeUtils import repair_point_cloud_module, transform_mesh_to_pcd
 
 if __name__ == "__main__":
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
@@ -42,9 +38,9 @@ if __name__ == "__main__":
         pcd_stat = remove_noise_statistical(pcd, True)
 
         # Divide the pointcloud into a 3d grid
-        grid = zzr.divide_pointcloud_into_grid(pcd_stat, 1, 0)
+        grid = grm.divide_pointcloud_into_grid(pcd_stat, 1, 0)
 
-        plane_pointcloud = zzr.walk_through_grid(pcd_stat, grid, 250, 500)
+        plane_pointcloud = grm.walk_through_grid(pcd_stat, grid, 250, 500)
 
         open_point_cloud_editor(plane_pointcloud, False)
 
