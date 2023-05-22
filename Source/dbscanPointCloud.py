@@ -83,8 +83,8 @@ def pointcloud_dbscan(
         print(str(len(np.unique(labels)) - 1) + " label(s) were made with DBScan.")
 
         # Create a color map for the clusters.
-        maxLabel = labels.max()
-        colors = plt.cm.jet(labels / (maxLabel if maxLabel > 0 else 1))
+        max_label = labels.max()
+        colors = plt.cm.jet(labels / (max_label if max_label > 0 else 1))
 
         # Set colors for each point in the point cloud.
         pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
