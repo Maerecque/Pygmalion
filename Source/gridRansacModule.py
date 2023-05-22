@@ -1,5 +1,5 @@
 # In this file I will attempt to implement the following:
-# 1. Make a function that will devide a pointcloud after normalization up into a 3d grid. The grid cells will have overlapping points with each other.
+# 1. Make a function that will divide a pointcloud after normalization up into a 3d grid. The grid cells will have overlapping points with each other.
 # 2. This function will run RANSAC on each grid cell. RANSAC will only keep planes that have a certain number of points.
 # 3. After RANSAC is done, the function will return a list of planes that are in the pointcloud.
 
