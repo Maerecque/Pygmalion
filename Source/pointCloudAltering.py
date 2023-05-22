@@ -72,8 +72,8 @@ def remove_noise_statistical(
     if show_removed_points:
         outlier_cloud = input_pcd.select_by_index(ind, invert=True)
         outlier_cloud.paint_uniform_color([1, 0, 0])
-        o3d.visualization.draw_geometries([outlier_cloud, input_pcd], left=0, top=45, window_name="Remove noise with statistical")
-
+        inlier_cloud_ex = get_difference_point_cloud(input_pcd, outlier_cloud)
+        o3d.visualization.draw_geometries([inlier_cloud_ex, outlier_cloud], left=0, top=45, window_name="Remove noise with statistical")
     return cl
 
 
