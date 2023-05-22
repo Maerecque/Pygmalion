@@ -108,7 +108,8 @@ def ransac_plane_finder(
     distance_threshold: float = 0.01,
     ransac_n: int = 3,
     num_iterations: int = 100000,
-    min_plane_points: int = 500
+    min_plane_points: int = 500,
+    print_found_planes: bool = False,
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     Extracts a plane from a point cloud based on user input.
@@ -128,6 +129,9 @@ def ransac_plane_finder(
 
         min_plane_points (int, optional): The minimum number of points a plane must have to be considered a plane.
             Defaults to 500.
+
+        print_found_planes (bool, optional): A boolean to toggle the printing of found planes.
+            Defaults to False.
 
     Returns:
         open3d.geometry.PointCloud: The extracted plane equation.
@@ -150,7 +154,8 @@ def ransac_plane_finder(
         plane_pcd, leftover_pcd = su.segment_plane(pcd, False, False, distance_threshold, ransac_n, num_iterations)
 
         if len(plane_pcd.points) >= min_plane_points:
-            print(f"- Found a plane with {len(plane_pcd.points)} points.")
+            if print_found_planes:
+                print(f"- Found a plane with {len(plane_pcd.points)} points.")
             amount_planes += 1
 
             # Save the current plane equation as the new previous plane
@@ -164,16 +169,18 @@ def ransac_plane_finder(
 
         # If the plane that was found is too small, skip it and continue with the next plane.
         else:
-            print(f"- Found a plane with {len(plane_pcd.points)} points, which is too small.")
+            if print_found_planes:
+                print(f"- Found a plane with {len(plane_pcd.points)} points, which is too small.")
             current_plane = previous_plane
             pcd = plane_pcd
             # break
 
-    if amount_planes > 0:
+    if amount_planes > 0 and print_found_planes:
         print(f"Found {amount_planes} planes in the current cell.")
 
     else:
-        print("- No planes found in the current cell.")
+        if print_found_planes:
+            print("- No planes found in the current cell.")
 
     if previous_plane is not None:
         return su.merge_pcd(current_plane, previous_plane)
