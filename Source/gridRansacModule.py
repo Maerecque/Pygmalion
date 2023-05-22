@@ -7,7 +7,7 @@
 import numpy as np
 import open3d as o3d
 import fileHandler as fh
-import shape_utils as su
+import shapeUtils as su
 from tqdm import tqdm
 
 
