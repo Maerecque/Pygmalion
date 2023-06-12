@@ -9,7 +9,8 @@ import Source.gridRansacModule as grm
 from Source.fileHandler import (
     # convert_ply_to_las,
     get_file_path,
-    readout_LAS_file
+    readout_LAS_file,
+    open_stage_file
 )
 from Source.pointCloudAltering import (
     # combine_point_cloud,
@@ -20,6 +21,9 @@ from Source.pointCloudEditor import open_point_cloud_editor
 from Source.shapeUtils import repair_point_cloud_module, transform_mesh_to_pcd
 
 if __name__ == "__main__":
+    stage_file_name = open_stage_file("Werfkelderscans\\Geomaat\\Handscanner\\GerritGeoSlam\\Uitgesneden puntenwolken\\LAS bestanden\\Room1.las")
+    stage_pcd = readout_LAS_file(stage_file_name, False)
+
     file_name = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
     pcd = readout_LAS_file(file_name)
 
@@ -32,6 +36,7 @@ if __name__ == "__main__":
     if pcd is not None:
         # Downsample the point cloud.
         pcd = grid_subsampling(pcd, 0.025)
+        stage_pcd = grid_subsampling(stage_pcd, 0.025, False)
         open_point_cloud_editor(pcd)
 
         # Remove noise from the point cloud
@@ -42,14 +47,15 @@ if __name__ == "__main__":
 
         plane_pointcloud = grm.walk_through_grid(pcd_stat, grid, 250, 500)
 
-        open_point_cloud_editor(plane_pointcloud, False)
+        # open_point_cloud_editor(plane_pointcloud, False)
+        open_point_cloud_editor(stage_pcd, False)
 
         # Repair the point cloud with the planes found.
         # With these parameters, just try higher NN and depth and lower quantile value (and maybe scale)
-        mesh = repair_point_cloud_module(plane_pointcloud, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
+        mesh = repair_point_cloud_module(stage_pcd, visualize=True, kdtree_max_nn=100, depth=10, quantile_value=0.01, scale=2.2)
 
         # Transform the mesh back to a point cloud.
-        transformed_pcd = transform_mesh_to_pcd(mesh, plane_pointcloud)
+        transformed_pcd = transform_mesh_to_pcd(mesh, stage_pcd)
 
         open_point_cloud_editor(transformed_pcd, False)
 

@@ -4,7 +4,11 @@ import open3d as o3d
 import pointCloudEditor as pce
 
 
-def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxel_size: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
+def grid_subsampling(
+    pcd: o3d.cpu.pybind.geometry.PointCloud,
+    voxel_size: float = 0.05,
+    print_removal_amount: bool = True
+) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to normalize the points in a point cloud over a grid.
     So I found out, maybe the hard way. This method will always normalize the size of the point cloud based on how many points are in the cloud.
     A large point cloud will not be decimated by the same size as a smaller point cloud. It is all dependent on the original density of the cloud.
@@ -15,12 +19,16 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxel_size: float 
         voxel_size (float, optional): Distance between points that is allowed.
             Defaults to 0.05.
 
+        print_removal_amount (bool, optional): Boolean to print the amount of points that were removed.
+            Defaults to True.
+
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Down sampled point cloud with normalized point positions.
     """
     # Downsample the point cloud to a regular grid using voxel_down_sample
     downsampled_pcd = pcd.voxel_down_sample(voxel_size)
-    print(f'The point cloud has been resized after grid normalization from {len(pcd.points):,} to {len(downsampled_pcd.points):,}')
+    if print_removal_amount:
+        print(f'The point cloud has been resized after grid normalization from {len(pcd.points):,} to {len(downsampled_pcd.points):,}')
 
     return downsampled_pcd
 

@@ -40,12 +40,21 @@ def get_file_path(description: str, fileformat: any) -> str:
     return
 
 
-def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
+def open_stage_file(filename: str,) -> o3d.cpu.pybind.geometry.PointCloud:
+    current_folder = os.path.realpath(os.path.dirname(__file__))
+    filename_new = os.path.join(current_folder, '..', filename)
+    return filename_new
+
+
+def readout_LAS_file(filename: str, print_info: bool = True) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to read a LAS/LAZ file and convert the contents into an Open3D format.
     This makes it possible to use the Open3D tools on the LAS/LAZ files.
 
     Args:
         filename (str): A PATH to a LAS/LAZ file to be converted.
+
+        print_info (bool, optional): A boolean to determine if the function should print information about the LAS/LAZ file.
+            Defaults to True.
 
     Raises:
         FileNotFoundError: If a given path does not exist.
@@ -97,7 +106,8 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         # gpsData = np.stack([las.gps_time], axis=0).transpose((1, 0))
         # geom.gps = o3d.utility.Vector2dVector(gpsData)
 
-        print("A " + str(geom)[:-1] + " was extracted from the given LAS/LAZ file.")
+        if print_info:
+            print("A " + str(geom)[:-1] + " was extracted from the given LAS/LAZ file.")
         return geom
     except FileNotFoundError:
         print("Could not find a file on the given PATH,  please check if the PATH exists.")
