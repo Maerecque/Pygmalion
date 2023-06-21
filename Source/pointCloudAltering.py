@@ -8,6 +8,8 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxel_size: float 
     """A function to normalize the points in a point cloud over a grid.
     So I found out, maybe the hard way. This method will always normalize the size of the point cloud based on how many points are in the cloud.
     A large point cloud will not be decimated by the same size as a smaller point cloud. It is all dependent on the original density of the cloud.
+    NOTE:   Should research a more reliable way to normalize the point cloud, find a way to normalize based on original point distance.
+            `voxel_down_sample_and_trace` exists.
 
     Args:
         pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud to be normalized.
