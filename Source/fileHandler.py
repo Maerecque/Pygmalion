@@ -74,24 +74,24 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         geom = o3d.geometry.PointCloud()
 
         # Create an Open3d model that contains the points from the LAS/LAZ file.
-        pointData = np.stack([
+        point_data = np.stack([
             las.X,
             las.Y,
             las.Z
         ], axis=0).transpose((1, 0))
 
         # With the line below the visualization will look "odd", but is needed for the export to PLY and turn back to the LAS format.
-        geom.points = o3d.utility.Vector3dVector((pointData * las.header.scales) + las.header.offsets)
-        # geom.points = o3d.utility.Vector3dVector(pointData)
+        geom.points = o3d.utility.Vector3dVector((point_data * las.header.scales) + las.header.offsets)
+        # geom.points = o3d.utility.Vector3dVector(point_data)
 
         # Assign the colours of the points to the Open3d model.
         # Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly.
-        colourData = np.stack([
+        colour_data = np.stack([
             normalize_array(las.red, True),
             normalize_array(las.green, True),
             normalize_array(las.blue, True)
         ], axis=0).transpose((1, 0))
-        geom.colors = o3d.utility.Vector3dVector(colourData)
+        geom.colors = o3d.utility.Vector3dVector(colour_data)
 
         # # It seems like Open3d does not accept the use gps as a variable. Find a way to give this to the ply file.
         # gpsData = np.stack([las.gps_time], axis=0).transpose((1, 0))
@@ -118,7 +118,7 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         exit()
 
 
-def convert_ply_to_las(inputLasPath: str = None):
+def convert_ply_to_las(input_las_path: str = None):
     """A function to convert a ply file to a LAS file, based on a given LAS input file.
     With this function the user is prompted to select a PLY file that will be converted to a LAS file.
     If the function runs into an error during the conversion, no new LAS file will be created and the PLY file will be kept.
@@ -126,40 +126,40 @@ def convert_ply_to_las(inputLasPath: str = None):
     !!! NOTE: This function will delete the PLY file once it's converted to a LAS file, unless it runs into an error !!!
 
     Args:
-        inputLasPath (str): The path to the LAS file to be used as header template.
+        input_las_path (str): The path to the LAS file to be used as header template.
 
     Raises:
         noFileGivenError: If no file is selected.
     """
     try:
         print("Select your created ply file to convert it to a LAS file.")
-        toConvertToLas = get_file_path("PLY files", "*.ply")
+        ply_to_convert_to_las = get_file_path("PLY files", "*.ply")
 
         # if no PLY file is selected this if statement will be ran.
-        if not toConvertToLas:
+        if not ply_to_convert_to_las:
             raise noFileGivenError
 
-        plyFile = PlyData.read(toConvertToLas, False)
-        newLasFileName = os.path.splitext(toConvertToLas)[0] + ".las"
+        ply_file = PlyData.read(ply_to_convert_to_las, False)
+        new_las_file_name = os.path.splitext(ply_to_convert_to_las)[0] + ".las"
 
         # if no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.
-        if not inputLasPath:
-            customHeader = laspy.LasHeader(version="1.2", point_format=3)
-            LasHeaderPointFormat = customHeader.point_format
-            LasHeaderFileVersion = customHeader.version
+        if not input_las_path:
+            custom_header = laspy.LasHeader(version="1.2", point_format=3)
+            las_header_point_format = custom_header.point_format
+            las_header_file_version = custom_header.version
 
         else:
-            LasHeaderPointFormat = laspy.read(inputLasPath).header.point_format
-            LasHeaderFileVersion = laspy.read(inputLasPath).header.version
+            las_header_point_format = laspy.read(input_las_path).header.point_format
+            las_header_file_version = laspy.read(input_las_path).header.version
 
-        outfile = laspy.create(point_format=LasHeaderPointFormat, file_version=LasHeaderFileVersion)
+        outfile = laspy.create(point_format=las_header_point_format, file_version=las_header_file_version)
 
-        outfile.x = plyFile['vertex']['x']
-        outfile.y = plyFile['vertex']['y']
-        outfile.z = plyFile['vertex']['z']
-        outfile.red = plyFile['vertex']['red'] * 257
-        outfile.green = plyFile['vertex']['green'] * 257
-        outfile.blue = plyFile['vertex']['blue'] * 257
+        outfile.x = ply_file['vertex']['x']
+        outfile.y = ply_file['vertex']['y']
+        outfile.z = ply_file['vertex']['z']
+        outfile.red = ply_file['vertex']['red'] * 257
+        outfile.green = ply_file['vertex']['green'] * 257
+        outfile.blue = ply_file['vertex']['blue'] * 257
 
     except noFileGivenError:
         print("No file was selected, script will be stopped.")
@@ -168,12 +168,12 @@ def convert_ply_to_las(inputLasPath: str = None):
         print("Something went wrong during conversion, the PLY file will not be deleted.")
         print(e)
     else:
-        outfile.write(newLasFileName)
-        print("The PLY data was saved to " + newLasFileName)
-        os.remove(toConvertToLas)
+        outfile.write(new_las_file_name)
+        print("The PLY data was saved to " + new_las_file_name)
+        os.remove(ply_to_convert_to_las)
         print("The PLY file was successfully deleted")
         try:
-            os.remove(os.path.splitext(toConvertToLas)[0] + ".json")
+            os.remove(os.path.splitext(ply_to_convert_to_las)[0] + ".json")
             print("The accompanying JSON file was successfully deleted.")
         except Exception as e:  # noqa: F841
             print("No accompanying JSON file was found.")

@@ -1,27 +1,27 @@
 import numpy as np
 
 
-def normalize_array(inputArray: np.ndarray, isColour: bool = False) -> np.ndarray:
+def normalize_array(input_array: np.ndarray, is_colour: bool = False) -> np.ndarray:
     """A function made to normalize a NumPy ndarray.
 
     Args:
-        inputArray (numpy.ndarray): A NumPy ndarray to normalize.
+        input_array (numpy.ndarray): A NumPy ndarray to normalize.
 
-        isColour (bool, optional): A boolean value to divide the ndarray to the LAS colour standards to 0.
+        is_colour (bool, optional): A boolean value to divide the ndarray to the LAS colour standards to 0.
             Defaults to False.
 
     Raises:
-        TypeError: If the inputArray is not of the NumPy ndarray type, this error will be raised.
+        TypeError: If the input_array is not of the NumPy ndarray type, this error will be raised.
 
     Returns:
        numpy.ndarray: The normalized NumPy ndarray.
     """
     try:
-        if type(inputArray) is not np.ndarray: raise TypeError
+        if type(input_array) is not np.ndarray: raise TypeError
 
-        if isColour is True: normalizedArray = inputArray / 65535
-        else: normalizedArray = (inputArray - np.min(inputArray)) / (np.max(inputArray) - np.min(inputArray))
+        if is_colour is True: normalized_array = input_array / 65535
+        else: normalized_array = (input_array - np.min(input_array)) / (np.max(input_array) - np.min(input_array))
 
-        return normalizedArray
+        return normalized_array
     except TypeError:
         print("Given value is not the correct type; not a NumPy ndarray.")
