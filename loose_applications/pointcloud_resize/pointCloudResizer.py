@@ -77,7 +77,7 @@ class MainWindow:
                 point_cloud = readout_LAS_file(self.selected_file)
 
                 voxel_size = self.float_var.get()
-                downsampled_pcd = grid_subsampling(point_cloud, voxel_size)
+                downsampled_pcd = grid_subsampling(point_cloud, voxel_size / 100)
 
                 # Save the downsampled point cloud to a temporary PCD file
                 temp_pcd_path = "temp_pcd.pcd"
@@ -156,7 +156,7 @@ class MainWindow:
                 self.update_point_count()
 
                 voxel_size = self.float_var.get()
-                downsampled_pcd = grid_subsampling(point_cloud, voxel_size)
+                downsampled_pcd = grid_subsampling(point_cloud, voxel_size / 100)
                 self.grid_subsampling_size = len(downsampled_pcd.points)
                 self.update_grid_subsampling_size()
 
