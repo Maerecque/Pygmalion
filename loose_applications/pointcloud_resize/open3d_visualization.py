@@ -13,6 +13,9 @@ if __name__ == "__main__":
         print("Usage: python open3d_visualization.py <path_to_pcd>")
         sys.exit(1)
 
+    # Set the verbosity level of Open3D to only print severe errors
+    o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
+
     pcd_path = sys.argv[1]
     visualize_point_cloud(pcd_path)
 
