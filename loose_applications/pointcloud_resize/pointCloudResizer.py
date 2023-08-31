@@ -130,36 +130,6 @@ class MainWindow:
     def decrease_float(self):
         self.float_var.set(round(max(0.05, self.float_var.get() - 0.05), 2))
 
-    def start_increase(self):
-        # Start the repeat task for increasing the float value
-        self.repeating = True
-        self.repeat_function = self.increase_float
-        self.repeat_task_id = self.root.after(0, self.repeat_task)
-
-    def start_decrease(self):
-        # Start the repeat task for decreasing the float value
-        self.repeating = True
-        self.repeat_function = self.decrease_float
-        self.repeat_task_id = self.root.after(0, self.repeat_task)
-
-    def stop_repeating(self):
-        # Stop the repeat task
-        if self.repeating:
-            self.root.after_cancel(self.repeat_task_id)
-            self.repeating = False
-
-    def repeat_task(self):
-        # Perform the repeat task (increase or decrease)
-        self.repeat_function()
-
-        # Calculate the next repeat interval based on the current interval
-        # You can adjust the interval multiplier as needed
-        self.repeat_interval = max(10, self.repeat_interval * 0.9)
-
-        # Schedule the next repeat
-        if self.repeating:
-            self.repeat_task_id = self.root.after(int(self.repeat_interval), self.repeat_task)
-
     # Method to read the LAS/LAZ file and update the point count label
     def read_las_laz(self):
         if self.selected_file:
