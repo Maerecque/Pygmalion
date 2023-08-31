@@ -4,7 +4,7 @@ import os
 
 def visualize_point_cloud(pcd_path):
     point_cloud = o3d.io.read_point_cloud(pcd_path)
-    o3d.visualization.draw_geometries([point_cloud])
+    o3d.visualization.draw_geometries([point_cloud], left=0, top=45)
 
 
 if __name__ == "__main__":
