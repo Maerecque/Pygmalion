@@ -71,6 +71,7 @@ class MainWindow:
     def close_application(self, event):
         self.root.destroy()
 
+    # Method to preview the downsampled point cloud
     def preview_resized_point_cloud(self):
         if self.grid_subsampling_size:
             try:
