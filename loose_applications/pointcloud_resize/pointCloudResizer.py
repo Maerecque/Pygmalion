@@ -358,7 +358,7 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxel_size: float)
         o3d.cpu.pybind.geometry.PointCloud: Down sampled point cloud with normalized point positions.
     """
     # Downsample the point cloud to a regular grid using voxel_down_sample
-    downsampled_pcd = pcd.voxel_down_sample(voxel_size)
+    downsampled_pcd = pcd.voxel_down_sample(voxel_size / 100)
 
     return downsampled_pcd
 
