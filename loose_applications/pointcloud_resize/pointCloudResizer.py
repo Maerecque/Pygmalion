@@ -111,11 +111,6 @@ class MainWindow:
         else:
             self.file_label.config(text="Selected file: None")
 
-    # Method to create a new thread for the Open3D visualization this is to prevent the GUI from resizing
-    def visualize_point_cloud(self, downsampled_pcd):
-        # Create an Open3D visualization window in the new thread
-        o3d.visualization.draw_geometries([downsampled_pcd])
-
     # Method to update the point count label
     def update_point_count(self):
         if self.point_count is not None:
