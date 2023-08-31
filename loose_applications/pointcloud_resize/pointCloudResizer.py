@@ -147,28 +147,35 @@ class MainWindow:
 
             print("No file selected. Please select a file first.")
 
-    # Method to apply grid subsampling
+    # Method to apply grid subsampling to the point cloud in a separate thread
     def apply_grid_subsampling(self):
         if self.selected_file:
-            try:
-                point_cloud = readout_LAS_file(self.selected_file)
-                original_point_count = len(point_cloud.points)
-                self.point_count = original_point_count
-                self.update_point_count()
-
-                voxel_size = self.float_var.get()
-                downsampled_pcd = grid_subsampling(point_cloud, voxel_size / 100)
-                self.grid_subsampling_size = len(downsampled_pcd.points)
-                self.update_grid_subsampling_size()
-
-                subsampling_factor = original_point_count / self.grid_subsampling_size
-                self.update_subsampling_factor(subsampling_factor)
-            except Exception as e:
-                print("An error occurred:")
-                print(type(e).__name__, ":", e)
+            # Start a new thread to apply grid subsampling
+            threading.Thread(target=self.apply_grid_subsampling_thread).start()
         else:
             messagebox.showwarning("Warning", "No file selected or no point cloud available for subsampling.")
             print("No file selected. Please select a file first.")
+
+    # Actual method to apply grid subsampling to the point cloud
+    def apply_grid_subsampling_thread(self):
+        try:
+            point_cloud = readout_LAS_file(self.selected_file)
+            original_point_count = len(point_cloud.points)
+            self.point_count = original_point_count
+            self.update_point_count()
+
+            voxel_size = self.float_var.get()
+            downsampled_pcd = grid_subsampling(point_cloud, voxel_size)
+            self.grid_subsampling_size = len(downsampled_pcd.points)
+
+            # Update the GUI with the new values
+            self.root.after(0, self.update_grid_subsampling_size)
+            subsampling_factor = original_point_count / self.grid_subsampling_size
+            self.root.after(0, self.update_subsampling_factor, subsampling_factor)
+
+        except Exception as e:
+            print("An error occurred:")
+            print(type(e).__name__, ":", e)
 
     # Method to update the subsampling factor label
     def update_subsampling_factor(self, factor):
@@ -181,46 +188,58 @@ class MainWindow:
         else:
             self.grid_subsampling_size_label.config(text="Point cloud size after subsampling: N/A")
 
-    # Method to save the downsampled point cloud to a LAS file
+    # Method to save the downsampled point cloud to a LAS file in a separate thread
     def save_to_las(self):
         if self.selected_file and self.grid_subsampling_size:
-            try:
-                point_cloud = readout_LAS_file(self.selected_file)
-
-                voxel_size = self.float_var.get()
-                downsampled_pcd = grid_subsampling(point_cloud, voxel_size)
-
-                output_path = filedialog.asksaveasfilename(defaultextension=".las", filetypes=[("LAS files", "*.las")])
-                if output_path:
-                    custom_header = laspy.LasHeader(version="1.2", point_format=3)
-                    las_header_point_format = custom_header.point_format
-                    las_header_file_version = custom_header.version
-
-                    # Create a new LAS file using laspy
-                    outfile = laspy.create(point_format=las_header_point_format, file_version=las_header_file_version)
-
-                    # Convert Open3D point cloud data to laspy format
-                    x, y, z = np.array(downsampled_pcd.points).T
-                    outfile.x = x
-                    outfile.y = y
-                    outfile.z = z
-                    red, green, blue = np.array(downsampled_pcd.colors).T
-                    outfile.red = (red * 65535).astype(np.uint16)
-                    outfile.green = (green * 65535).astype(np.uint16)
-                    outfile.blue = (blue * 65535).astype(np.uint16)
-
-                    # Close the LAS file
-                    outfile.write(output_path)
-
-                    messagebox.showinfo("Success", f"Saved downsampled point cloud to:\n{output_path}")
-                    print(f"Saved downsampled point cloud to: {output_path}")
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while saving the LAS file:\n{type(e).__name__}: {e}")
-                print("An error occurred while saving the LAS file:")
-                print(type(e).__name__, ":", e)
+            # Start a new thread to save the point cloud to a LAS file
+            threading.Thread(target=self.save_to_las_thread).start()
         else:
             messagebox.showwarning("Warning", "No file selected or no point cloud available for saving.")
-            print("No file selected or no point cloud available for saving.")
+            print("No file selected. Please select a file first.")
+
+    # Actual method to save the downsampled point cloud to a LAS file
+    def save_to_las_thread(self):
+        try:
+            point_cloud = readout_LAS_file(self.selected_file)
+
+            voxel_size = self.float_var.get()
+            downsampled_pcd = grid_subsampling(point_cloud, voxel_size)
+
+            output_path = filedialog.asksaveasfilename(defaultextension=".las", filetypes=[("LAS files", "*.las")])
+            if output_path:
+                custom_header = laspy.LasHeader(version="1.2", point_format=3)
+                las_header_point_format = custom_header.point_format
+                las_header_file_version = custom_header.version
+
+                # Create a new LAS file using laspy
+                outfile = laspy.create(point_format=las_header_point_format, file_version=las_header_file_version)
+
+                # Convert Open3D point cloud data to laspy format
+                x, y, z = np.array(downsampled_pcd.points).T
+                outfile.x = x
+                outfile.y = y
+                outfile.z = z
+                red, green, blue = np.array(downsampled_pcd.colors).T
+                outfile.red = (red * 65535).astype(np.uint16)
+                outfile.green = (green * 65535).astype(np.uint16)
+                outfile.blue = (blue * 65535).astype(np.uint16)
+
+                # Close the LAS file
+                outfile.write(output_path)
+
+                # Update the GUI after the file is saved
+                self.root.after(0, self.show_save_success, output_path)
+        except Exception as e:
+            self.root.after(0, self.show_save_error, e)
+
+    def show_save_success(self, output_path):
+        messagebox.showinfo("Success", f"Saved downsampled point cloud to:\n{output_path}")
+        print(f"Saved downsampled point cloud to: {output_path}")
+
+    def show_save_error(self, e):
+        messagebox.showerror("Error", f"An error occurred while saving the LAS file:\n{type(e).__name__}: {e}")
+        print("An error occurred while saving the LAS file:")
+        print(type(e).__name__, ":", e)
 
 
 def normalize_array(array):
