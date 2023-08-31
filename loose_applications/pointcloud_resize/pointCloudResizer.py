@@ -5,6 +5,7 @@ import open3d as o3d
 import numpy as np
 import os
 import subprocess
+import threading
 
 
 class MainWindow:
@@ -96,7 +97,10 @@ class MainWindow:
         if file_path:
             self.selected_file = file_path
             self.update_file_label()
-            self.read_las_laz()  # Automatically read LAS/LAZ file and update point count
+
+            # Create a new thread for reading the LAS/LAZ file
+            loading_thread = threading.Thread(target=self.read_las_laz)  # Automatically read LAS/LAZ file and update point count
+            loading_thread.start()
 
     # Method to update the file label
     def update_file_label(self):
@@ -160,6 +164,8 @@ class MainWindow:
     def read_las_laz(self):
         if self.selected_file:
             try:
+                self.point_count = "Loading..."
+                self.update_point_count()
                 point_cloud = readout_LAS_file(self.selected_file)
                 self.point_count = len(point_cloud.points)
                 self.update_point_count()
