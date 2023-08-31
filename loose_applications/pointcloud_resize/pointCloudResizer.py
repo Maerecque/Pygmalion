@@ -74,23 +74,30 @@ class MainWindow:
     # Method to preview the downsampled point cloud
     def preview_resized_point_cloud(self):
         if self.grid_subsampling_size:
-            try:
-                point_cloud = readout_LAS_file(self.selected_file)
-
-                voxel_size = self.float_var.get()
-                downsampled_pcd = grid_subsampling(point_cloud, voxel_size / 100)
-
-                # Save the downsampled point cloud to a temporary PCD file
-                temp_pcd_path = "temp_pcd.pcd"
-                o3d.io.write_point_cloud(temp_pcd_path, downsampled_pcd)
-
-                # Launch the open3d_visualization.py script as a separate process
-                subprocess.Popen(["python", "open3d_visualization.py", temp_pcd_path])
-
-            except Exception as e:
-                messagebox.showerror("Error", "An error occurred while previewing the point cloud:\n" + str(e))
+            # Start a new thread to preview the downsampled point cloud
+            threading.Thread(target=self.preview_resized_point_cloud_thread).start()
         else:
             messagebox.showwarning("No point cloud", "No point cloud available for preview.")
+
+    # Method to preview the downsampled point cloud
+    def preview_resized_point_cloud_thread(self):
+        try:
+            point_cloud = readout_LAS_file(self.selected_file)
+
+            voxel_size = self.float_var.get()
+            downsampled_pcd = grid_subsampling(point_cloud, voxel_size)
+
+            print("Point cloud size after subsampling:", len(downsampled_pcd.points))
+
+            # Save the downsampled point cloud to a temporary PCD file
+            temp_pcd_path = "temp_pcd.pcd"
+            o3d.io.write_point_cloud(temp_pcd_path, downsampled_pcd)
+
+            # Launch the open3d_visualization.py script as a separate process
+            subprocess.Popen(["python", "open3d_visualization.py", temp_pcd_path])
+
+        except Exception as e:
+            messagebox.showerror("Error", "An error occurred while previewing the point cloud:\n" + str(e))
 
     # Method to open a file dialog and select a file
     def open_file(self):
