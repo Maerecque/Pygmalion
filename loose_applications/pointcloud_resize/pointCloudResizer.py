@@ -87,7 +87,7 @@ class MainWindow:
             voxel_size = self.float_var.get()
             downsampled_pcd = grid_subsampling(point_cloud, voxel_size)
 
-            print("Point cloud size after subsampling:", len(downsampled_pcd.points))
+            # print("Point cloud size after subsampling:", len(downsampled_pcd.points))
 
             # Save the downsampled point cloud to a temporary PCD file
             temp_pcd_path = "temp_pcd.pcd"
