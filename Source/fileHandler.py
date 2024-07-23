@@ -41,6 +41,15 @@ def get_file_path(description: str, fileformat: any) -> str:
 
 
 def open_stage_file(filename: str,) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function to open a different file in main.py to make it look like it is cleaning a pointcloud with a different method than it's actually doing. 
+    Didn't document this until like 13 months after I last worked on this code.
+
+    Args:
+        filename (str): Location of the stage file.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: The pointcloud in an open3d pointcloud format.
+    """    
     current_folder = os.path.realpath(os.path.dirname(__file__))
     filename_new = os.path.join(current_folder, '..', filename)
     return filename_new
@@ -75,7 +84,10 @@ def readout_LAS_file(filename: str, print_info: bool = True) -> o3d.cpu.pybind.g
 
         las = laspy.read(filename)
 
-        # check if LAS file is in the correct format
+        # check if LAS file is in the correct format: 
+        # - Las version: 1.2
+        # - PointFormat 3, x
+        # - Point amount < 10000000
         if "<LasData(1.2, point fmt: <PointFormat(3," not in str(las):
             if len(las.points) < 10000000:
                 raise FileFormatError
