@@ -1,6 +1,6 @@
 import os
 from tkinter import Tk
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 
 import laspy
 import numpy as np
@@ -38,6 +38,37 @@ def get_file_path(description: str, fileformat: any) -> str:
         return filename
 
     return
+
+
+def get_save_file_path(description: str, fileformat: any, default_name: str) -> str:
+    """A function to get the filepath of a selected file to save.
+    
+    Args:
+        description (str): Description of the to be selected file format.
+
+        fileformat (any): Either a string of one specified file format or a list of file formats. e.g. "*.txt" or ["*.txt", "*.docx"].
+        
+        default_name (str): The default name of the file that will be saved.
+        
+    Returns:
+        str: The filepath of the selected file.
+    """
+    root = Tk()
+    root.withdraw()  # we don't want a full GUI, so keep the root window from appearing
+    current_folder = os.path.realpath(os.path.dirname(__file__))
+    root.iconbitmap(current_folder + "\\support_files\\logo.ico")
+    # show a "save" dialog box and return the path to the selected file
+    filename = asksaveasfilename(
+        filetypes=[(description, fileformat)],          # filetypes=[("Text files", "*.txt"), ("all files", "*.*")]
+        initialdir=os.path.join(current_folder, '..'),  # initialdir=os.path.join(current_folder, '..')
+        initialfile=default_name                        # initialfile="default_name.txt"
+    )
+    if filename:
+        print("The following file was selected: \n" + filename)
+        return filename
+    
+    return
+
 
 
 def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
