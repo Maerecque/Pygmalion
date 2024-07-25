@@ -88,12 +88,12 @@ def mesh_simple_downsample(
     return smooth_mesh
 
 
-def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, grid_size: int = 200 ,visualize_map: bool = False, debugging_logs: bool = False):
+def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, grid_size: int = 200, visualize_map: bool = False, debugging_logs: bool = False):
     """Transforms a mesh into a height map by projecting it onto the x-y plane.
 
     Args:
         mesh (o3d.cpu.pybind.geometry.TriangleMesh): The mesh to be transformed into a height map.
-        grid_size (int, optional): Number of grid points. Defaults to 100.
+        grid_size (int, optional): Number of grid points. Defaults to 200.
         visualize_map (bool, optional): Boolean to visualize the height map. Defaults to False.
         debugging_logs (bool, optional): Boolean to print debugging logs. Defaults to False.
 
@@ -136,44 +136,43 @@ def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, gri
     x_grid = np.linspace(x_min, x_max, grid_size)
     y_grid = np.linspace(y_min, y_max, grid_size)
     X, Y = np.meshgrid(x_grid, y_grid)
-
-    # Create an empty grid for heights
-    height_map = np.full(X.shape, -np.inf)
     
-    # Fill the height map with z-values (heights)
-    for vertex, height in tqdm(zip(vertices, z), desc="Filling height map"):
-        xi = np.searchsorted(x_grid, vertex[0])
-        yi = np.searchsorted(y_grid, vertex[1])
-        if xi < grid_size and yi < grid_size:
-            height_map[yi, xi] = max(height_map[yi, xi], height)
-
-    # Replace remaining -inf values with 0
-    height_map[np.isneginf(height_map)] = 0
-
-    if debugging_logs:            
-        # Debugging: Print height map stats
-        print("Height map min:", height_map.min())
-        print("Height map max:", height_map.max())
-        print("Height map shape:", height_map.shape)
-
+    # Show the amount of points in the grid
+    if debugging_logs:
+        print("Amount of points in the grid:", len(X.flatten()))
+    
+    
+    # Keep per x-y coordinate the highest z value
+    height_map = np.full((grid_size, grid_size), -np.inf)
+    for i in tqdm(range(len(x)), desc="Creating height map"):
+        x_idx = np.argmin(np.abs(x_grid - x[i]))
+        y_idx = np.argmin(np.abs(y_grid - y[i]))
+        height_map[x_idx, y_idx] = max(height_map[x_idx, y_idx], z[i])
+        
+    # So currently there can still be some holes in the height map, can be looked at later.
+        
+    # Show the amount of points in the height map
+    if debugging_logs:
+        print("Amount of points in the height map:", len(height_map.flatten()))
+    
+    # Visualize the height map
     if visualize_map:
-       # Plot contour map
-        plt.figure(figsize=(10, 8))
-        plt.contourf(X, Y, height_map, cmap='viridis', norm=Normalize(vmin=height_map.min(), vmax=height_map.max()))
-        plt.colorbar(label='Height')
-        plt.title('Contour Map (Top-Down View)')
-        plt.xlabel('X')
-        plt.ylabel('Y')
+        plt.imshow(height_map, cmap="viridis", norm=Normalize(vmin=z_min, vmax=z_max))
+        plt.colorbar()
         plt.show()
-    
-    # Interpolate the height map
-    interpolator = RegularGridInterpolator((y_grid, x_grid), height_map, method='linear', bounds_error=False, fill_value=z_min)    
-    
-    # Create KDTree for height map
-    valid_points = np.array([(y, x) for y, x in zip(np.ravel(Y), np.ravel(X)) if height_map[np.where(Y == y)[0][0], np.where(X[0] == x)[0][0]] != -np.inf])
-    height_map_KDTree = cKDTree(valid_points)
-
-    return interpolator, height_map_KDTree, valid_points, height_map, X, Y, z_min
+        
+    if debugging_logs:
+        # Show statistics of the height map
+        print("Height map statistics:")
+        # # Print the first 10 rows of the height map
+        # print(height_map[:10])
+        print("Amount of points in the height map:", len(height_map.flatten()))
+        print("Minimum height:", z_min)
+        print("Maximum height:", z_max)
+        print("Amount of valid points:", np.sum(height_map != -np.inf))
+        print("Amount of invalid points:", np.sum(height_map == -np.inf))
+        print("Amount of total points:", grid_size * grid_size)
+        print("Percentage of valid points:", np.sum(height_map != -np.inf) / (grid_size * grid_size) * 100, "%")
 
 
 def create_mesh_from_height_map(height_map: np.ndarray, X: np.ndarray, Y: np.ndarray) -> o3d.geometry.TriangleMesh:
