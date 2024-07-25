@@ -4,8 +4,11 @@ import numpy as np
 import open3d as o3d
 from scipy.interpolate import RegularGridInterpolator
 from scipy.spatial import cKDTree
+from scipy.ndimage import binary_dilation, binary_erosion
 import open3d as o3d
 from tqdm import tqdm
+
+import pyvista as pv
 
 
 
@@ -88,7 +91,11 @@ def mesh_simple_downsample(
     return smooth_mesh
 
 
-def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, grid_size: int = 200, visualize_map: bool = False, debugging_logs: bool = False):
+def transform_mesh_to_height_map(
+    mesh: o3d.cpu.pybind.geometry.TriangleMesh,
+    grid_size: int = 200,
+    visualize_map: bool = False,
+    debugging_logs: bool = False):
     """Transforms a mesh into a height map by projecting it onto the x-y plane.
 
     Args:
@@ -98,13 +105,7 @@ def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, gri
         debugging_logs (bool, optional): Boolean to print debugging logs. Defaults to False.
 
     Returns:
-        RegularGridInterpolator: An interpolator for the height map.
-        cKDTree: A KDTree for the height map.
-        np.ndarray: An array of valid points in the height map.
-        np.ndarray: The height map grid.
-        np.ndarray: X coordinates of the grid.
-        np.ndarray: Y coordinates of the grid.
-        float: The minimum height value.
+        o3d.cpu.pybind.geometry.PointCloud: The point cloud representing the height map.
         
     Raises:
         ValueError: If the mesh is empty.
@@ -115,6 +116,12 @@ def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, gri
     
     # Print that the transformation process has started
     print("Starting calculation of height map...")
+    
+    # Print statistics of the mesh
+    if debugging_logs:
+        print("Mesh statistics:")
+        print("Amount of vertices:", len(mesh.vertices))
+        print("Amount of triangles:", len(mesh.triangles))
         
     # Project mesh onto the x-y plane (use Z as height)
     vertices = np.asarray(mesh.vertices)
@@ -150,10 +157,6 @@ def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, gri
         height_map[x_idx, y_idx] = max(height_map[x_idx, y_idx], z[i])
         
     # So currently there can still be some holes in the height map, can be looked at later.
-        
-    # Show the amount of points in the height map
-    if debugging_logs:
-        print("Amount of points in the height map:", len(height_map.flatten()))
     
     # Visualize the height map
     if visualize_map:
@@ -164,8 +167,6 @@ def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, gri
     if debugging_logs:
         # Show statistics of the height map
         print("Height map statistics:")
-        # # Print the first 10 rows of the height map
-        # print(height_map[:10])
         print("Amount of points in the height map:", len(height_map.flatten()))
         print("Minimum height:", z_min)
         print("Maximum height:", z_max)
@@ -173,115 +174,77 @@ def transform_mesh_to_height_map(mesh: o3d.cpu.pybind.geometry.TriangleMesh, gri
         print("Amount of invalid points:", np.sum(height_map == -np.inf))
         print("Amount of total points:", grid_size * grid_size)
         print("Percentage of valid points:", np.sum(height_map != -np.inf) / (grid_size * grid_size) * 100, "%")
-
-
-def create_mesh_from_height_map(height_map: np.ndarray, X: np.ndarray, Y: np.ndarray) -> o3d.geometry.TriangleMesh:
-    """Creates a new mesh from the height map.
-
-    Args:
-        height_map (np.ndarray): The height map grid.
-        X (np.ndarray): X coordinates of the grid.
-        Y (np.ndarray): Y coordinates of the grid.
-
-    Returns:
-        o3d.geometry.TriangleMesh: The new mesh created from the height map.
-    """
-    # Create vertices from the height map
-    vertices = []
-    for i in tqdm(range(height_map.shape[0]), desc="Creating vertices"):
-        for j in range(height_map.shape[1]):
-            vertices.append([X[i, j], Y[i, j], height_map[i, j]])
-    vertices = np.array(vertices)
+        
+    # Transform the height map into an open3d point cloud to get an idea of the floorplan
+    floor_plan_points = np.argwhere(height_map != -np.inf)
+    floor_plan_coords = np.array([x_grid[floor_plan_points[:, 1]], y_grid[floor_plan_points[:, 0]], np.full(floor_plan_points.shape[0], z_min)]).T
+    floor_plan_point_cloud = o3d.geometry.PointCloud()
+    floor_plan_point_cloud.points = o3d.utility.Vector3dVector(floor_plan_coords)
     
-    # Create triangles from the grid
-    triangles = []
-    for i in tqdm(range(height_map.shape[0] - 1), desc="Creating triangles"):
-        for j in range(height_map.shape[1] - 1):
-            idx = i * height_map.shape[1] + j
-            triangles.append([idx, idx + 1, idx + height_map.shape[1]])
-            triangles.append([idx + 1, idx + height_map.shape[1] + 1, idx + height_map.shape[1]])
-    triangles = np.array(triangles)
+    # Create the same pointcloud but with correct z values
+    ceiling_points = np.argwhere(height_map != -np.inf)
+    z_values = height_map[ceiling_points[:, 0], ceiling_points[:, 1]]
+    ceiling_coords = np.array([x_grid[ceiling_points[:, 1]], y_grid[ceiling_points[:, 0]], z_values]).T
+    ceiling_point_cloud = o3d.geometry.PointCloud()
+    ceiling_point_cloud.points = o3d.utility.Vector3dVector(ceiling_coords)
     
-    # Create the mesh
-    mesh = o3d.geometry.TriangleMesh()
-    mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    # Calculate the point density of the floor plan
+    point_density = len(floor_plan_coords) / (grid_size * grid_size)
+
+    if debugging_logs:
+        print("Point density of the floor plan:", point_density)
     
-    mesh.compute_vertex_normals()
-    mesh.compute_triangle_normals()
+    # Find the edges of the floor plan and ceiling based their x and y coordinates
+    floor_plan_edges = np.argwhere(binary_dilation(height_map != -np.inf) ^ binary_erosion(height_map != -np.inf))
+    ceiling_edges = np.argwhere(binary_dilation(height_map != -np.inf) ^ binary_erosion(height_map != -np.inf))
     
-    return mesh
-
-# Idea for next function:
-# Cut out any point in the height map that at the bottom height
-# After the mesh is cutout make a bottom layer under the height map so that the mesh is a closed volume
-# Then repair any holes in the mesh so that it surelly is a closed volume
-# Test out with higher resolution height map and mesh to see if the function works as intended
-
-def drape_mesh_downward(
-    mesh: o3d.geometry.TriangleMesh,
-    interpolator: RegularGridInterpolator,
-    tree: cKDTree,
-    valid_points: np.ndarray,
-    height_map: np.ndarray,
-    X: np.ndarray,
-    Y: np.ndarray,
-    z_min: float,
-    contour_distance: float = 0.1  # Distance threshold to determine contour relevance
-    ) -> o3d.geometry.TriangleMesh:
-    """Drapes a mesh downward to a height map, focusing on contour points.
-
-    Args:
-        mesh (o3d.geometry.TriangleMesh): The mesh to be draped.
-        interpolator (RegularGridInterpolator): An interpolator for the height map.
-        tree (cKDTree): A KDTree for the height map.
-        valid_points (np.ndarray): An array of valid points in the height map.
-        height_map (np.ndarray): The height map grid.
-        X (np.ndarray): X coordinates of the grid.
-        Y (np.ndarray): Y coordinates of the grid.
-        z_min (float): The minimum height value.
-        contour_distance (float): Distance from the contour within which to apply draping.
-
-    Returns:
-        o3d.geometry.TriangleMesh: The draped mesh.
-    """
-    # Print that the draping process has started
-    print("Starting draping of mesh...")
-
-    vertices = np.asarray(mesh.vertices)
-    new_vertices = vertices.copy()
-
-    # Create a set of contour points
-    contour_points = set()
+    # Visualize the floor plan and ceiling edges in a 3d plot
+    if visualize_map:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(floor_plan_edges[:, 1], floor_plan_edges[:, 0], np.full(floor_plan_edges.shape[0], z_min), c='r', marker='o')
+        ax.scatter(ceiling_edges[:, 1], ceiling_edges[:, 0], height_map[ceiling_edges[:, 0], ceiling_edges[:, 1]], c='b', marker='o')
+        plt.show()
     
-    for i in tqdm(range(len(X)), desc="Identifying contour points"):
-        for j in range(len(Y)):
-            if height_map[i, j] != z_min:
-                contour_points.add((Y[i, j], X[i, j]))
+    # calculate the distance between all the floor plan edge points and the ceiling edge points and fill in the gaps with the same density as the floor plan
+    # This is done to make sure the point cloud is complete
+    # These new points will be called wall points
+    # Calculate the wall points
+    # Create walls between floor edges and ceiling edges
+    wall_points = []
 
-    # Draping the mesh downward only within contour distance
-    for i, vertex in enumerate(tqdm(vertices, desc="Draping mesh")):
-        x, y = vertex[0], vertex[1]
-        height_at_point = interpolator((y, x))
+    for floor_edge in floor_plan_edges:
+        floor_x, floor_y = x_grid[floor_edge[1]], y_grid[floor_edge[0]]
+        corresponding_ceiling = next((ceiling_edge for ceiling_edge in ceiling_edges if np.array_equal(ceiling_edge[:2], floor_edge[:2])), None)
+        if corresponding_ceiling is not None:
+            ceiling_z = height_map[corresponding_ceiling[0], corresponding_ceiling[1]]
+            floor_z = z_min
+            height_difference = ceiling_z - floor_z
+            if np.isfinite(height_difference) and height_difference > 0:
+                num_points = int(height_difference / point_density) + 1
+                for i in range(num_points + 1):
+                    wall_z = floor_z + i * (height_difference / num_points)
+                    wall_points.append([floor_x, floor_y, wall_z])
 
-        if height_at_point == z_min:
-            # Find the nearest valid height if no direct height is available
-            distance, index = tree.query([y, x])
-            if distance < np.inf:
-                nearest_valid_point = valid_points[index]
-                height_at_point = height_map[np.where(Y == nearest_valid_point[0])[0][0], np.where(X[0] == nearest_valid_point[1])[0][0]]
+    wall_points = np.array(wall_points)
 
-        # Check if the vertex is close to a contour point
-        min_distance_to_contour = min(np.linalg.norm(np.array([x, y]) - np.array(contour_point)) for contour_point in contour_points)
-        if min_distance_to_contour <= contour_distance:
-            if height_at_point != -np.inf:
-                new_vertices[i, 2] = min(vertex[2], height_at_point)
-
-    # Create new mesh with draped vertices
-    new_mesh = o3d.geometry.TriangleMesh()
-    new_mesh.vertices = o3d.utility.Vector3dVector(new_vertices)
-    new_mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh.triangles))
+    if wall_points.size > 0:
+        wall_point_cloud = o3d.geometry.PointCloud()
+        wall_point_cloud.points = o3d.utility.Vector3dVector(wall_points)
+    else:
+        wall_point_cloud = o3d.geometry.PointCloud()
     
-    new_mesh.compute_vertex_normals()
-    new_mesh.compute_triangle_normals()
-    return new_mesh
+    # Combine the floor plan and ceiling point cloud
+    hull_points = np.concatenate([
+        np.asarray(floor_plan_point_cloud.points),
+        np.asarray(ceiling_point_cloud.points),
+        np.asarray(wall_point_cloud.points)
+    ])
+    hull_point_cloud = o3d.geometry.PointCloud()
+    hull_point_cloud.points = o3d.utility.Vector3dVector(hull_points)
+    
+    # Visualize the point cloud
+    if visualize_map:
+        o3d.visualization.draw_geometries([hull_point_cloud])
+
+    return hull_point_cloud

@@ -2,6 +2,9 @@ import os
 import sys
 import open3d as o3d
 
+import numpy as np
+import pyvista as pv
+
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 
@@ -23,8 +26,6 @@ from Source.shapeUtils import repair_point_cloud_module, transform_mesh_to_pcd
 from Source.meshAlterer import (
     mesh_simple_downsample,
     transform_mesh_to_height_map,
-    drape_mesh_downward,
-    create_mesh_from_height_map,
 )
 
 if __name__ == "__main__":
@@ -41,14 +42,14 @@ if __name__ == "__main__":
         # Downsample the point cloud.
         pcd = grid_subsampling(pcd, 0.025)
 
-        # open_point_cloud_editor(pcd)
 
         # Remove noise from the point cloud
         pcd_stat = remove_noise_statistical(pcd, True)
 
+
         # Compute normals
         pcd_stat.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-
+        
         # Create a mesh from the point cloud
         stat_mesh = repair_point_cloud_module(pcd_stat, visualize=False, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
 
@@ -58,13 +59,24 @@ if __name__ == "__main__":
         simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.05, True)
 
         # Transform the mesh into a height map
-        interpolator, height_map_KDTree, valid_points, height_map, X, Y, z_min = transform_mesh_to_height_map(simplified_mesh, 100, visualize_map=True, debugging_logs=True)
+        hull_point_cloud = transform_mesh_to_height_map(simplified_mesh, 100, visualize_map=True, debugging_logs=False)
+
+        # TEMP CODE #
+        whole_cloud_points = np.asarray(hull_point_cloud.points)
+        cloud = pv.PolyData(whole_cloud_points)
+        volume = cloud.delaunay_3d(alpha=0.1, progress_bar=True, tol=0.05, offset=0.0)
+        shell = volume.extract_geometry(progress_bar=True)
+        shell.plot()
+        exit()        
+
+        
+        hull_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(hull_point_cloud, alpha=100)
         
         # Create a mesh from the height map
-        height_map_mesh = create_mesh_from_height_map(height_map, X, Y)
+        repaired_hull_mesh = repair_point_cloud_module(hull_point_cloud, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
         
-        # Visualize the contour vertices
-        o3d.visualization.draw_geometries([height_map_mesh], mesh_show_back_face=True)
+        # # Visualize the contour vertices
+        # o3d.visualization.draw_geometries([height_map_mesh], mesh_show_back_face=True)
         
         # CODE WORKS UNTIL HERE #
         exit()
