@@ -2,14 +2,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 import numpy as np
 import open3d as o3d
-from scipy.interpolate import RegularGridInterpolator
-from scipy.spatial import cKDTree
 from scipy.ndimage import binary_dilation, binary_erosion
 import open3d as o3d
 from tqdm import tqdm
-
-import pyvista as pv
-
 
 
 def mesh_simple_downsample(
@@ -174,14 +169,16 @@ def transform_mesh_to_height_map(
         print("Amount of invalid points:", np.sum(height_map == -np.inf))
         print("Amount of total points:", grid_size * grid_size)
         print("Percentage of valid points:", np.sum(height_map != -np.inf) / (grid_size * grid_size) * 100, "%")
-        
+    
     # Transform the height map into an open3d point cloud to get an idea of the floorplan
+    print("Creating the floor plan  point cloud...")    
     floor_plan_points = np.argwhere(height_map != -np.inf)
     floor_plan_coords = np.array([x_grid[floor_plan_points[:, 1]], y_grid[floor_plan_points[:, 0]], np.full(floor_plan_points.shape[0], z_min)]).T
     floor_plan_point_cloud = o3d.geometry.PointCloud()
     floor_plan_point_cloud.points = o3d.utility.Vector3dVector(floor_plan_coords)
     
     # Create the same pointcloud but with correct z values
+    print("Creating the ceiling point cloud...")
     ceiling_points = np.argwhere(height_map != -np.inf)
     z_values = height_map[ceiling_points[:, 0], ceiling_points[:, 1]]
     ceiling_coords = np.array([x_grid[ceiling_points[:, 1]], y_grid[ceiling_points[:, 0]], z_values]).T
@@ -195,6 +192,7 @@ def transform_mesh_to_height_map(
         print("Point density of the floor plan:", point_density)
     
     # Find the edges of the floor plan and ceiling based their x and y coordinates
+    print("Finding the edges of the floor plan and ceiling...")
     floor_plan_edges = np.argwhere(binary_dilation(height_map != -np.inf) ^ binary_erosion(height_map != -np.inf))
     ceiling_edges = np.argwhere(binary_dilation(height_map != -np.inf) ^ binary_erosion(height_map != -np.inf))
     
@@ -206,14 +204,10 @@ def transform_mesh_to_height_map(
         ax.scatter(ceiling_edges[:, 1], ceiling_edges[:, 0], height_map[ceiling_edges[:, 0], ceiling_edges[:, 1]], c='b', marker='o')
         plt.show()
     
-    # calculate the distance between all the floor plan edge points and the ceiling edge points and fill in the gaps with the same density as the floor plan
-    # This is done to make sure the point cloud is complete
-    # These new points will be called wall points
-    # Calculate the wall points
     # Create walls between floor edges and ceiling edges
     wall_points = []
 
-    for floor_edge in floor_plan_edges:
+    for floor_edge in tqdm(floor_plan_edges, desc="Creating walls"):
         floor_x, floor_y = x_grid[floor_edge[1]], y_grid[floor_edge[0]]
         corresponding_ceiling = next((ceiling_edge for ceiling_edge in ceiling_edges if np.array_equal(ceiling_edge[:2], floor_edge[:2])), None)
         if corresponding_ceiling is not None:

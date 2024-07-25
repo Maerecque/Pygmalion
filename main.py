@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
 
         # Remove noise from the point cloud
-        pcd_stat = remove_noise_statistical(pcd, True)
+        pcd_stat = remove_noise_statistical(pcd, False)
 
 
         # Compute normals
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         ## NEW CODE ##
 
         # Downsample and simplify the mesh
-        simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.05, True)
+        simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.05, False)
 
         # Transform the mesh into a height map
         hull_point_cloud = transform_mesh_to_height_map(simplified_mesh, 100, visualize_map=True, debugging_logs=False)
@@ -67,6 +67,13 @@ if __name__ == "__main__":
         volume = cloud.delaunay_3d(alpha=0.1, progress_bar=True, tol=0.05, offset=0.0)
         shell = volume.extract_geometry(progress_bar=True)
         shell.plot()
+        
+        # Create a filename location for the height map in stl
+        export_file_path = get_save_file_path("STL files", ["*.stl"],(str(os.path.basename(file_name).split(".")[0])+".stl"))
+        
+        # Export the height map as STL
+        pv.save_meshio(export_file_path, volume)
+        
         exit()        
 
         
