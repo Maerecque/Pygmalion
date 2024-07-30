@@ -26,6 +26,7 @@ from Source.shapeUtils import repair_point_cloud_module, transform_mesh_to_pcd
 from Source.meshAlterer import (
     mesh_simple_downsample,
     transform_mesh_to_height_map,
+    transform_pcd_to_mesh
 )
 
 if __name__ == "__main__":
@@ -60,17 +61,16 @@ if __name__ == "__main__":
         # NEW CODE #
 
         # Downsample and simplify the mesh
-        simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.05, False)
+        simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.01, False)
 
         # Transform the mesh into a height map
-        hull_point_cloud = transform_mesh_to_height_map(simplified_mesh, 100, visualize_map=True, debugging_logs=False)
+        floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud = transform_mesh_to_height_map(simplified_mesh, 100, False, debugging_logs=False)
 
-        # TEMP CODE #
-        whole_cloud_points = np.asarray(hull_point_cloud.points)
-        cloud = pv.PolyData(whole_cloud_points)
-        volume = cloud.delaunay_3d(alpha=0.1, progress_bar=True, tol=0.05, offset=0.0)
-        shell = volume.extract_geometry(progress_bar=True)
-        shell.plot()
+        # Transform the point clouds into a mesh
+        floor_plan_volume = transform_pcd_to_mesh(floor_plan_point_cloud, bool_3d_mesh=False, alpha=0.1, tollerance=0.000001, offset=1)
+        ceiling_volume = transform_pcd_to_mesh(ceiling_point_cloud, bool_3d_mesh=True, alpha=0.2, tollerance=0.000001, offset=1, visualize_bool=False)
+        wall_volume = transform_pcd_to_mesh(wall_point_cloud, bool_3d_mesh=True, alpha=0.2, tollerance=0.000001, offset=1, visualize_bool=True)
+        exit()
 
         # Create a filename location for the height map in stl
         export_file_path = get_save_file_path(

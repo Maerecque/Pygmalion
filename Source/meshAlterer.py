@@ -4,6 +4,7 @@ import numpy as np
 import open3d as o3d
 from scipy.ndimage import binary_dilation, binary_erosion
 from tqdm import tqdm
+import pyvista as pv
 
 
 def mesh_simple_downsample(
@@ -244,18 +245,51 @@ def transform_mesh_to_height_map(
     else:
         wall_point_cloud = o3d.geometry.PointCloud()
 
-    # Combine the floor plan and ceiling point cloud
-    hull_points = np.concatenate([
-        np.asarray(floor_plan_point_cloud.points),
-        np.asarray(ceiling_point_cloud.points),
-        np.asarray(wall_point_cloud.points)
-    ])
+    # # Calculate the normals of the point clouds
+    # for point_cloud in tqdm([floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud], desc="Calculating normals"):
+    #     point_cloud.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    #     point_cloud.orient_normals_consistent_tangent_plane(25)
 
-    hull_point_cloud = o3d.geometry.PointCloud()
-    hull_point_cloud.points = o3d.utility.Vector3dVector(hull_points)
-
-    # Visualize the point cloud
+    # Visualize the point clouds
     if visualize_map:
-        o3d.visualization.draw_geometries([hull_point_cloud])
+        o3d.visualization.draw_geometries(
+            [floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud], mesh_show_back_face=True
+        )
 
-    return hull_point_cloud
+    return floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud
+
+
+def transform_pcd_to_mesh(
+    hull_point_cloud: o3d.cpu.pybind.geometry.PointCloud,
+    alpha: float = 0.1,
+    tollerance: float = 0.05,
+    offset: float = 0.0,
+    visualize_bool: bool = False,
+    bool_3d_mesh: bool = True
+) -> pv.UnstructuredGrid:
+    """Transforms a point cloud into a mesh using the Delaunay 3D algorithm.
+
+    Args:
+        hull_point_cloud (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be transformed into a mesh.
+        alpha (float, optional): Alpha value for the Delaunay 3D algorithm. Defaults to 0.1.
+        tollerance (float, optional): Tollerance value for the Delaunay 3D algorithm. Defaults to 0.05.
+        offset (float, optional): Offset value for the Delaunay 3D algorithm. Defaults to 0.0.
+        visualize_bool (bool, optional): Boolean to visualize the mesh. Defaults to False.
+        bool_3d_mesh (bool, optional): Boolean to create a 3D mesh. Defaults to True.
+
+    Returns:
+        pv.UnstructuredGrid: The mesh created from the point cloud.
+    """
+    # TEMP CODE #
+    whole_cloud_points = np.asarray(hull_point_cloud.points)
+    cloud = pv.PolyData(whole_cloud_points)
+    if bool_3d_mesh:
+        volume = cloud.delaunay_3d(alpha=alpha, progress_bar=True, tol=tollerance, offset=offset)
+    else:
+        volume = cloud.delaunay_2d(alpha=alpha, progress_bar=True, tol=tollerance, offset=offset)
+
+    if visualize_bool:
+        shell = volume.extract_geometry(progress_bar=True)
+        shell.plot()
+
+    return volume
