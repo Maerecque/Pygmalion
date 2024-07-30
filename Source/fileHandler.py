@@ -9,8 +9,8 @@ from arrayNormalizer import normalize_array
 from plyfile import PlyData
 
 
-class FileFormatError(Exception): pass
-class noFileGivenError(Exception): pass
+class FileFormatError(Exception): pass   # noqa: E701
+class noFileGivenError(Exception): pass  # noqa: E701
 
 
 def get_file_path(description: str, fileformat: any) -> str:
@@ -19,7 +19,8 @@ def get_file_path(description: str, fileformat: any) -> str:
     Args:
         description (str): Description of the to be selected file format.
 
-        fileformat (any): Either a string of one specified file format or a list of file formats. e.g. "*.txt" or ["*.txt", "*.docx"].
+        fileformat (any): Either a string of one specified file format or a list of file formats. e.g.
+            "*.txt" or ["*.txt", "*.docx"].
 
     Returns:
         str: The filepath of the selected file.
@@ -42,14 +43,15 @@ def get_file_path(description: str, fileformat: any) -> str:
 
 def get_save_file_path(description: str, fileformat: any, default_name: str) -> str:
     """A function to get the filepath of a selected file to save.
-    
+
     Args:
         description (str): Description of the to be selected file format.
 
-        fileformat (any): Either a string of one specified file format or a list of file formats. e.g. "*.txt" or ["*.txt", "*.docx"].
-        
+        fileformat (any): Either a string of one specified file format or a list of file formats. e.g.
+            "*.txt" or ["*.txt", "*.docx"].
+
         default_name (str): The default name of the file that will be saved.
-        
+
     Returns:
         str: The filepath of the selected file.
     """
@@ -66,9 +68,8 @@ def get_save_file_path(description: str, fileformat: any, default_name: str) -> 
     if filename:
         print("The following file was selected: \n" + filename)
         return filename
-    
-    return
 
+    return
 
 
 def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
@@ -111,7 +112,7 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
             las.Z
         ], axis=0).transpose((1, 0))
 
-        # With the line below the visualization will look "odd", but is needed for the export to PLY and turn back to the LAS format.
+        # With the line below the visualization will look "odd", but is needed for export to PLY and turn back to the LAS format.
         geom.points = o3d.utility.Vector3dVector((point_data * las.header.scales) + las.header.offsets)
         # geom.points = o3d.utility.Vector3dVector(point_data)
 
@@ -137,7 +138,7 @@ def readout_LAS_file(filename: str) -> o3d.cpu.pybind.geometry.PointCloud:
         print("No file was selected, script will not be stopped.")
         return
     except laspy.errors.LaspyException:
-        print("The framework could not handle this file, please check if the file is not corrupted and/or if it is a LAS/LAZ file.")
+        print("The framework could not handle this file, please check if the file is not corrupted and if it is a LAS/LAZ file.")
         exit()
     except FileFormatError:
         print("The chosen LAS/LAZ file is not in the correct format or correct version. This file will not be used.")
