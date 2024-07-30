@@ -17,7 +17,7 @@ def mesh_simple_downsample(
     Args:
         mesh (o3d.cpu.pybind.geometry.TriangleMesh): The mesh to be simplified.
         original_point_cloud (o3d.cpu.pybind.geometry.PointCloud): The original point cloud.
-        distance_threshold (float, optional): The max distance between a vertex in the mesh and the nearest point in the pointcloud. Defaults to 0.05.
+        distance_threshold (float, optional): The max distance between a vertex in the mesh and the nearest point in the pointcloud. Defaults to 0.05.  # noqa: E501
         visualize_mesh (bool, optional): Boolean to visualize the simplified mesh. Defaults to False.
 
     Raises:
@@ -172,7 +172,9 @@ def transform_mesh_to_height_map(
     # Transform the height map into an open3d point cloud to get an idea of the floorplan
     print("Creating the floor plan  point cloud...")
     floor_plan_points = np.argwhere(height_map != -np.inf)
-    floor_plan_coords = np.array([x_grid[floor_plan_points[:, 1]], y_grid[floor_plan_points[:, 0]], np.full(floor_plan_points.shape[0], z_min)]).T
+    floor_plan_coords = np.array(
+        [x_grid[floor_plan_points[:, 1]], y_grid[floor_plan_points[:, 0]], np.full(floor_plan_points.shape[0], z_min)]
+    ).T
     floor_plan_point_cloud = o3d.geometry.PointCloud()
     floor_plan_point_cloud.points = o3d.utility.Vector3dVector(floor_plan_coords)
 
@@ -199,8 +201,20 @@ def transform_mesh_to_height_map(
     if visualize_map:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(floor_plan_edges[:, 1], floor_plan_edges[:, 0], np.full(floor_plan_edges.shape[0], z_min), c='r', marker='o')
-        ax.scatter(ceiling_edges[:, 1], ceiling_edges[:, 0], height_map[ceiling_edges[:, 0], ceiling_edges[:, 1]], c='b', marker='o')
+        ax.scatter(
+            floor_plan_edges[:, 1],
+            floor_plan_edges[:, 0],
+            np.full(floor_plan_edges.shape[0], z_min),
+            c='r',
+            marker='o'
+        )
+        ax.scatter(
+            ceiling_edges[:, 1],
+            ceiling_edges[:, 0],
+            height_map[ceiling_edges[:, 0], ceiling_edges[:, 1]],
+            c='b',
+            marker='o'
+        )
         plt.show()
 
     # Create walls between floor edges and ceiling edges
@@ -208,7 +222,10 @@ def transform_mesh_to_height_map(
 
     for floor_edge in tqdm(floor_plan_edges, desc="Creating walls"):
         floor_x, floor_y = x_grid[floor_edge[1]], y_grid[floor_edge[0]]
-        corresponding_ceiling = next((ceiling_edge for ceiling_edge in ceiling_edges if np.array_equal(ceiling_edge[:2], floor_edge[:2])), None)
+        corresponding_ceiling = next(
+            (ceiling_edge for ceiling_edge in ceiling_edges if np.array_equal(ceiling_edge[:2], floor_edge[:2])),
+            None
+        )
         if corresponding_ceiling is not None:
             ceiling_z = height_map[corresponding_ceiling[0], corresponding_ceiling[1]]
             floor_z = z_min
@@ -233,6 +250,7 @@ def transform_mesh_to_height_map(
         np.asarray(ceiling_point_cloud.points),
         np.asarray(wall_point_cloud.points)
     ])
+
     hull_point_cloud = o3d.geometry.PointCloud()
     hull_point_cloud.points = o3d.utility.Vector3dVector(hull_points)
 
