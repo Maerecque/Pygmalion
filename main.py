@@ -2,15 +2,15 @@ import os
 import sys
 import open3d as o3d
 
-import numpy as np
+import numpy as np  # noqa: F401
 import pyvista as pv
 from vtkmodules.vtkFiltersModeling import vtkFillHolesFilter
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 
-# from Source.dbscanPointCloud import pointcloud_dbscan
-import Source.gridRansacModule as grm
+from Source.dbscanPointCloud import pointcloud_dbscan  # noqa: F401
+import Source.gridRansacModule as grm   # noqa: F401
 from Source.fileHandler import (
     # convert_ply_to_las,
     get_file_path,
@@ -22,8 +22,8 @@ from Source.pointCloudAltering import (
     grid_subsampling,
     remove_noise_statistical
 )
-from Source.pointCloudEditor import open_point_cloud_editor
-from Source.shapeUtils import repair_point_cloud_module, transform_mesh_to_pcd
+from Source.pointCloudEditor import open_point_cloud_editor  # noqa: F401
+from Source.shapeUtils import repair_point_cloud_module, transform_mesh_to_pcd  # noqa: F401
 from Source.meshAlterer import (
     mesh_simple_downsample,
     transform_pcd_to_mesh
