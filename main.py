@@ -46,6 +46,7 @@ if __name__ == "__main__":
         # Remove noise from the point cloud
         pcd_stat = remove_noise_statistical(pcd, False)
 
+        # NEW CODE #
         # Compute normals
         pcd_stat.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
 
@@ -57,8 +58,6 @@ if __name__ == "__main__":
             quantile_value=0.01,
             scale=2.2
         )
-
-        # NEW CODE #
 
         # Downsample and simplify the mesh
         simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.01, False)
@@ -93,29 +92,6 @@ if __name__ == "__main__":
             exit()
 
         exit()
-
-
-        hull_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(hull_point_cloud, alpha=100)
-
-        # Create a mesh from the height map
-        repaired_hull_mesh = repair_point_cloud_module(hull_point_cloud, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
-
-        # # Visualize the contour vertices
-        # o3d.visualization.draw_geometries([height_map_mesh], mesh_show_back_face=True)
-
-        # CODE WORKS UNTIL HERE #
-        exit()
-
-        # Drape the mesh downward
-        downward_mesh = drape_mesh_downward(simplified_mesh, interpolator, kdtree, valid_points, height_map, x_grid, y_grid, min_height) # Does not work yet
-
-        # Visualize the downward mesh
-        o3d.visualization.draw_geometries([downward_mesh], mesh_show_back_face=True)
-
-        # Export the mesh as STL
-        export_file_path = get_save_file_path("STL files", ["*.stl"],(str(os.path.basename(file_name))+".stl"))
-        o3d.io.write_triangle_mesh(export_file_path, smooth_mesh)
-
         # END NEW CODE #
 
         # # Divide the pointcloud into a 3d grid
