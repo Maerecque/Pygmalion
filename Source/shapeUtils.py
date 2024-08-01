@@ -4,9 +4,6 @@ import numpy as np
 import open3d as o3d
 from tqdm import tqdm
 
-# Set the verbosity level of Open3D to only print severe errors
-o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
-
 
 def merge_pcd(pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
     """Function to merge two point clouds into one.
@@ -249,6 +246,8 @@ def repair_point_cloud_module(
     copy_pcd.normalize_normals()
 
     print("There might be an error that will pop up below :)")
+    # Set the verbosity level of Open3D to only print severe errors
+    o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
 
     # Higher scale, more fill up, but also more random guessing and more "detail"
     # Pretty sure this line causes the warning about finding bad sample nodes
