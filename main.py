@@ -67,9 +67,9 @@ if __name__ == "__main__":
         floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud = transform_mesh_to_height_map(simplified_mesh, 100, False)
 
         # Transform the point clouds into a mesh
-        floor_plan_volume = transform_pcd_to_mesh(floor_plan_point_cloud, bool_3d_mesh=False, alpha=0.1, tollerance=0.000001, offset=1)  # noqa: E501
-        ceiling_volume = transform_pcd_to_mesh(ceiling_point_cloud, bool_3d_mesh=True, alpha=0.2, tollerance=0.000001, offset=1)
-        wall_volume = transform_pcd_to_mesh(wall_point_cloud, bool_3d_mesh=True, alpha=0.225, tollerance=0.000001, offset=1)
+        floor_plan_volume = transform_pcd_to_mesh(floor_plan_point_cloud, bool_3d_mesh=False, alpha=0.1, tolerance=0.000001, offset=1)  # noqa: E501
+        ceiling_volume = transform_pcd_to_mesh(ceiling_point_cloud, bool_3d_mesh=True, alpha=0.2, tolerance=0.000001, offset=1)
+        wall_volume = transform_pcd_to_mesh(wall_point_cloud, bool_3d_mesh=True, alpha=0.225, tolerance=0.000001, offset=1)
 
         # Combine all the parts into one volume
         volume = floor_plan_volume + ceiling_volume + wall_volume
@@ -78,6 +78,7 @@ if __name__ == "__main__":
         pv.plot(volume)
 
         # TODO: Fix remaining holes in the mesh
+        # To be honest I have no idea what this does or if it even does anything
         # Transform the unstructured grid into a polydata
         poly_data = volume.extract_geometry()
         filler = vtkFillHolesFilter()

@@ -113,7 +113,7 @@ def mesh_simple_downsample(
 
 
 def transform_pcd_to_mesh(
-    hull_point_cloud: o3d.cpu.pybind.geometry.PointCloud,
+    input_pcd: o3d.cpu.pybind.geometry.PointCloud,
     alpha: float = 0.1,
     tolerance: float = 0.05,
     offset: float = 0.0,
@@ -123,7 +123,7 @@ def transform_pcd_to_mesh(
     """Transforms a point cloud into a mesh using the Delaunay algorithm.
 
     Args:
-        hull_point_cloud (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be transformed into a mesh.
+        input_pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be transformed into a mesh.
         alpha (float, optional): Alpha value for the Delaunay algorithm. Defaults to 0.1.
         tolerance (float, optional): Tolerance value for the Delaunay algorithm. Defaults to 0.05.
         offset (float, optional): Offset value for the Delaunay algorithm. Defaults to 0.0.
@@ -134,7 +134,7 @@ def transform_pcd_to_mesh(
         pv.UnstructuredGrid: The mesh created from the point cloud.
     """
     # Convert the point cloud to a numpy array
-    whole_cloud_points = np.asarray(hull_point_cloud.points)
+    whole_cloud_points = np.asarray(input_pcd.points)
 
     # Create a PyVista PolyData object from the point cloud
     cloud = pv.PolyData(whole_cloud_points)
