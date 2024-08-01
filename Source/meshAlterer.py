@@ -282,7 +282,9 @@ def transform_pcd_to_mesh(
     """
     # TEMP CODE #
     whole_cloud_points = np.asarray(hull_point_cloud.points)
+
     cloud = pv.PolyData(whole_cloud_points)
+
     if bool_3d_mesh:
         volume = cloud.delaunay_3d(alpha=alpha, progress_bar=True, tol=tollerance, offset=offset)
     else:

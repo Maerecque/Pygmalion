@@ -68,9 +68,14 @@ if __name__ == "__main__":
 
         # Transform the point clouds into a mesh
         floor_plan_volume = transform_pcd_to_mesh(floor_plan_point_cloud, bool_3d_mesh=False, alpha=0.1, tollerance=0.000001, offset=1)
-        ceiling_volume = transform_pcd_to_mesh(ceiling_point_cloud, bool_3d_mesh=True, alpha=0.2, tollerance=0.000001, offset=1, visualize_bool=False)
-        wall_volume = transform_pcd_to_mesh(wall_point_cloud, bool_3d_mesh=True, alpha=0.2, tollerance=0.000001, offset=1, visualize_bool=True)
-        exit()
+        ceiling_volume = transform_pcd_to_mesh(ceiling_point_cloud, bool_3d_mesh=True, alpha=0.2, tollerance=0.000001, offset=1, visualize_bool=True)
+        wall_volume = transform_pcd_to_mesh(wall_point_cloud, bool_3d_mesh=True, alpha=0.225, tollerance=0.000001, offset=1)
+
+        # Combine all the parts into one volume
+        volume = floor_plan_volume + ceiling_volume + wall_volume
+
+        # Visualize the volume
+        pv.plot(volume)
 
         # Create a filename location for the height map in stl
         export_file_path = get_save_file_path(
