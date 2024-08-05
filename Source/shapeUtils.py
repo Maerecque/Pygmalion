@@ -5,7 +5,9 @@ import open3d as o3d
 from tqdm import tqdm
 
 
-def merge_pcd(pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geometry.PointCloud) -> o3d.cpu.pybind.geometry.PointCloud:
+def merge_pcd(
+        pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geometry.PointCloud
+) -> o3d.cpu.pybind.geometry.PointCloud:
     """Function to merge two point clouds into one.
     Past me: Idea to use a list of point clouds and then merge them all at once using some sort of loop.
 
@@ -16,6 +18,18 @@ def merge_pcd(pcd1: o3d.cpu.pybind.geometry.PointCloud, pcd2: o3d.cpu.pybind.geo
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Point cloud 1 and 2 merged into one.
     """
+    # Check if the input point clouds are empty
+    if len(pcd1.points) == 0:
+        raise ValueError("The first input point cloud is empty.")
+    if len(pcd2.points) == 0:
+        raise ValueError("The second input point cloud is empty.")
+
+    # Check if the input point clouds have colours
+    if not pcd1.has_colors():
+        raise ValueError("The first input point cloud does not have colours.")
+    if not pcd2.has_colors():
+        raise ValueError("The second input point cloud does not have colours.")
+
     # Merge the points of the two point clouds
     p1_load = np.asarray(pcd1.points)
     p2_load = np.asarray(pcd2.points)
@@ -42,6 +56,18 @@ def merge_list_of_pointclouds(pcd_list: list) -> o3d.cpu.pybind.geometry.PointCl
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Point clouds merged into one.
     """
+    # Check if the input list is empty
+    if len(pcd_list) == 0:
+        raise ValueError("The input list of point clouds is empty.")
+
+    # Check if the input list contains point clouds
+    if not all(isinstance(pcd, o3d.cpu.pybind.geometry.PointCloud) for pcd in pcd_list):
+        raise ValueError("The input list contains elements that are not point clouds.")
+
+    # Check if the input list contains point clouds with points
+    if not all(len(pcd.points) > 0 for pcd in pcd_list):
+        raise ValueError("The input list contains point clouds with no points.")
+
     # Add each point cloud from the list to a new point cloud
     pcd = o3d.geometry.PointCloud()
     print("Merging point clouds...")
@@ -70,7 +96,8 @@ def segment_plane(
         visualize_plane (bool, optional): A boolean to determine whether or not to visualize the extracted plane.
             Defaults to False.
 
-        visualize_leftovers (bool, optional): A boolean to determine whether or not to visualize the points that are not in the extracted plane.
+        visualize_leftovers (bool, optional): A boolean to determine whether or not to visualize the points that are not in the
+            extracted plane.
             Defaults to False.
 
         distance_threshold (float, optional): The maximum distance a point can be from the plane to be considered an inlier.
@@ -82,13 +109,18 @@ def segment_plane(
         num_iterations (int, optional): The number of iterations to run RANSAC.
             Defaults to 10000.
 
-        print_bool (bool, optional): A boolean to toggle print statement the number of points in the extracted plane and the leftover points.
+        print_bool (bool, optional): A boolean to toggle print statement the number of points in the extracted plane and the
+            leftover points.
             Defaults to False.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: The extracted plane in point cloud format.
         o3d.cpu.pybind.geometry.PointCloud: The points that are not in the extracted plane.
     """
+    # Check if the input point cloud is empty
+    if len(point_cloud.points) == 0:
+        raise ValueError("The input point cloud is empty.")
+
     # Use RANSAC to segment the point cloud into planes
     plane_model, inliers = point_cloud.segment_plane(
         distance_threshold=distance_threshold,
@@ -140,6 +172,10 @@ def find_plane_module_manual(
     Returns:
         open3d.geometry.PointCloud: The extracted plane equation.
     """
+    # Check if the input point cloud is empty
+    if len(point_cloud.points) == 0:
+        raise ValueError("The input point cloud is empty.")
+
     pcd = point_cloud
 
     # Initialize variables
@@ -221,13 +257,17 @@ def repair_point_cloud_module(
             The higher the value the more accurate the reconstruction will be, but more faulty triangles will be generated.
             Defaults to 30.
         depth (int, optional): Maximum depth of the tree that will be used for surface reconstruction.
-            Higher values will increase the runtime, but will also increase the quality of the reconstruction, but will be a slower and will overfit.
+            Higher values will increase the runtime, but will also increase the quality of the reconstruction,
+            but will be a slower and will overfit.
             Defaults to 8.
-        scale (float, optional): Specifies the ratio between the diameter of the reconstruction cube and the diameter of the samples' bounding cube.
+        scale (float, optional): Specifies the ratio between the diameter of the reconstruction cube and the diameter of the
+            samples' bounding cube.
             Defaults to 2.2.
-        linear_fit (bool, optional): If true, the reconstructor will use linear interpolation to estimate the positions of iso-vertices.
+        linear_fit (bool, optional): If true, the reconstructor will use linear interpolation to estimate the positions of iso-
+            vertices.
             Defaults to True.
-        quantile_value (float, optional): The quantile value to use for removing the giant plane that will be generated by the Poisson reconstruction.
+        quantile_value (float, optional): The quantile value to use for removing the giant plane that will be generated by the
+            Poisson reconstruction.
             Value must be between 0 and 1. The higher the value the more plane will be removed.
             Defaults to 0.1.
         visualize (bool, optional): A boolean that determines whether to visualize the reconstructed mesh or not.
@@ -236,10 +276,22 @@ def repair_point_cloud_module(
     Returns:
         o3d.cpu.pybind.geometry.TriangleMesh: The reconstructed mesh.
     """
-    print("Starting Poisson surface reconstruction...")
+    # Check inputs
+    # Check if the input point cloud is empty
+    if len(input_point_cloud.points) == 0:
+        raise ValueError("The input point cloud is empty.")
+
+    # Check if the value of the quantile is between 0 and 1
+    if not 0 <= quantile_value <= 1:
+        raise ValueError("The quantile value must be between 0 and 1.")
 
     # Compute normals
-    input_point_cloud.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    input_point_cloud.estimate_normals(
+        search_param=o3d.geometry.KDTreeSearchParamHybrid(
+            radius=kdtree_radius,
+            max_nn=kdtree_max_nn
+        )
+    )
     # Normalize the point cloud using normalize_normals
     input_point_cloud.normalize_normals()
 
@@ -256,7 +308,12 @@ def repair_point_cloud_module(
 
     # Higher scale, more fill up, but also more random guessing and more "detail"
     # Pretty sure this line causes the warning about finding bad sample nodes
-    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(copy_pcd, depth=depth, scale=scale, linear_fit=linear_fit)
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
+        copy_pcd,
+        depth=depth,
+        scale=scale,
+        linear_fit=linear_fit
+    )
 
     # The code below will remove the giant plane that will be generated by the Poisson reconstruction
     # Note to future me: Maybe fiddle around with the quantile value to get better results 😘
@@ -283,6 +340,14 @@ def transform_mesh_to_pcd(
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: The transformed point cloud.
     """
+    # Check if the input mesh is empty
+    if len(mesh.vertices) == 0:
+        raise ValueError("The input mesh is empty.")
+
+    # Check if the input point cloud is empty
+    if len(original_pcd.points) == 0:
+        raise ValueError("The input point cloud is empty.")
+
     print("Transforming mesh to point cloud...")
 
     # calculate overall density of the point cloud
