@@ -1,9 +1,11 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
 import os
 import sys
 import threading
 import traceback
+import subprocess  # For launching the point cloud visualization script
+import open3d as o3d  # Ensure open3d is installed and imported if used
 
 sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 
@@ -11,11 +13,12 @@ sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 from Source.fileHandler import get_file_path, readout_LAS_file
 from Source.pointCloudAltering import grid_subsampling, remove_noise_statistical
 
+
 class PointCloudApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Point Cloud Processing")
-        self.root.geometry("600x300")  # Adjusted width for new labels
+        self.root.geometry("600x350")  # Adjusted height for new buttons
         self.root.resizable(False, False)
 
         # Define button size
@@ -25,7 +28,11 @@ class PointCloudApp:
         self.create_widgets()
         self.file_path = None  # Initialize file path variable
         self.point_cloud_data = None  # To store the processed point cloud data
+        self.pcd_after_dwnsmpl = None  # To store the downsampled point cloud data
         self.original_downsample_text = "Downsample Pointcloud"  # Store the original button text
+
+        # If the escape key is pressed, activate the on_close method
+        self.root.bind("<Escape>", lambda e: self.on_close())
 
         # Bind the window close event to the on_close method
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -81,6 +88,13 @@ class PointCloudApp:
         )
         self.btn_open_3d_printing.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
+        # Row 4
+        self.btn_view_point_cloud = tk.Button(
+            self.root, text="View Point Cloud", width=self.button_width * 2, height=self.button_height,
+            state='disabled', command=self.start_view_point_cloud_thread
+        )
+        self.btn_view_point_cloud.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky='ew')
+
         # Configure column weights to make buttons expand
         self.root.grid_columnconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
@@ -98,6 +112,7 @@ class PointCloudApp:
                 self.point_cloud_data = pcd
                 self.update_point_cloud_info(pcd)
                 self.enable_buttons_after_file_selection()
+                self.enable_view_point_cloud_button()  # Enable view point cloud button
             else:
                 messagebox.showerror("Error", "Failed to read the LAS/LAZ file.")
         else:
@@ -110,6 +125,15 @@ class PointCloudApp:
         self.entry_field.config(state='normal')
         self.btn_downsample.config(state='normal')
 
+    def disable_buttons(self):
+        # Disable all buttons that should be inactive when no file is selected
+        self.btn_downsample.config(state='disabled')
+        self.btn_remove_noise.config(state='disabled')
+        self.btn_repair_save.config(state='disabled')
+        self.btn_open_3d_printing.config(state='disabled')
+        self.btn_view_point_cloud.config(state='disabled')
+        self.entry_field.config(state='disabled')
+
     def update_point_cloud_info(self, pcd):
         # Update point count and color information
         num_points = len(pcd.points) if pcd is not None else 0
@@ -120,7 +144,7 @@ class PointCloudApp:
             f"Points: {num_points}\n"
             f"Has Color: {'Yes' if has_color else 'No'}"
         )
-        self.label_info.config(text=file_info)
+        self.update_label_info(file_info)
 
     def start_downsample_thread(self):
         # Start a new thread for downsampling
@@ -150,17 +174,21 @@ class PointCloudApp:
                 original_data = readout_LAS_file(self.file_path)
                 if original_data:
                     original_size = len(original_data.points)
+                    # Perform downsampling
+                    self.pcd_after_dwnsmpl = grid_subsampling(original_data, voxel_size)
                     self.point_cloud_data = grid_subsampling(original_data, voxel_size)
-                    num_points = len(self.point_cloud_data.points)
+                    num_points = len(self.pcd_after_dwnsmpl.points)
                     # Update the label with the new information
                     file_info = (
                         f"File: {os.path.basename(self.file_path)}\n"
                         f"Points: {num_points} (original size: {original_size})\n"
-                        f"Has Color: {'Yes' if hasattr(self.point_cloud_data, 'colors') and len(self.point_cloud_data.colors) > 0 else 'No'}"
+                        f"Has Color: {'Yes' if hasattr(self.pcd_after_dwnsmpl, 'colors') and len(self.pcd_after_dwnsmpl.colors) > 0 else 'No'}"  # noqa: E501
                     )
                     self.update_label_info(file_info)
                     # Enable remove noise button
                     self.enable_remove_noise_button()
+                    # Enable view point cloud button
+                    self.enable_view_point_cloud_button()
                 else:
                     self.show_error("Failed to reload the point cloud data.")
             except Exception as e:
@@ -182,17 +210,17 @@ class PointCloudApp:
         thread.start()
 
     def remove_noise(self):
-        if self.point_cloud_data:
+        if self.pcd_after_dwnsmpl:
             try:
                 # Get the visualization option from the checkbox
                 visualize = self.visualize_var.get()
 
                 # Store the original number of points
-                original_size = len(self.point_cloud_data.points)
-                
+                original_size = len(self.pcd_after_dwnsmpl.points)
+
                 # Remove noise from the point cloud data with the visualization option
-                self.point_cloud_data = remove_noise_statistical(self.point_cloud_data, visualize)
-                
+                self.point_cloud_data = remove_noise_statistical(self.pcd_after_dwnsmpl, visualize)
+
                 # Calculate the number of points removed and remaining points
                 num_points = len(self.point_cloud_data.points)
                 points_removed = original_size - num_points
@@ -203,10 +231,32 @@ class PointCloudApp:
 
                 # Enable repair and 3D printing buttons
                 self.enable_repair_and_3d_printing_buttons()
+                # Enable view point cloud button
+                self.enable_view_point_cloud_button()
             except Exception as e:
                 self.handle_exception(e)
         else:
-            self.show_error("No point cloud data available for noise removal.")
+            self.show_error("No downsampled point cloud data available for noise removal.")
+
+    def start_view_point_cloud_thread(self):
+        # Start a new thread for viewing the point cloud
+        threading.Thread(target=self.view_point_cloud).start()
+
+    def view_point_cloud(self):
+        try:
+            if not self.point_cloud_data:
+                self.show_error("No point cloud data available for viewing.")
+                return
+
+            # Save the point cloud to a temporary PCD file
+            temp_pcd_path = "temp_pcd.pcd"
+            o3d.io.write_point_cloud(temp_pcd_path, self.point_cloud_data)
+
+            # Launch the open3d_visualization.py script as a separate process
+            subprocess.Popen(["python", "open3d_visualization.py", temp_pcd_path])
+
+        except Exception as e:
+            self.show_error("An error occurred while previewing the point cloud:\n" + str(e))
 
     def update_label_info(self, text):
         # Update label text safely from any thread
@@ -219,6 +269,10 @@ class PointCloudApp:
     def enable_remove_noise_button(self):
         # Enable remove noise button safely from any thread
         self.root.after(0, self.btn_remove_noise.config, {'state': 'normal'})
+
+    def enable_view_point_cloud_button(self):
+        # Enable view point cloud button safely from any thread
+        self.root.after(0, self.btn_view_point_cloud.config, {'state': 'normal'})
 
     def enable_repair_and_3d_printing_buttons(self):
         # Enable repair and 3D printing buttons safely from any thread
@@ -245,6 +299,7 @@ class PointCloudApp:
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.root.quit()  # Exit the Tkinter main loop
             self.root.destroy()  # Close the Tkinter window
+
 
 # Create the main window and run the application
 if __name__ == "__main__":
