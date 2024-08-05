@@ -1,14 +1,17 @@
 # In this file I will attempt to implement the following:
-# 1. Make a function that will divide a pointcloud after normalization up into a 3d grid. The grid cells will have overlapping points with each other.
+# 1. Make a function that will divide a pointcloud after normalization up into a 3d grid.
+#       The grid cells will have overlapping points with each other.
 # 2. This function will run RANSAC on each grid cell. RANSAC will only keep planes that have a certain number of points.
 # 3. After RANSAC is done, the function will return a list of planes that are in the pointcloud.
 
 # Importing libraries
 import numpy as np
 import open3d as o3d
-import fileHandler as fh
-import shapeUtils as su
 from tqdm import tqdm
+import os, sys  # noqa: E401
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+import Source.fileHandler as fh
+import Source.shapeUtils as su
 
 
 def divide_pointcloud_into_grid(

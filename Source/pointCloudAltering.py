@@ -1,14 +1,18 @@
-import fileHandler as fh
 import numpy as np
 import open3d as o3d
-import pointCloudEditor as pce
+import os, sys  # noqa: E401
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+import Source.pointCloudEditor as pce
+import Source.fileHandler as fh
 
 
 def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxel_size: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to normalize the points in a point cloud over a grid.
-    So I found out, maybe the hard way. This method will always normalize the size of the point cloud based on how many points are in the cloud.
-    A large point cloud will not be decimated by the same size as a smaller point cloud. It is all dependent on the original density of the cloud.
-    NOTE:   Should research a more reliable way to normalize the point cloud, find a way to normalize based on original point distance.
+    So I found out, maybe the hard way. This method will always normalize the size of the point cloud based on how many points
+    are in the cloud. A large point cloud will not be decimated by the same size as a smaller point cloud. It is all dependent
+    on the original density of the cloud.
+    NOTE:   Should research a more reliable way to normalize the point cloud,
+            find a way to normalize based on original point distance.
             `voxel_down_sample_and_trace` exists.
 
     Args:
@@ -22,7 +26,7 @@ def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxel_size: float 
     """
     # Downsample the point cloud to a regular grid using voxel_down_sample
     downsampled_pcd = pcd.voxel_down_sample(voxel_size)
-    print(f'The point cloud has been resized after grid normalization from {len(pcd.points):,} to {len(downsampled_pcd.points):,}')
+    print(f'The point cloud has been resized after grid normalization from {len(pcd.points):,} to {len(downsampled_pcd.points):,}')  # noqa: E501
 
     return downsampled_pcd
 
@@ -35,8 +39,6 @@ def remove_noise_statistical(
     print_removal_amount: bool = True,
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """A function to remove noise from a point cloud. This removes points that are further away from their neighbors in average.
-    !!! This function is still an experimental feature. !!!
-    This function seems to perform much better on removing noise without altering any hyperparameters from both mobile and static scans.
 
     Args:
         input_pcd (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
@@ -68,13 +70,16 @@ def remove_noise_statistical(
 
     if print_removal_amount: print(str(amount_removed_points) + " points were removed as outliers.")
 
-    # So there is a bug with this if statement.
-    # For some unknown reason, the outlier_cloud will not be coloured red. This wil happen randomly with the same settings in the same point cloud.
     if show_removed_points:
         outlier_cloud = input_pcd.select_by_index(ind, invert=True)
         outlier_cloud.paint_uniform_color([1, 0, 0])
         inlier_cloud_ex = get_difference_point_cloud(input_pcd, outlier_cloud)
-        o3d.visualization.draw_geometries([inlier_cloud_ex, outlier_cloud], left=0, top=45, window_name="Remove noise with statistical")
+        o3d.visualization.draw_geometries(
+            [inlier_cloud_ex, outlier_cloud],
+            left=0,
+            top=45,
+            window_name="Remove noise with statistical"
+        )
     return cl
 
 
