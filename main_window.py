@@ -253,7 +253,7 @@ class PointCloudApp:
             o3d.io.write_point_cloud(temp_pcd_path, self.point_cloud_data)
 
             # Launch the open3d_visualization.py script as a separate process
-            subprocess.Popen(["python", "open3d_visualization.py", temp_pcd_path])
+            subprocess.Popen(["python", "Source/open3d_visualization.py", temp_pcd_path])
 
         except Exception as e:
             self.show_error("An error occurred while previewing the point cloud:\n" + str(e))
