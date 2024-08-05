@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 # Import the necessary functions (assuming these functions are properly defined in your source)
 from Source.fileHandler import get_file_path, readout_LAS_file
 from Source.pointCloudAltering import grid_subsampling, remove_noise_statistical
+from Interfaces.ThreeDeeprinting_window import App as PrintingApp
 
 
 class PointCloudApp:
@@ -84,7 +85,7 @@ class PointCloudApp:
 
         self.btn_open_3d_printing = tk.Button(
             self.root, text="Open 3d printing\nmodule", width=self.button_width * 2, height=self.button_height,
-            state='disabled'
+            state='disabled', command=self.open_3d_printing_module
         )
         self.btn_open_3d_printing.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
@@ -284,6 +285,13 @@ class PointCloudApp:
     def update_button_text(self, button, text):
         # Update button text safely from any thread
         self.root.after(0, button.config, {'text': text})
+
+    def open_3d_printing_module(self):
+        printing_window = tk.Toplevel(self.root)
+        PrintingApp(
+            printing_window,
+            point_cloud_data=self.point_cloud_data,
+            point_cloud_path=self.file_path)
 
     def show_error(self, message):
         # Show error message safely from any thread

@@ -238,12 +238,17 @@ def repair_point_cloud_module(
     """
     print("Starting Poisson surface reconstruction...")
 
+    # Compute normals
+    input_point_cloud.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    # Normalize the point cloud using normalize_normals
+    input_point_cloud.normalize_normals()
+
     # Hey this actually works really well and fast 👀
     copy_pcd = copy.deepcopy(input_point_cloud)
 
-    # Normalize the point cloud using normalize_normals
-    o3d.geometry.PointCloud.estimate_normals(copy_pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=kdtree_radius, max_nn=kdtree_max_nn))
-    copy_pcd.normalize_normals()
+    # Check if the point cloud actually has normals
+    if not copy_pcd.has_normals():
+        raise ValueError("The point cloud does not have normals, please calculate normals before running this function.")
 
     print("There might be an error that will pop up below :)")
     # Set the verbosity level of Open3D to only print severe errors
