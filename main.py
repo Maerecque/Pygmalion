@@ -7,7 +7,7 @@ import pyvista as pv
 from vtkmodules.vtkFiltersModeling import vtkFillHolesFilter
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
-sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 
 from Source.dbscanPointCloud import pointcloud_dbscan  # noqa: F401
 import Source.gridRansacModule as grm   # noqa: F401

@@ -1,12 +1,13 @@
-import os
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
 import laspy
 import numpy as np
 import open3d as o3d
-from arrayNormalizer import normalize_array
 from plyfile import PlyData
+import os, sys  # noqa: E401
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+from Source.arrayNormalizer import normalize_array
 
 
 class FileFormatError(Exception): pass   # noqa: E701

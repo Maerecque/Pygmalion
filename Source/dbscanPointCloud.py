@@ -1,7 +1,9 @@
 import matplotlib as plt
 import numpy as np
 import open3d as o3d
-from pointCloudEditor import open_point_cloud_editor
+import os, sys  # noqa: E401
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+from Source.pointCloudEditor import open_point_cloud_editor
 from sklearn.cluster import DBSCAN
 
 

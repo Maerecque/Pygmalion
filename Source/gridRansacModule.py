@@ -6,9 +6,11 @@
 # Importing libraries
 import numpy as np
 import open3d as o3d
-import fileHandler as fh
-import shapeUtils as su
 from tqdm import tqdm
+import os, sys  # noqa: E401
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+import Source.fileHandler as fh
+import Source.shapeUtils as su
 
 
 def divide_pointcloud_into_grid(

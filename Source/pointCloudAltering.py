@@ -1,7 +1,9 @@
-import fileHandler as fh
 import numpy as np
 import open3d as o3d
-import pointCloudEditor as pce
+import os, sys  # noqa: E401
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+import Source.pointCloudEditor as pce
+import Source.fileHandler as fh
 
 
 def grid_subsampling(pcd: o3d.cpu.pybind.geometry.PointCloud, voxel_size: float = 0.05) -> o3d.cpu.pybind.geometry.PointCloud:
