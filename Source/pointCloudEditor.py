@@ -13,6 +13,11 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud, show_help: 
         show_help (bool): Whether to show help messages.
             Defaults to True.
     """
+    # Check if the input point cloud is empty
+    if len(pcd.points) == 0:
+        # If the point cloud is empty, show an error message and return
+        raise ValueError("The point cloud is empty")
+
     if show_help:
         print("\n")  # noqa: E303
         print("1) Press 'Y' twice to align geometry with negative direction of y-axis")
