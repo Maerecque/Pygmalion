@@ -66,7 +66,7 @@ class PointCloudApp:
         )
         self.btn_remove_noise.grid(row=2, column=0, padx=10, pady=10, sticky='ew')
 
-        self.label_remove_noise_info = tk.Label(self.root, text="Noise reduction status", anchor='w', justify='left')
+        self.label_remove_noise_info = tk.Label(self.root, text="", anchor='w', justify='left')
         self.label_remove_noise_info.grid(row=2, column=1, padx=10, pady=10, sticky='w')
 
         # Checkbox for visualization
@@ -102,6 +102,10 @@ class PointCloudApp:
         self.root.grid_columnconfigure(2, weight=0)
 
     def choose_file(self):
+        # Update the button text and disable it while processing
+        self.update_button_text(self.btn_choose_file, "Loading...")
+        self.btn_choose_file.config(state='disabled')
+
         # Open a file dialog to choose a file
         file_path = get_file_path("LAS and LAZ files", ["*.las", "*.laz"])
         if file_path:
@@ -113,13 +117,16 @@ class PointCloudApp:
                 self.point_cloud_data = pcd
                 self.update_point_cloud_info(pcd)
                 self.enable_buttons_after_file_selection()
-                self.enable_view_point_cloud_button()  # Enable view point cloud button
             else:
                 messagebox.showerror("Error", "Failed to read the LAS/LAZ file.")
         else:
             self.file_path = None
             self.label_info.config(text="No file selected")
             self.disable_buttons()
+
+        # Re-enable the button and restore its original text
+        self.update_button_text(self.btn_choose_file, "Choose a\nLAS/LAZ file")
+        self.btn_choose_file.config(state='normal')
 
     def enable_buttons_after_file_selection(self):
         # Enable downsample input field and button
@@ -166,7 +173,7 @@ class PointCloudApp:
         if self.file_path:
             try:
                 # Change the button text to "Loading"
-                self.update_button_text(self.btn_downsample, "Loading")
+                self.update_button_text(self.btn_downsample, "Loading...")
                 # Disable the downsample button and input field during processing
                 self.btn_downsample.config(state='disabled')
                 self.entry_field.config(state='disabled')

@@ -1,6 +1,7 @@
 import os
 import sys
 import tkinter as tk
+import threading
 import configparser
 import pyvista as pv
 from vtkmodules.vtkFiltersModeling import vtkFillHolesFilter
@@ -59,81 +60,113 @@ class App:
             return value == ""
 
     def process_point_cloud(self):
-        # Read point cloud data from the provided data
-        pcd = self.point_cloud_data
-
-        # Create a mesh from the point cloud
-        stat_mesh = repair_point_cloud_module(
-            pcd, visualize=self.visualize_step_var1.get(),
-            kdtree_max_nn=int(self.kdtree_nn_entry.get() or 100),
-            depth=int(self.depth_entry.get() or 13),
-            quantile_value=float(self.quantile_value_entry.get() or 0.01),
-            scale=float(self.scale_entry.get() or 2.2)
-        )
-
-        # Downsample and simplify the mesh
-        simplified_mesh = mesh_simple_downsample(
-            stat_mesh,
-            pcd,
-            float(self.distance_threshold_entry.get() or 0.01),
-            self.visualize_step_var2.get()
-        )
-
-        # Transform the mesh into a height map
-        floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud = transform_mesh_to_height_map(
-            simplified_mesh,
-            int(self.gridsize_entry.get() or 100),
-            self.visualize_pointcloud_var.get()
-        )
-
-        # Transform the point clouds into meshes
-        floor_plan_volume = transform_pcd_to_mesh(
-            floor_plan_point_cloud,
-            bool_3d_mesh=self.floor_is_3d_var.get(),
-            alpha=float(self.floor_alpha_offset_entry.get() or 0.1),
-            tolerance=float(self.floor_tolerance_entry.get() or 0.000001),
-            offset=float(self.floor_alpha_offset_entry.get() or 1)
-        )
-        ceiling_volume = transform_pcd_to_mesh(
-            ceiling_point_cloud,
-            bool_3d_mesh=self.ceiling_is_3d_var.get(),
-            alpha=float(self.ceiling_alpha_offset_entry.get() or 0.2),
-            tolerance=float(self.ceiling_tolerance_entry.get() or 0.000001),
-            offset=float(self.ceiling_alpha_offset_entry.get() or 1)
-        )
-        wall_volume = transform_pcd_to_mesh(
-            wall_point_cloud,
-            bool_3d_mesh=self.walls_is_3d_var.get(),
-            alpha=float(self.walls_alpha_offset_entry.get() or 0.225),
-            tolerance=float(self.walls_tolerance_entry.get() or 0.000001),
-            offset=float(self.walls_alpha_offset_entry.get() or 1)
-        )
-
-        # Combine all the parts into one volume
-        volume = floor_plan_volume + ceiling_volume + wall_volume
-
-        # Fix remaining holes in the mesh
-        poly_data = volume.extract_geometry()
-        filler = vtkFillHolesFilter()
-        filler.SetInputData(poly_data)
-        filler.Update()
-        vtk_volume = filler.GetOutput()
-
-        # Create a filename location for the height map in STL
-        export_file_path = get_save_file_path(
-            "STL files", ["*.stl"],
-            (str(os.path.basename(self.point_cloud_path).split(".")[0]) + ".stl")
-        )
+        # Disable the Start button to prevent multiple clicks
+        self.update_button_state(self.start_button, 'disabled')
+        # Update text on the Start button
+        self.start_button.config(text="Processing...")
 
         try:
-            # Transform the vtk polydata to a pyvista mesh
-            output_volume = pv.wrap(vtk_volume)
+            # Read point cloud data from the provided data
+            pcd = self.point_cloud_data
 
-            # Export the height map as STL
-            pv.save_meshio(export_file_path, output_volume)
+            # Update start button text
+            self.start_button.config(text="Repairing\npoint cloud...")
+            # Create a mesh from the point cloud
+            stat_mesh = repair_point_cloud_module(
+                pcd, visualize=self.visualize_step_var1.get(),
+                kdtree_max_nn=int(self.kdtree_nn_entry.get() or 100),
+                depth=int(self.depth_entry.get() or 13),
+                quantile_value=float(self.quantile_value_entry.get() or 0.01),
+                scale=float(self.scale_entry.get() or 2.2)
+            )
 
-        except TypeError:
-            print("No file save location given.")
+            # Update start button text
+            self.start_button.config(text="Simplifying mesh...")
+            # Downsample and simplify the mesh
+            simplified_mesh = mesh_simple_downsample(
+                stat_mesh,
+                pcd,
+                float(self.distance_threshold_entry.get() or 0.01),
+                self.visualize_step_var2.get()
+            )
+
+            # Update start button text
+            self.start_button.config(text="Transforming mesh\nto height map...")
+            # Transform the mesh into a height map
+            floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud = transform_mesh_to_height_map(
+                simplified_mesh,
+                int(self.gridsize_entry.get() or 100),
+                self.visualize_pointcloud_var.get()
+            )
+
+            # Update start button text
+            self.start_button.config(text="Creating mesh \nfrom pointclouds...")
+            # Transform the point clouds into meshes
+            floor_plan_volume = transform_pcd_to_mesh(
+                floor_plan_point_cloud,
+                bool_3d_mesh=self.floor_is_3d_var.get(),
+                alpha=float(self.floor_alpha_offset_entry.get() or 0.1),
+                tolerance=float(self.floor_tolerance_entry.get() or 0.000001),
+                offset=float(self.floor_alpha_offset_entry.get() or 1)
+            )
+            ceiling_volume = transform_pcd_to_mesh(
+                ceiling_point_cloud,
+                bool_3d_mesh=self.ceiling_is_3d_var.get(),
+                alpha=float(self.ceiling_alpha_offset_entry.get() or 0.2),
+                tolerance=float(self.ceiling_tolerance_entry.get() or 0.000001),
+                offset=float(self.ceiling_alpha_offset_entry.get() or 1)
+            )
+            wall_volume = transform_pcd_to_mesh(
+                wall_point_cloud,
+                bool_3d_mesh=self.walls_is_3d_var.get(),
+                alpha=float(self.walls_alpha_offset_entry.get() or 0.225),
+                tolerance=float(self.walls_tolerance_entry.get() or 0.000001),
+                offset=float(self.walls_alpha_offset_entry.get() or 1)
+            )
+
+            # Combine all the parts into one volume
+            volume = floor_plan_volume + ceiling_volume + wall_volume
+
+            # Update start button text
+            self.start_button.config(text="Fixing remaining holes in volume...")
+            # Fix remaining holes in the mesh
+            poly_data = volume.extract_geometry()
+            filler = vtkFillHolesFilter()
+            filler.SetInputData(poly_data)
+            filler.Update()
+            vtk_volume = filler.GetOutput()
+
+            # Update start button text
+            self.start_button.config(text="Saving height map...")
+            # Create a filename location for the height map in STL
+            export_file_path = get_save_file_path(
+                "STL files", ["*.stl"],
+                (str(os.path.basename(self.point_cloud_path).split(".")[0]) + ".stl")
+            )
+
+            try:
+                # Transform the vtk polydata to a pyvista mesh
+                output_volume = pv.wrap(vtk_volume)
+
+                # Export the height map as STL
+                pv.save_meshio(export_file_path, output_volume)
+
+                # Show success message
+                self.show_message("Success", f"Height map saved as {export_file_path}")
+
+            except TypeError:
+                self.show_message("Error", "No file save location given.")
+
+        finally:
+            # Re-enable the Start button
+            self.update_button_state(self.start_button, 'normal')
+            # Reset the text on the Start button
+            self.start_button.config(text="Start")
+
+    def process_point_cloud_thread(self):
+        # Run the processing function in a separate thread
+        thread = threading.Thread(target=self.process_point_cloud)
+        thread.start()
 
     def create_widgets(self):
         # Create a main frame
@@ -290,11 +323,20 @@ class App:
         back_button = tk.Button(button_frame, text="Back", width=15, height=2, command=self.close_window)
         back_button.pack(side="left", padx=5)
 
-        start_button = tk.Button(button_frame, text="Start", width=15, height=2, command=self.process_point_cloud)
-        start_button.pack(side="left", padx=5)
+        self.start_button = tk.Button(button_frame, text="Start", width=15, height=2, command=self.process_point_cloud_thread)
+        self.start_button.pack(side="left", padx=5)
 
         # Bind Escape key to close the window
         self.root.bind("<Escape>", lambda event: self.close_window())
+
+    def update_button_state(self, button, state):
+        button.config(state=state)
+
+    def show_message(self, title, message):
+        message_window = tk.Toplevel(self.root)
+        message_window.title(title)
+        tk.Label(message_window, text=message, padx=10, pady=10).pack()
+        tk.Button(message_window, text="OK", command=message_window.destroy).pack(pady=5)
 
     def load_presets(self):
         config = configparser.ConfigParser()
