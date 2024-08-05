@@ -25,13 +25,13 @@ def pointcloud_dbscan(
     Args:
         pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud that will be used as input for the DBScan.
 
-        eps (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
-            This is not a maximum bound on the distances of points within a cluster.
+        eps (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the
+            other point. This is not a maximum bound on the distances of points within a cluster.
             This is the most important DBSCAN parameter to choose appropriately for your data set and distance function.
             Defaults to 0.1.
 
-        min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
-            This includes the point itself.
+        min_samples (int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a
+            core point. This includes the point itself.
             Defaults to 20.
 
         metric (str, optional): The metric to use when calculating distance between instances in a feature array.
@@ -39,8 +39,8 @@ def pointcloud_dbscan(
             The following metrics can be used: ['chebyshev','cityblock','euclidean','hamming','nan_euclidean','sqeuclidean'].
             Defaults to 'euclidean'.
 
-        algorithm (str, optional): The algorithm to be used by the NearestNeighbors module to compute pointwise distances and find nearest neighbors.
-            See NearestNeighbors module documentation for details.
+        algorithm (str, optional): The algorithm to be used by the NearestNeighbors module to compute pointwise distances and
+            find nearest neighbors. See NearestNeighbors module documentation for details.
             The following metrics can be used: [`auto`, `ball_tree`, `kd_tree`, `brute`].
             Defaults to 'auto'.
 

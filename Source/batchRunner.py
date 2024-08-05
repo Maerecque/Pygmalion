@@ -96,28 +96,28 @@ def batch_running(
         statistical_nb_neighbors (int, optional): nb_neighbors hyperparameter for the statistical noise remover function.
             Defaults to 20.
 
-        statistical_std_ratio (float or list[float], optional): std_ratio hyperparameter for the statistical noise remover function.
+        statistical_std_ratio (float or list[float], optional): std_ratio hyperparameter for statistical noise remover function.
             Defaults to 2.0.
 
         visualize_noise (bool, optional): Wether to visualize the noise that will be removed from the point clouds.
             Defaults to False.
 
-        dbscan_eps (float or list[float], optional): The maximum distance between two samples for one to be considered as in the neighborhood of
-            the other. This is not a maximum bound on the distances of points within a cluster.
+        dbscan_eps (float or list[float], optional): The maximum distance between two samples for one to be considered as in the
+            neighborhood of the other point. This is not a maximum bound on the distances of points within a cluster.
             This is the most important DBSCAN parameter to choose appropriately for your data set and distance function.
             Defaults to 0.1.
 
-        dbscan_min_sample (int or list[int], optional): The number of samples (or total weight) in a neighborhood for a point to be considered as
-            a core point. This includes the point itself.
+        dbscan_min_sample (int or list[int], optional): The number of samples (or total weight) in a neighborhood for a point to
+            be considered as a core point. This includes the point itself.
             Defaults to 20.
 
-        dbscan_metric (str or list[str], optional): The metric to use when calculating distance between instances in a feature array.
-            It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
+        dbscan_metric (str or list[str], optional): The metric to use when calculating distance between instances in a feature
+            array. It must be one of the options allowed by :func:`sklearn.metrics.pairwise_distances` for its metric parameter.
             The following metrics can be used: ['chebyshev','cityblock','euclidean','hamming','nan_euclidean','sqeuclidean'].
             Defaults to 'euclidean'.
 
-        dbscan_algorithm (str or list[str], optional): The algorithm used by NearestNeighbors module to compute pointwise distances
-            and find nearest neighbors. See NearestNeighbors module documentation for details.
+        dbscan_algorithm (str or list[str], optional): The algorithm used by NearestNeighbors module to compute pointwise
+            distances and find nearest neighbors. See NearestNeighbors module documentation for details.
             The following metrics can be used: ['auto', 'ball_tree', 'kd_tree', 'brute'].
             Defaults to 'auto'.
 
