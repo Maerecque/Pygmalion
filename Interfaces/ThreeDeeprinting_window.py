@@ -321,24 +321,24 @@ class App:
         floor_labelframe.pack(fill="x", padx=5, pady=5)
 
         # Add content to Ceiling, Walls, and Floor LabelFrames
-        for frame, alpha_offset_entry_name, tolerance_entry_name, threshold_entry_name, is_3d_var_name in [
+        for frame, alpha_offset_entry_name, tolerance_entry_name, threshold_entry_name, is_3d_var_name in [  # TO-DO: Fix the naming of alpha and offset and remove threshold  # noqa: E501
             (
                 ceiling_labelframe,
-                'ceiling_alpha_offset_entry',
+                'ceiling_alpha_offset_entry',   # TO-DO: Fix the naming of alpha and offset and remove threshold
                 'ceiling_tolerance_entry',
-                'ceiling_threshold_entry',
+                'ceiling_threshold_entry',  # TO-DO: Fix the naming of alpha and offset and remove threshold
                 'ceiling_is_3d_var'
             ), (
                 walls_labelframe,
-                'walls_alpha_offset_entry',
+                'walls_alpha_offset_entry',  # TO-DO: Fix the naming of alpha and offset and remove threshold
                 'walls_tolerance_entry',
-                'walls_threshold_entry',
+                'walls_threshold_entry',    # TO-DO: Fix the naming of alpha and offset and remove threshold
                 'walls_is_3d_var'
             ), (
                 floor_labelframe,
-                'floor_alpha_offset_entry',
+                'floor_alpha_offset_entry',  # TO-DO: Fix the naming of alpha and offset and remove threshold
                 'floor_tolerance_entry',
-                'floor_threshold_entry',
+                'floor_threshold_entry',    # TO-DO: Fix the naming of alpha and offset and remove threshold
                 'floor_is_3d_var'
             )
         ]:
