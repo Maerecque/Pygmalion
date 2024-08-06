@@ -19,6 +19,7 @@ class App:
         self.root = root
         self.root.title("3D Printing Module")
         self.root.resizable(False, False)
+        self.root.iconbitmap("Source\\support_files\\logo.ico")
 
         # Store the point cloud data and path
         self.point_cloud_data = point_cloud_data
