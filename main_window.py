@@ -21,6 +21,7 @@ class PointCloudApp:
         self.root.title("Point Cloud Processing")
         self.root.geometry("600x350")  # Adjusted height for new buttons
         self.root.resizable(False, False)
+        self.root.iconbitmap("Source\\support_files\\logo.ico")
 
         # Define button size
         self.button_width = 20
@@ -145,11 +146,12 @@ class PointCloudApp:
     def update_point_cloud_info(self, pcd):
         # Update point count and color information
         num_points = len(pcd.points) if pcd is not None else 0
+        formatted_points = f"{num_points:,}".replace(',', '.')
         has_color = hasattr(pcd, 'colors') and len(pcd.colors) > 0
 
         file_info = (
             f"File: {os.path.basename(self.file_path)}\n"
-            f"Points: {num_points}\n"
+            f"Points: {formatted_points}\n"
             f"Has Color: {'Yes' if has_color else 'No'}"
         )
         self.update_label_info(file_info)
@@ -182,14 +184,16 @@ class PointCloudApp:
                 original_data = readout_LAS_file(self.file_path)
                 if original_data:
                     original_size = len(original_data.points)
+                    formatted_original = f"{original_size:,}".replace(',', '.')
                     # Perform downsampling
                     self.pcd_after_dwnsmpl = grid_subsampling(original_data, voxel_size)
                     self.point_cloud_data = grid_subsampling(original_data, voxel_size)
                     num_points = len(self.pcd_after_dwnsmpl.points)
+                    formatted_points = f"{num_points:,}".replace(',', '.')
                     # Update the label with the new information
                     file_info = (
                         f"File: {os.path.basename(self.file_path)}\n"
-                        f"Points: {num_points} (original size: {original_size})\n"
+                        f"Points: {formatted_points} (original size: {formatted_original})\n"
                         f"Has Color: {'Yes' if hasattr(self.pcd_after_dwnsmpl, 'colors') and len(self.pcd_after_dwnsmpl.colors) > 0 else 'No'}"  # noqa: E501
                     )
                     self.update_label_info(file_info)
@@ -231,10 +235,12 @@ class PointCloudApp:
 
                 # Calculate the number of points removed and remaining points
                 num_points = len(self.point_cloud_data.points)
+                formatted_points = f"{num_points:,}".replace(',', '.')
                 points_removed = original_size - num_points
+                formatted_removed = f"{points_removed:,}".replace(',', '.')
 
                 # Update the label with the noise reduction status and remaining points
-                noise_info = f"Noise removed: {points_removed} points\nRemaining points: {num_points}"
+                noise_info = f"Noise removed: {formatted_removed} points\nRemaining points: {formatted_points}"
                 self.update_label_remove_noise_info(noise_info)
 
                 # Enable repair and 3D printing buttons
@@ -314,6 +320,7 @@ class PointCloudApp:
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.root.quit()  # Exit the Tkinter main loop
             self.root.destroy()  # Close the Tkinter window
+            exit()
 
 
 # Create the main window and run the application
