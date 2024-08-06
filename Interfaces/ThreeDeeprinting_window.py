@@ -394,11 +394,13 @@ class App:
     def update_button_state(self, button, state):
         button.config(state=state)
 
-    def show_message(self, title, message):
-        message_window = tk.Toplevel(self.root)
-        message_window.title(title)
-        tk.Label(message_window, text=message, padx=10, pady=10).pack()
-        tk.Button(message_window, text="OK", command=message_window.destroy).pack(pady=5)
+    def show_message(self, title, message, message_type="info"):
+        if message_type == "info":
+            tk.messagebox.showinfo(title, message)
+        elif message_type == "error":
+            tk.messagebox.showerror(title, message)
+        elif message_type == "warning":
+            tk.messagebox.showwarning(title, message)
 
     def load_presets(self):
         config = configparser.ConfigParser()
