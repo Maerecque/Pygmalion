@@ -60,11 +60,72 @@ class App:
         except ValueError:
             return value == ""
 
+    def validate_fields(self):
+        # Create a list to store the invalid fields
+        invalid_fields = []
+
+        # Reset the background color of all entry fields
+        for entry in self.root.winfo_children():
+            if isinstance(entry, tk.Entry):
+                entry.config(bg="white")
+
+        # Validate the fields and add invalid fields to the list
+        fields = {
+            "Kdtree NN": self.kdtree_nn_entry.get().isdigit(),
+            "Quantile Value": self.quantile_value_entry.get().replace(".", "").isdigit(),
+            "Depth": self.depth_entry.get().isdigit(),
+            "Scale": self.scale_entry.get().replace(".", "").isdigit(),
+            "Distance Threshold": self.distance_threshold_entry.get().replace(".", "").isdigit(),
+            "Gridsize": self.gridsize_entry.get().isdigit(),
+            "Floor Alpha Offset": self.floor_alpha_offset_entry.get().replace(".", "").isdigit(),
+            "Floor Tolerance": self.floor_tolerance_entry.get().replace(".", "").isdigit(),
+            "Floor Threshold": self.floor_threshold_entry.get().replace(".", "").isdigit(),
+            "Ceiling Alpha Offset": self.ceiling_alpha_offset_entry.get().replace(".", "").isdigit(),
+            "Ceiling Tolerance": self.ceiling_tolerance_entry.get().replace(".", "").isdigit(),
+            "Ceiling Threshold": self.ceiling_threshold_entry.get().replace(".", "").isdigit(),
+            "Walls Alpha Offset": self.walls_alpha_offset_entry.get().replace(".", "").isdigit(),
+            "Walls Tolerance": self.walls_tolerance_entry.get().replace(".", "").isdigit(),
+            "Walls Threshold": self.walls_threshold_entry.get().replace(".", "").isdigit()
+        }
+        invalid_fields = [field for field, valid in fields.items() if not valid]
+
+        # Make the bg of the valid fields green
+        for field in [field for field, valid in fields.items() if valid]:
+            getattr(self, f"{field.lower().replace(' ', '_')}_entry").config(bg="white")
+
+        # If there are invalid fields, show a popup with the field names
+        if invalid_fields:
+            # Highlight the invalid fields
+            for field, valid in fields.items():
+                if not valid:
+                    getattr(self, f"{field.lower().replace(' ', '_')}_entry").config(bg="red")
+
+            # Show a popup with the invalid fields
+            self.show_message(
+                "Invalid Fields",
+                f"The following fields are invalid or empty: {', '.join(invalid_fields)}",
+                "error"
+            )
+
+            # Focus on the first invalid field
+            getattr(self, f"{invalid_fields[0].lower().replace(' ', '_')}_entry").focus()
+
+            return False
+
+        return True
+
     def process_point_cloud(self):
         # Disable the Start button to prevent multiple clicks
         self.update_button_state(self.start_button, 'disabled')
         # Update text on the Start button
         self.start_button.config(text="Processing...")
+
+        # Check if all fields are filled in correctly
+        if not self.validate_fields():
+            # Re-enable the Start button
+            self.update_button_state(self.start_button, 'normal')
+            self.start_button.config(text="Start")
+            return
 
         try:
             # Read point cloud data from the provided data
