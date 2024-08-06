@@ -107,7 +107,7 @@ def generate_wall_points(
     """
     wall_points = []
     for floor_edge in tqdm(floor_edges, desc="Creating walls"):
-        floor_x, floor_y = x_grid[floor_edge[1]], y_grid[floor_edge[0]]
+        floor_x, floor_y = x_grid[floor_edge[0]], y_grid[floor_edge[1]]
         corresponding_ceiling = next(
             (ceiling_edge for ceiling_edge in ceiling_edges if np.array_equal(ceiling_edge[:2], floor_edge[:2])), None
         )
@@ -165,13 +165,13 @@ def transform_mesh_to_height_map(
         plt.show()
 
     # Generate floor plan coordinates
-    floor_plan_coords = np.column_stack([x_grid[np.argwhere(height_map != -np.inf)[:, 1]],
-                                         y_grid[np.argwhere(height_map != -np.inf)[:, 0]],
+    floor_plan_coords = np.column_stack([x_grid[np.argwhere(height_map != -np.inf)[:, 0]],
+                                         y_grid[np.argwhere(height_map != -np.inf)[:, 1]],
                                          np.full(np.argwhere(height_map != -np.inf).shape[0], z.min())])
 
     # Generate ceiling coordinates
-    ceiling_coords = np.column_stack([x_grid[np.argwhere(height_map != -np.inf)[:, 1]],
-                                      y_grid[np.argwhere(height_map != -np.inf)[:, 0]],
+    ceiling_coords = np.column_stack([x_grid[np.argwhere(height_map != -np.inf)[:, 0]],
+                                      y_grid[np.argwhere(height_map != -np.inf)[:, 1]],
                                       height_map[np.argwhere(height_map != -np.inf)[:, 0],
                                                  np.argwhere(height_map != -np.inf)[:, 1]]])
 
