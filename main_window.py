@@ -19,7 +19,7 @@ class PointCloudApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Point Cloud Processing")
-        self.root.geometry("600x350")  # Adjusted height for new buttons
+        self.root.geometry("500x350")  # Adjusted height for new buttons
         self.root.resizable(False, False)
         self.root.iconbitmap("Source\\support_files\\logo.ico")
 
@@ -39,13 +39,16 @@ class PointCloudApp:
         # Bind the window close event to the on_close method
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
+        # On startup focus on the choose file button
+        self.btn_choose_file.focus()
+
     def create_widgets(self):
         # Row 0
         self.btn_choose_file = tk.Button(
             self.root, text="Choose a\nLAS/LAZ file", width=self.button_width, height=self.button_height,
             command=self.choose_file
         )
-        self.btn_choose_file.grid(row=0, column=0, padx=10, pady=10, sticky='ew')
+        self.btn_choose_file.grid(row=0, column=0, padx=10, pady=15, sticky='ew')
 
         self.label_info = tk.Label(self.root, text="No file selected", anchor='w', wraplength=500, justify='left')
         self.label_info.grid(row=0, column=1, padx=10, pady=10, sticky='w')
@@ -67,15 +70,15 @@ class PointCloudApp:
         )
         self.btn_remove_noise.grid(row=2, column=0, padx=10, pady=10, sticky='ew')
 
-        self.label_remove_noise_info = tk.Label(self.root, text="", anchor='w', justify='left')
-        self.label_remove_noise_info.grid(row=2, column=1, padx=10, pady=10, sticky='w')
+        self.label_remove_noise_info = tk.Label(self.root, text="", anchor='nw', justify='left')
+        self.label_remove_noise_info.grid(row=2, column=1, padx=10, pady=5, sticky='nw')
 
         # Checkbox for visualization
         self.visualize_var = tk.BooleanVar()  # Variable to hold the state of the checkbox
         self.check_visualize = tk.Checkbutton(
             self.root, text="Visualize", variable=self.visualize_var, onvalue=True, offvalue=False
         )
-        self.check_visualize.grid(row=2, column=1, padx=10, pady=10, sticky='e')
+        self.check_visualize.grid(row=2, column=1, padx=10, pady=10, sticky='se')
 
         # Row 3
         self.btn_repair_save = tk.Button(
@@ -138,7 +141,11 @@ class PointCloudApp:
     def enable_buttons_after_file_selection(self):
         # Enable downsample input field and button
         self.entry_field.config(state='normal')
+        self.entry_field.focus()  # Focus on the entry field for user convenience
         self.btn_downsample.config(state='normal')
+
+        # Bind the enter key to the downsample button
+        self.root.bind("<Return>", lambda e: self.start_downsample_thread())
 
     def disable_buttons(self):
         # Disable all buttons that should be inactive when no file is selected
@@ -166,6 +173,9 @@ class PointCloudApp:
         # Start a new thread for downsampling
         thread = threading.Thread(target=self.downsample_pointcloud)
         thread.start()
+
+        # Unbind the enter key from the downsample button
+        self.root.unbind("<Return>")
 
     def downsample_pointcloud(self):
         # Retrieve the float parameter from the entry field
@@ -299,6 +309,8 @@ class PointCloudApp:
     def enable_remove_noise_button(self):
         # Enable remove noise button safely from any thread
         self.root.after(0, self.btn_remove_noise.config, {'state': 'normal'})
+        # Focus on the remove noise button for user convenience
+        self.root.after(0, self.btn_remove_noise.focus)
 
     def enable_view_point_cloud_button(self):
         # Enable view point cloud button safely from any thread
@@ -324,6 +336,7 @@ class PointCloudApp:
         self.label_remove_noise_info.config(text="")
         self.disable_buttons()
         self.update_label_info("No file selected")
+        self.btn_choose_file.focus()
 
     def open_3d_printing_module(self):
         if hasattr(self, "printing_window") and self.printing_window.winfo_exists():
