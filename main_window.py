@@ -184,6 +184,8 @@ class PointCloudApp:
                 return
             else:
                 self.show_error("Invalid voxel size. Please enter a float value.")
+                # Focus on the entry field to allow the user to correct the input
+                self.entry_field.focus()
             return
 
         if self.file_path:
@@ -324,11 +326,14 @@ class PointCloudApp:
         self.update_label_info("No file selected")
 
     def open_3d_printing_module(self):
-        printing_window = tk.Toplevel(self.root)
-        PrintingApp(
-            printing_window,
-            point_cloud_data=self.point_cloud_data,
-            point_cloud_path=self.file_path)
+        if hasattr(self, "printing_window") and self.printing_window.winfo_exists():
+            self.printing_window.lift()
+        else:
+            self.printing_window = tk.Toplevel(self.root)
+            PrintingApp(
+                self.printing_window,
+                point_cloud_data=self.point_cloud_data,
+                point_cloud_path=self.file_path)
 
     def show_error(self, message):
         # Show error message safely from any thread
