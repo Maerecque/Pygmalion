@@ -169,7 +169,15 @@ class PointCloudApp:
                 self.show_error("Voxel size must be greater than 0.")
                 return
         except ValueError:
-            self.show_error("Invalid voxel size. Please enter a numeric value.")
+            # Check if the user may have entered a float with a comma instead of a period
+            if ',' in self.entry_field.get() and '.' not in self.entry_field.get():
+                input_text = self.entry_field.get().replace(',', '.')
+                self.entry_field.delete(0, 'end')
+                self.entry_field.insert(0, input_text)
+                self.downsample_pointcloud()
+                return
+            else:
+                self.show_error("Invalid voxel size. Please enter a float value.")
             return
 
         if self.file_path:
