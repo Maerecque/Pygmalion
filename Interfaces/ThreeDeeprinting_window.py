@@ -391,6 +391,9 @@ class App:
         # Bind Escape key to close the window
         self.root.bind("<Escape>", lambda event: self.close_window())
 
+        # Bind Enter key to start processing
+        self.root.bind("<Return>", lambda event: self.process_point_cloud_thread())
+
     def update_button_state(self, button, state):
         button.config(state=state)
 
