@@ -91,11 +91,17 @@ class PointCloudApp:
         self.btn_open_3d_printing.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
         # Row 4
+        self.btn_reset = tk.Button(
+            self.root, text="Reset", width=self.button_width, height=self.button_height,
+            command=self.reset
+        )
+        self.btn_reset.grid(row=4, column=0, padx=10, pady=10, sticky='ew')
+
         self.btn_view_point_cloud = tk.Button(
             self.root, text="View Point Cloud", width=self.button_width * 2, height=self.button_height,
             state='disabled', command=self.start_view_point_cloud_thread
         )
-        self.btn_view_point_cloud.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky='ew')
+        self.btn_view_point_cloud.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
 
         # Configure column weights to make buttons expand
         self.root.grid_columnconfigure(0, weight=1)
@@ -306,6 +312,16 @@ class PointCloudApp:
     def update_button_text(self, button, text):
         # Update button text safely from any thread
         self.root.after(0, button.config, {'text': text})
+
+    def reset(self):
+        # Reset the file path, point cloud data, and other variables
+        self.file_path = None
+        self.point_cloud_data = None
+        self.pcd_after_dwnsmpl = None
+        self.entry_field.delete(0, 'end')
+        self.label_remove_noise_info.config(text="")
+        self.disable_buttons()
+        self.update_label_info("No file selected")
 
     def open_3d_printing_module(self):
         printing_window = tk.Toplevel(self.root)
