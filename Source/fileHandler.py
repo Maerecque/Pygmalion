@@ -210,3 +210,45 @@ def convert_ply_to_las(input_las_path: str = None):
             print("The accompanying JSON file was successfully deleted.")
         except Exception as e:  # noqa: F841
             print("No accompanying JSON file was found.")
+
+
+def save_pcd_as_las(input_pcd: o3d.cpu.pybind.geometry.PointCloud):
+    """A function to save an Open3D point cloud as a LAS file.
+
+    Args:
+        input_pcd (o3d.cpu.pybind.geometry.PointCloud): An Open3D point cloud to be saved as a LAS file.
+    """
+    try:
+        file_name = get_save_file_path("LAS files", "*.las", "default_name.las")
+        if not file_name:
+            raise noFileGivenError
+
+        # Create a new las file
+        las_file = laspy.create(point_format=3, file_version=1.2)
+
+        # Get the point data from the Open3D point cloud
+        point_data = np.asarray(input_pcd.points)
+
+        # Get the colour data from the Open3D point cloud
+        colour_data = np.asarray(input_pcd.colors)
+
+        # Assign the point data to the las file
+        las_file.x = point_data[:, 0]
+        las_file.y = point_data[:, 1]
+        las_file.z = point_data[:, 2]
+
+        # Assign the colour data to the las file
+        las_file.red = colour_data[:, 0] * 257
+        las_file.green = colour_data[:, 1] * 257
+        las_file.blue = colour_data[:, 2] * 257
+
+        # Write the las file to the given file name
+        las_file.write(file_name)
+        print("The point cloud was saved as a LAS file.")
+    except noFileGivenError:
+        print("No file was selected, script will be stopped.")
+        exit()
+    except Exception as e:
+        print("Something went wrong during the saving process.")
+        print(e)
+        exit()

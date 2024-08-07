@@ -17,7 +17,8 @@ import Source.shapeUtils as su
 def divide_pointcloud_into_grid(
     pointcloud: o3d.geometry.PointCloud,
     grid_size: float,
-    overlap: int
+    overlap: int,
+    give_grid_size: bool = False
 ) -> dict:
     """A function to divide a pointcloud into a 3d grid.
 
@@ -65,6 +66,9 @@ def divide_pointcloud_into_grid(
     # Print the number of cells in the grid
     print(f"The pointcloud has been divided into a {num_cells[0]} x {num_cells[1]} x {num_cells[2]} grid.")
     print("Number of cells in the grid: ", len(grid))
+
+    if give_grid_size:
+        return grid, num_cells
 
     return grid
 
@@ -164,7 +168,9 @@ def ransac_plane_finder(
             current_plane = plane_pcd
 
             pcd = leftover_pcd
-            if previous_plane is not None:
+            if previous_plane is not None and current_plane is not None:
+                print(current_plane)
+                print(previous_plane)
                 current_plane = su.merge_pcd(current_plane, previous_plane)
 
         # If the plane that was found is too small, skip it and continue with the next plane.

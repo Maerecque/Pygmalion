@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 from Source.fileHandler import get_file_path, readout_LAS_file
 from Source.pointCloudAltering import grid_subsampling, remove_noise_statistical
 from Interfaces.ThreeDeeprinting_window import App as PrintingApp
+from Interfaces.RepairModule import App as RepairApp
 
 
 class PointCloudApp:
@@ -83,7 +84,7 @@ class PointCloudApp:
         # Row 3
         self.btn_repair_save = tk.Button(
             self.root, text="Repair Point cloud\nand save as a new file", width=self.button_width * 2, height=self.button_height,
-            state='disabled'
+            state='disabled', command=self.open_repair_save_module
         )
         self.btn_repair_save.grid(row=3, column=0, padx=10, pady=10, sticky='ew')
 
@@ -347,6 +348,16 @@ class PointCloudApp:
                 self.printing_window,
                 point_cloud_data=self.point_cloud_data,
                 point_cloud_path=self.file_path)
+
+    def open_repair_save_module(self):
+        if hasattr(self, "repair_window") and self.repair_window.winfo_exists():
+            self.repair_window.lift()
+        else:
+            self.repair_window = tk.Toplevel(self.root)
+            RepairApp(
+                self.repair_window,
+                point_cloud_data=self.point_cloud_data
+            )
 
     def show_error(self, message):
         # Show error message safely from any thread

@@ -12,7 +12,7 @@ sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.dbscanPointCloud import pointcloud_dbscan  # noqa: F401
 import Source.gridRansacModule as grm   # noqa: F401
 from Source.fileHandler import (
-    # convert_ply_to_las,
+    convert_ply_to_las,
     get_file_path,
     get_save_file_path,
     readout_LAS_file
@@ -47,91 +47,89 @@ if __name__ == "__main__":
         # Remove noise from the point cloud
         pcd_stat = remove_noise_statistical(pcd, False)
 
-        # NEW CODE #
-        # Compute normals
-        pcd_stat.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+        # # NEW CODE #
+        # # Compute normals
+        # pcd_stat.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
 
-        # Create a mesh from the point cloud
-        stat_mesh = repair_point_cloud_module(
-            pcd_stat, visualize=False,
-            kdtree_max_nn=100,
-            depth=13,
-            quantile_value=0.01,
-            scale=2.2
-        )
+        # # Create a mesh from the point cloud
+        # stat_mesh = repair_point_cloud_module(
+        #     pcd_stat, visualize=False,
+        #     kdtree_max_nn=100,
+        #     depth=13,
+        #     quantile_value=0.01,
+        #     scale=2.2
+        # )
 
-        # Downsample and simplify the mesh
-        simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.01, False)
+        # # Downsample and simplify the mesh
+        # simplified_mesh = mesh_simple_downsample(stat_mesh, pcd_stat, 0.01, False)
 
-        # Transform the mesh into a height map
-        floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud = transform_mesh_to_height_map(simplified_mesh, 100, False)
+        # # Transform the mesh into a height map
+        # floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud = transform_mesh_to_height_map(simplified_mesh, 100, False)
 
-        # Transform the point clouds into a mesh
-        floor_plan_volume = transform_pcd_to_mesh(floor_plan_point_cloud, bool_3d_mesh=False, alpha=0.1, tolerance=0.000001, offset=1)  # noqa: E501
-        ceiling_volume = transform_pcd_to_mesh(ceiling_point_cloud, bool_3d_mesh=True, alpha=0.2, tolerance=0.000001, offset=1)
-        wall_volume = transform_pcd_to_mesh(wall_point_cloud, bool_3d_mesh=True, alpha=0.225, tolerance=0.000001, offset=1)
+        # # Transform the point clouds into a mesh
+        # floor_plan_volume = transform_pcd_to_mesh(floor_plan_point_cloud, bool_3d_mesh=False, alpha=0.1, tolerance=0.000001, offset=1)  # noqa: E501
+        # ceiling_volume = transform_pcd_to_mesh(ceiling_point_cloud, bool_3d_mesh=True, alpha=0.2, tolerance=0.000001, offset=1)
+        # wall_volume = transform_pcd_to_mesh(wall_point_cloud, bool_3d_mesh=True, alpha=0.225, tolerance=0.000001, offset=1)
 
-        # Combine all the parts into one volume
-        volume = floor_plan_volume + ceiling_volume + wall_volume
+        # # Combine all the parts into one volume
+        # volume = floor_plan_volume + ceiling_volume + wall_volume
 
-        # Visualize the volume
-        pv.plot(volume)
+        # # Visualize the volume
+        # pv.plot(volume)
 
-        # TODO: Fix remaining holes in the mesh
-        # To be honest I have no idea what this does or if it even does anything
-        # Transform the unstructured grid into a polydata
-        poly_data = volume.extract_geometry()
-        filler = vtkFillHolesFilter()
-        filler.SetInputData(poly_data)
-        filler.Update()
+        # # TODO: Fix remaining holes in the mesh
+        # # To be honest I have no idea what this does or if it even does anything
+        # # Transform the unstructured grid into a polydata
+        # poly_data = volume.extract_geometry()
+        # filler = vtkFillHolesFilter()
+        # filler.SetInputData(poly_data)
+        # filler.Update()
 
-        vtk_volume = filler.GetOutput()
+        # vtk_volume = filler.GetOutput()
 
-        # Create a filename location for the height map in stl
-        export_file_path = get_save_file_path(
-            "STL files", ["*.stl"],
-            (str(os.path.basename(file_name).split(".")[0]) + ".stl")
-        )
+        # # Create a filename location for the height map in stl
+        # export_file_path = get_save_file_path(
+        #     "STL files", ["*.stl"],
+        #     (str(os.path.basename(file_name).split(".")[0]) + ".stl")
+        # )
 
-        try:
-            # transform the vtk polydata to a pyvista mesh
-            output_volume = pv.wrap(vtk_volume)
+        # try:
+        #     # transform the vtk polydata to a pyvista mesh
+        #     output_volume = pv.wrap(vtk_volume)
 
-            # Export the height map as STL
-            pv.save_meshio(export_file_path, output_volume)
+        #     # Export the height map as STL
+        #     pv.save_meshio(export_file_path, output_volume)
 
-        # Except type error
-        except TypeError:
-            print("No file save location given.")
-            exit()
+        # # Except type error
+        # except TypeError:
+        #     print("No file save location given.")
+        #     exit()
 
-        exit()
-        # END NEW CODE #
+        # exit()
+        # # END NEW CODE #
 
-        # # Divide the pointcloud into a 3d grid
-        # grid = grm.divide_pointcloud_into_grid(pcd_stat, 1, 0)
+        # Divide the pointcloud into a 3d grid
+        grid = grm.divide_pointcloud_into_grid(pcd_stat, 1, 0)
 
-        # plane_pointcloud = grm.walk_through_grid(pcd_stat, grid, 250, 500)
+        plane_pointcloud = grm.walk_through_grid(pcd_stat, grid, 250, 500)
 
-        # open_point_cloud_editor(plane_pointcloud, False)
+        open_point_cloud_editor(plane_pointcloud, False)
 
-        # # Repair the point cloud with the planes found.
-        # # With these parameters, just try higher NN and depth and lower quantile value (and maybe scale)
-        # mesh = repair_point_cloud_module(plane_pointcloud, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
+        # Repair the point cloud with the planes found.
+        # With these parameters, just try higher NN and depth and lower quantile value (and maybe scale)
+        mesh = repair_point_cloud_module(plane_pointcloud, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
 
-        # # Transform the mesh back to a point cloud.
-        # transformed_pcd = transform_mesh_to_pcd(mesh, plane_pointcloud)
+        # Transform the mesh back to a point cloud.
+        transformed_pcd = transform_mesh_to_pcd(mesh, plane_pointcloud)
 
-        # open_point_cloud_editor(transformed_pcd, False)
+        # I think that this last past can be rewritten with just one function call to save the point cloud as a LAS file.
+        open_point_cloud_editor(transformed_pcd, False)
 
+    # ____________________________ PLY MODULE ____________________________ # noqa: E303
+    # When the point cloud alterations are done, the point cloud is saved as a PLY file or no LAS file is given, this part will start.
+    print("\n Starting PLY module")
 
+    # Print a nice line over the width of the terminal
+    print(u'\u2500' * term_size.columns)
 
-
-    # # ____________________________ PLY MODULE ____________________________ # noqa: E303
-    # # When the point cloud alterations are done, the point cloud is saved as a PLY file or no LAS file is given, this part will start.
-    # print("\n Starting PLY module")
-
-    # # Print a nice line over the width of the terminal
-    # print(u'\u2500' * term_size.columns)
-
-    # convert_ply_to_las(file_name)
+    convert_ply_to_las(file_name)
