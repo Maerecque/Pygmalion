@@ -24,7 +24,7 @@ class PointCloudApp:
         self.root.iconbitmap("Source\\support_files\\logo.ico")
 
         # Define button size
-        self.button_width = 30  # Set a larger width to ensure consistency across all buttons
+        self.button_width = 20  # Set a larger width to ensure consistency across all buttons
         self.button_height = 2
 
         self.create_widgets()
@@ -51,10 +51,14 @@ class PointCloudApp:
             file_selection_frame, text="Choose a\nLAS/LAZ file", width=self.button_width, height=self.button_height,
             command=self.choose_file
         )
-        self.btn_choose_file.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        self.btn_choose_file.grid(row=0, column=0, padx=10, pady=15, sticky='w')
 
-        self.label_info = tk.Label(file_selection_frame, text="No file selected", anchor='w', wraplength=500, justify='left')
-        self.label_info.grid(row=0, column=1, padx=10, pady=10, sticky='w')
+        self.label_info = tk.Label(file_selection_frame, text="No file selected", anchor='w', wraplength=400, justify='left')
+        self.label_info.grid(row=0, column=1, padx=0, pady=15, sticky='w')
+
+        # Configure column weights within file_selection_frame
+        file_selection_frame.grid_columnconfigure(0, weight=0)  # Button column
+        file_selection_frame.grid_columnconfigure(1, weight=1)  # Label column
 
         # Down Sampling Section
         downsampling_frame = ttk.LabelFrame(self.root, text="Down Sampling")
@@ -80,7 +84,7 @@ class PointCloudApp:
         self.btn_remove_noise.grid(row=0, column=0, padx=10, pady=10, sticky='w')
 
         self.label_remove_noise_info = tk.Label(noise_removal_frame, text="", anchor='nw', justify='left')
-        self.label_remove_noise_info.grid(row=0, column=1, padx=10, pady=10, sticky='nw')
+        self.label_remove_noise_info.grid(row=0, column=1, padx=0, pady=10, sticky='nw')
 
         # Checkbox for visualization
         self.visualize_var = tk.BooleanVar()  # Variable to hold the state of the checkbox
