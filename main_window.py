@@ -19,12 +19,12 @@ class PointCloudApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Point Cloud Processing")
-        self.root.geometry("500x500")  # Adjusted height for new sections
+        self.root.geometry("500x420")  # Adjusted height for new sections
         self.root.resizable(False, False)
         self.root.iconbitmap("Source\\support_files\\logo.ico")
 
         # Define button size
-        self.button_width = 20  # Set a larger width to ensure consistency across all buttons
+        self.button_width = 30  # Set a larger width to ensure consistency across all buttons
         self.button_height = 2
 
         self.create_widgets()
@@ -45,37 +45,40 @@ class PointCloudApp:
     def create_widgets(self):
         # File Selection Section
         file_selection_frame = ttk.LabelFrame(self.root, text="File Selection")
-        file_selection_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+        file_selection_frame.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
 
         self.btn_choose_file = tk.Button(
             file_selection_frame, text="Choose a\nLAS/LAZ file", width=self.button_width, height=self.button_height,
             command=self.choose_file
         )
-        self.btn_choose_file.grid(row=0, column=0, padx=10, pady=15, sticky='w')
+        self.btn_choose_file.grid(row=0, column=0, padx=10, pady=11, sticky='w')
 
-        self.label_info = tk.Label(file_selection_frame, text="No file selected", anchor='w', wraplength=400, justify='left')
-        self.label_info.grid(row=0, column=1, padx=0, pady=15, sticky='w')
+        self.label_info = tk.Label(file_selection_frame, text="No file selected", anchor='e', wraplength=400, justify='left')
+        self.label_info.grid(row=0, column=1, padx=10, pady=7, sticky='e')
 
         # Configure column weights within file_selection_frame
         file_selection_frame.grid_columnconfigure(0, weight=0)  # Button column
         file_selection_frame.grid_columnconfigure(1, weight=1)  # Label column
 
+        # Make the root window's first column expandable
+        self.root.grid_columnconfigure(0, weight=1)
+
         # Down Sampling Section
         downsampling_frame = ttk.LabelFrame(self.root, text="Down Sampling")
-        downsampling_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        downsampling_frame.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
 
         self.entry_field = tk.Entry(downsampling_frame, width=self.button_width, state='disabled')
-        self.entry_field.grid(row=0, column=0, padx=10, pady=10, sticky='ew')
+        self.entry_field.grid(row=0, column=0, padx=10, pady=5, sticky='ew')
 
         self.btn_downsample = tk.Button(
             downsampling_frame, text="Downsample Pointcloud", width=self.button_width, height=self.button_height,
             state='disabled', command=self.start_downsample_thread
         )
-        self.btn_downsample.grid(row=0, column=1, padx=10, pady=10, sticky='e')
+        self.btn_downsample.grid(row=0, column=1, padx=10, pady=5, sticky='e')
 
         # Noise Removal Section
         noise_removal_frame = ttk.LabelFrame(self.root, text="Noise Removal")
-        noise_removal_frame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+        noise_removal_frame.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
 
         self.btn_remove_noise = tk.Button(
             noise_removal_frame, text="Remove noise\nfrom pointcloud", width=self.button_width, height=self.button_height,
@@ -84,46 +87,46 @@ class PointCloudApp:
         self.btn_remove_noise.grid(row=0, column=0, padx=10, pady=10, sticky='w')
 
         self.label_remove_noise_info = tk.Label(noise_removal_frame, text="", anchor='nw', justify='left')
-        self.label_remove_noise_info.grid(row=0, column=1, padx=0, pady=10, sticky='nw')
+        self.label_remove_noise_info.grid(row=0, column=2, padx=0, pady=10, sticky='nw')
 
         # Checkbox for visualization
         self.visualize_var = tk.BooleanVar()  # Variable to hold the state of the checkbox
         self.check_visualize = tk.Checkbutton(
             noise_removal_frame, text="Visualize", variable=self.visualize_var, onvalue=True, offvalue=False
         )
-        self.check_visualize.grid(row=0, column=1, padx=10, pady=10, sticky='se')
+        self.check_visualize.grid(row=0, column=1, padx=10, pady=10, sticky='w')
 
         # Modules Section
         modules_frame = ttk.LabelFrame(self.root, text="Modules")
-        modules_frame.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
+        modules_frame.grid(row=3, column=0, padx=10, pady=5, sticky="ew")
 
         self.btn_repair_save = tk.Button(
             modules_frame, text="Repair Point cloud\nand save as a new file", width=self.button_width, height=self.button_height,
             state='disabled'
         )
-        self.btn_repair_save.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        self.btn_repair_save.grid(row=0, column=0, padx=10, pady=5, sticky='w')
 
         self.btn_open_3d_printing = tk.Button(
             modules_frame, text="Open 3D printing\nmodule", width=self.button_width, height=self.button_height,
             state='disabled', command=self.open_3d_printing_module
         )
-        self.btn_open_3d_printing.grid(row=0, column=1, padx=10, pady=10, sticky='w')
+        self.btn_open_3d_printing.grid(row=0, column=1, padx=10, pady=5, sticky='w')
 
         # Miscellaneous Section
         misc_frame = ttk.LabelFrame(self.root, text="Miscellaneous")
-        misc_frame.grid(row=4, column=0, padx=10, pady=10, sticky="ew")
+        misc_frame.grid(row=4, column=0, padx=10, pady=5, sticky="ew")
 
         self.btn_reset = tk.Button(
             misc_frame, text="Reset", width=self.button_width, height=self.button_height,
             command=self.reset
         )
-        self.btn_reset.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        self.btn_reset.grid(row=0, column=0, padx=10, pady=5, sticky='w')
 
         self.btn_view_point_cloud = tk.Button(
             misc_frame, text="View Point Cloud", width=self.button_width, height=self.button_height,
             state='disabled', command=self.start_view_point_cloud_thread
         )
-        self.btn_view_point_cloud.grid(row=0, column=1, padx=10, pady=10, sticky='w')
+        self.btn_view_point_cloud.grid(row=0, column=1, padx=10, pady=5, sticky='w')
 
         # Configure column weights within each LabelFrame to make widgets expand properly
         for frame in [file_selection_frame, downsampling_frame, noise_removal_frame, modules_frame, misc_frame]:
@@ -320,6 +323,9 @@ class PointCloudApp:
     def update_label_info(self, text):
         # Update label text safely from any thread
         self.root.after(0, self.label_info.config, {'text': text})
+
+        # Update y padding to ensure the text is displayed properly
+        self.root.after(0, self.label_info.config, {'pady': 0})
 
     def update_label_remove_noise_info(self, text):
         # Update label text safely from any thread
