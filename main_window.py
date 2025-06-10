@@ -20,7 +20,7 @@ class PointCloudApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Point Cloud Processing")
-        self.root.geometry("500x420")  # Adjusted height for new sections
+        self.root.geometry("500x480")  # Adjusted height for new sections
         self.root.resizable(False, False)
         self.root.iconbitmap("Source\\support_files\\logo.ico")
 
@@ -103,9 +103,9 @@ class PointCloudApp:
 
         self.btn_repair_save = tk.Button(
             self.root, text="Repair Point cloud\nand save as a new file", width=self.button_width * 2, height=self.button_height,
-            state='disabled', command=self.open_repair_save_module
+            state='disabled', command=self.open_repair_save_module,
         )
-        self.btn_repair_save.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+        self.btn_repair_save.grid(row=5, column=0, padx=10, pady=5, sticky='w')
 
         self.btn_open_3d_printing = tk.Button(
             modules_frame, text="Open 3D printing\nmodule", width=self.button_width, height=self.button_height,
@@ -305,7 +305,7 @@ class PointCloudApp:
         # Start a new thread for viewing the point cloud
         threading.Thread(target=self.view_point_cloud).start()
 
-    def view_point_cloud(self):
+    def view_point_cloud(self):  # Note to self: Something is wrong with this function, it doesn't work properly. It cannot seem to save the temporary PCD file correctly, might have to do with work-pc. 
         try:
             if not self.point_cloud_data:
                 self.show_error("No point cloud data available for viewing.")
@@ -313,6 +313,13 @@ class PointCloudApp:
 
             # Save the point cloud to a temporary PCD file
             temp_pcd_path = "temp_pcd.pcd"
+
+            # Ensure the temporary file is placed in current working directory
+            current_dir = os.getcwd()
+            temp_pcd_path = os.path.join(current_dir, temp_pcd_path)
+            print(f"Temporary PCD file path: {temp_pcd_path}")  # Debugging line to check the path
+
+            # Write the point cloud data to the temporary PCD file
             o3d.io.write_point_cloud(temp_pcd_path, self.point_cloud_data)
 
             # Launch the open3d_visualization.py script as a separate process
