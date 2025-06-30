@@ -1,9 +1,3 @@
-# New interface 4 sections
-# Grid division
-# Plane detection in grid
-# Repair point cloud with planes found
-# Save repaired point cloud
-
 import sys
 import os
 import tkinter as tk
