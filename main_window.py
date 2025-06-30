@@ -16,6 +16,48 @@ from Interfaces.ThreeDeeprinting_window import App as PrintingApp
 from Interfaces.RepairModule import App as RepairApp
 
 
+class Tooltip:
+    """
+    Class to create tooltips for widgets in Tkinter applications.
+    """
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tipwindow = None
+        widget.bind("<Enter>", self.show_tip)
+        widget.bind("<Leave>", self.hide_tip)
+
+    def show_tip(self, event=None):
+        """Show the tooltip when the mouse enters the widget.
+
+        Args:
+            event (tk.Event, optional): The event that triggered the tooltip display. Defaults to None.
+        """
+        if self.tipwindow or not self.text:
+            return
+        x, y, _, _ = self.widget.bbox("insert") if hasattr(self.widget, "bbox") else (0, 0, 0, 0)
+        x = x + self.widget.winfo_rootx() + 25
+        y = y + self.widget.winfo_rooty() + 20
+        self.tipwindow = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(tw, text=self.text, justify='left',
+                         background="#ffffe0", relief='solid', borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hide_tip(self, event=None):
+        """Hide the tooltip when the mouse leaves the widget.
+
+        Args:
+            event (tk.Event, optional): The event that triggered the tooltip hide. Defaults to None.
+        """
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
+
+
 class PointCloudApp:
     def __init__(self, root):
         self.root = root
@@ -53,9 +95,11 @@ class PointCloudApp:
             command=self.choose_file
         )
         self.btn_choose_file.grid(row=0, column=0, padx=10, pady=11, sticky='w')
+        Tooltip(self.btn_choose_file, "Select a LAS or LAZ file to load your pointcloud.")
 
         self.label_info = tk.Label(file_selection_frame, text="No file selected", anchor='e', wraplength=400, justify='left')
         self.label_info.grid(row=0, column=1, padx=10, pady=7, sticky='e')
+        Tooltip(self.label_info, "Displays information about the currently loaded file.")
 
         # Configure column weights within file_selection_frame
         file_selection_frame.grid_columnconfigure(0, weight=0)  # Button column
@@ -70,12 +114,14 @@ class PointCloudApp:
 
         self.entry_field = tk.Entry(downsampling_frame, width=self.button_width, state='disabled')
         self.entry_field.grid(row=0, column=0, padx=10, pady=5, sticky='ew')
+        Tooltip(self.entry_field, "Enter the voxel size for downsampling (float, e.g. 0.025).")
 
         self.btn_downsample = tk.Button(
             downsampling_frame, text="Downsample Pointcloud", width=self.button_width, height=self.button_height,
             state='disabled', command=self.start_downsample_thread
         )
         self.btn_downsample.grid(row=0, column=1, padx=10, pady=5, sticky='e')
+        Tooltip(self.btn_downsample, "Reduce the number of points in the cloud using the specified voxel size.")
 
         # Noise Removal Section
         noise_removal_frame = ttk.LabelFrame(self.root, text="Noise Removal")
@@ -86,6 +132,7 @@ class PointCloudApp:
             state='disabled', command=self.start_remove_noise_thread
         )
         self.btn_remove_noise.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        Tooltip(self.btn_remove_noise, "Remove noise from the downsampled pointcloud using statistical methods.")
 
         self.label_remove_noise_info = tk.Label(noise_removal_frame, text="", anchor='nw', justify='left')
         self.label_remove_noise_info.grid(row=0, column=2, padx=0, pady=10, sticky='nw')
@@ -112,6 +159,7 @@ class PointCloudApp:
             state='disabled', command=self.open_3d_printing_module
         )
         self.btn_open_3d_printing.grid(row=0, column=1, padx=10, pady=5, sticky='w')
+        Tooltip(self.btn_open_3d_printing, "Open the 3D printing module to prepare the pointcloud for printing.")
 
         # Miscellaneous Section
         misc_frame = ttk.LabelFrame(self.root, text="Miscellaneous")
