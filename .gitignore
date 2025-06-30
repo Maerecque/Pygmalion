@@ -1,3 +1,4 @@
 /Werfkelderscans
 /.vscode
 */__pycache__
+*.stl
