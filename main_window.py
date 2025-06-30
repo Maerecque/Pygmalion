@@ -431,6 +431,7 @@ class PointCloudApp:
         self.disable_buttons()
         self.update_label_info("No file selected")
         self.btn_choose_file.focus()
+        self.remove_temporary_files()
 
     def open_3d_printing_module(self):
         if hasattr(self, "printing_window") and self.printing_window.winfo_exists():
@@ -464,9 +465,21 @@ class PointCloudApp:
     def on_close(self):
         # Perform any cleanup or final actions before closing
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            # Remove temporary files if they exist
+            self.remove_temporary_files()
             self.root.quit()  # Exit the Tkinter main loop
             self.root.destroy()  # Close the Tkinter window
             exit()
+
+    def remove_temporary_files(self):
+        """Remove temporary files created during the session."""
+        temp_pcd_path = "temp_pcd.pcd"
+        if os.path.exists(temp_pcd_path):
+            try:
+                os.remove(temp_pcd_path)
+                print(f"Temporary file {temp_pcd_path} removed successfully.")
+            except Exception as e:
+                print(f"Error removing temporary file: {e}")
 
 
 # Create the main window and run the application
