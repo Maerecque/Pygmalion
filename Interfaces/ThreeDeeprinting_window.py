@@ -77,15 +77,15 @@ class App:
             "Scale": self.scale_entry.get().replace(".", "").isdigit(),
             "Distance Threshold": self.distance_threshold_entry.get().replace(".", "").isdigit(),
             "Gridsize": self.gridsize_entry.get().isdigit(),
-            "Floor Alpha Offset": self.floor_alpha_offset_entry.get().replace(".", "").isdigit(),
-            "Floor Tolerance": self.floor_tolerance_entry.get().replace(".", "").isdigit(),
-            "Floor Threshold": self.floor_threshold_entry.get().replace(".", "").isdigit(),
             "Ceiling Alpha Offset": self.ceiling_alpha_offset_entry.get().replace(".", "").isdigit(),
             "Ceiling Tolerance": self.ceiling_tolerance_entry.get().replace(".", "").isdigit(),
             "Ceiling Threshold": self.ceiling_threshold_entry.get().replace(".", "").isdigit(),
             "Walls Alpha Offset": self.walls_alpha_offset_entry.get().replace(".", "").isdigit(),
             "Walls Tolerance": self.walls_tolerance_entry.get().replace(".", "").isdigit(),
-            "Walls Threshold": self.walls_threshold_entry.get().replace(".", "").isdigit()
+            "Walls Threshold": self.walls_threshold_entry.get().replace(".", "").isdigit(),
+            "Floor Alpha Offset": self.floor_alpha_offset_entry.get().replace(".", "").isdigit(),
+            "Floor Tolerance": self.floor_tolerance_entry.get().replace(".", "").isdigit(),
+            "Floor Threshold": self.floor_threshold_entry.get().replace(".", "").isdigit()
         }
         invalid_fields = [field for field, valid in fields.items() if not valid]
 
