@@ -278,7 +278,7 @@ class PointCloudApp:
                 self.entry_field.focus()
             return
 
-        if self.file_path:
+        if self.point_cloud_data:
             try:
                 # Change the button text to "Loading"
                 self.update_button_text(self.btn_downsample, "Loading...")
@@ -286,29 +286,26 @@ class PointCloudApp:
                 self.btn_downsample.config(state='disabled')
                 self.entry_field.config(state='disabled')
 
-                # Reload the original pointcloud data from the file
-                original_data = readout_LAS_file(self.file_path)
-                if original_data:
-                    original_size = len(original_data.points)
-                    formatted_original = f"{original_size:,}".replace(',', '.')
-                    # Perform downsampling
-                    self.pcd_after_dwnsmpl = grid_subsampling(original_data, voxel_size)
-                    self.point_cloud_data = grid_subsampling(original_data, voxel_size)
-                    num_points = len(self.pcd_after_dwnsmpl.points)
-                    formatted_points = f"{num_points:,}".replace(',', '.')
-                    # Update the label with the new information
-                    file_info = (
-                        f"File: {os.path.basename(self.file_path)}\n"
-                        f"Points: {formatted_points} (original size: {formatted_original})\n"
-                        f"Has Color: {'Yes' if hasattr(self.pcd_after_dwnsmpl, 'colors') and len(self.pcd_after_dwnsmpl.colors) > 0 else 'No'}"  # noqa: E501
-                    )
-                    self.update_label_info(file_info)
-                    # Enable remove noise button
-                    self.enable_remove_noise_button()
-                    # Enable view pointcloud button
-                    self.enable_view_point_cloud_button()
-                else:
-                    self.show_error("Failed to reload the pointcloud data.")
+                # Use the already loaded pointcloud data
+                original_data = self.point_cloud_data
+                original_size = len(original_data.points)
+                formatted_original = f"{original_size:,}".replace(',', '.')
+                # Perform downsampling
+                self.pcd_after_dwnsmpl = grid_subsampling(original_data, voxel_size)
+                self.point_cloud_data = self.pcd_after_dwnsmpl  # Update the point cloud data
+                num_points = len(self.pcd_after_dwnsmpl.points)
+                formatted_points = f"{num_points:,}".replace(',', '.')
+                # Update the label with the new information
+                file_info = (
+                    f"File: {os.path.basename(self.file_path)}\n"
+                    f"Points: {formatted_points} (original size: {formatted_original})\n"
+                    f"Has Color: {'Yes' if hasattr(self.pcd_after_dwnsmpl, 'colors') and len(self.pcd_after_dwnsmpl.colors) > 0 else 'No'}"  # noqa: E501
+                )
+                self.update_label_info(file_info)
+                # Enable remove noise button
+                self.enable_remove_noise_button()
+                # Enable view pointcloud button
+                self.enable_view_point_cloud_button()
             except Exception as e:
                 self.handle_exception(e)
             finally:
