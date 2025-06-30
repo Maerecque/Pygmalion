@@ -14,30 +14,26 @@ sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.gridRansacModule import divide_pointcloud_into_grid, walk_through_grid
 from Source.shapeUtils import repair_point_cloud_module
 
+
 class App:
     def __init__(self, root, point_cloud_data=None, point_cloud_path=None):
         self.root = root
         self.root.title("3D Processing Module")
-        self.root.geometry("410x420")
-        self.root.resizable(False, False)
+        self.root.update_idletasks()
+        self.root.geometry("")  # Let geometry be determined by content
+        self.root.resizable(False, False)  # Allow horizontal resizing
         self.root.iconbitmap("Source\\support_files\\logo.ico")
 
-        # Store the point cloud data and path
         self.point_cloud_data = point_cloud_data
         self.point_cloud_path = point_cloud_path
 
-        # Register the validation functions
         self.validate_int = self.root.register(self.validate_integer)
         self.validate_flt = self.root.register(self.validate_float)
 
-        # Define a uniform width for all labels and entry widgets
-        self.label_width = 25
-        self.entry_width = 25
+        # Common width for entry fields
+        self.entry_width = 18
 
-        # If the escape key is pressed, activate the on_close method
         self.root.bind("<Escape>", lambda e: self.on_close())
-
-        # Bind the window close event to the on_close method
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.create_widgets()
@@ -46,153 +42,74 @@ class App:
         # Grid Division Section
         grid_division_frame = ttk.LabelFrame(self.root, text="Grid division")
         grid_division_frame.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
+        grid_division_frame.grid_columnconfigure(0, weight=1)
+        grid_division_frame.grid_columnconfigure(1, weight=1)
 
-        tk.Label(
-            grid_division_frame,
-            text="Grid size (float):",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=0, column=0, padx=10, pady=0)
-        self.grid_size = tk.Entry(
-            grid_division_frame,
-            width=self.entry_width,
-            validate="key",
-            validatecommand=(self.validate_flt, "%P")
-        )
-        self.grid_size.grid(row=0, column=1, padx=10, pady=0)
+        tk.Label(grid_division_frame, text="Grid size (float):", anchor="w").grid(row=0, column=0, padx=5, pady=2, sticky="ew")
+        self.grid_size = tk.Entry(grid_division_frame, width=self.entry_width, validate="key", validatecommand=(self.validate_flt, "%P"))
+        self.grid_size.grid(row=0, column=1, padx=5, pady=2, sticky="ew")
 
-        tk.Label(
-            grid_division_frame,
-            text="Overlap (integer):",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=1, column=0, padx=10, pady=0)
-        self.overlap = tk.Entry(
-            grid_division_frame,
-            width=self.entry_width,
-            validate="key",
-            validatecommand=(self.validate_int, "%P")
-        )
-        self.overlap.grid(row=1, column=1, padx=10, pady=0)
+        tk.Label(grid_division_frame, text="Overlap (integer):", anchor="w").grid(row=1, column=0, padx=5, pady=2, sticky="ew")
+        self.overlap = tk.Entry(grid_division_frame, width=self.entry_width, validate="key", validatecommand=(self.validate_int, "%P"))
+        self.overlap.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
 
-        self.result_label = tk.Label(
-            grid_division_frame,
-            text="Result will be displayed here.",
-            width=self.label_width,
-            anchor="w"
-        )
-        self.result_label.grid(row=2, column=0, padx=10, pady=5)
+        self.result_label = tk.Label(grid_division_frame, text="Result will be displayed here.", anchor="w")
+        self.result_label.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
-        self.grid_division_start_button = tk.Button(
-            grid_division_frame,
-            text="Start",
-            width=self.entry_width - 4,
-            command=self.grid_division_start
-        )
-        self.grid_division_start_button.grid(row=2, column=1, padx=10, pady=5, sticky="e")
+        self.grid_division_start_button = tk.Button(grid_division_frame, text="Start", command=self.grid_division_start)
+        self.grid_division_start_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Grid Walkthrough Section
         grid_walkthrough_frame = ttk.LabelFrame(self.root, text="Grid walkthrough")
         grid_walkthrough_frame.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
+        grid_walkthrough_frame.grid_columnconfigure(0, weight=1)
+        grid_walkthrough_frame.grid_columnconfigure(1, weight=1)
 
-        tk.Label(
-            grid_walkthrough_frame,
-            text="Min. cell size:",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=0, column=0, padx=10, pady=0)
-        self.min_cell_size = tk.Entry(
-            grid_walkthrough_frame,
-            width=self.entry_width
-        )
-        self.min_cell_size.grid(row=0, column=1, padx=10, pady=0)
+        tk.Label(grid_walkthrough_frame, text="Min. cell size:", anchor="w").grid(row=0, column=0, padx=5, pady=2, sticky="ew")
+        self.min_cell_size = tk.Entry(grid_walkthrough_frame, width=self.entry_width)
+        self.min_cell_size.grid(row=0, column=1, padx=5, pady=2, sticky="ew")
 
-        tk.Label(
-            grid_walkthrough_frame,
-            text="Min. plane size:",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=1, column=0, padx=10, pady=0)
+        tk.Label(grid_walkthrough_frame, text="Min. plane size:", anchor="w").grid(row=1, column=0, padx=5, pady=2, sticky="ew")
         self.min_plane_size = tk.Entry(grid_walkthrough_frame, width=self.entry_width)
-        self.min_plane_size.grid(row=1, column=1, padx=10, pady=0)
+        self.min_plane_size.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
 
-        self.grid_walkthrough_show_button = tk.Button(
-            grid_walkthrough_frame,
-            text="Show Result",
-            width=self.label_width,
-            command=self.grid_walkthrough_show
-        )
-        self.grid_walkthrough_show_button.grid(row=2, column=0, padx=5, pady=5, sticky="e")
-
-        self.grid_walkthrough_start_button = tk.Button(
-            grid_walkthrough_frame,
-            text="Start",
-            width=self.entry_width - 4,
-            command=self.grid_walkthrough_start
-        )
-        self.grid_walkthrough_start_button.grid(row=2, column=1, padx=10, pady=5, sticky="e")
+        self.grid_walkthrough_show_button = tk.Button(grid_walkthrough_frame, text="Show Result", command=self.grid_walkthrough_show)
+        self.grid_walkthrough_show_button.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        self.grid_walkthrough_start_button = tk.Button(grid_walkthrough_frame, text="Start", command=self.grid_walkthrough_start)
+        self.grid_walkthrough_start_button.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
 
         # Pointcloud Repair Section
         pointcloud_repair_frame = ttk.LabelFrame(self.root, text="Pointcloud repair")
         pointcloud_repair_frame.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
+        pointcloud_repair_frame.grid_columnconfigure(0, weight=1)
+        pointcloud_repair_frame.grid_columnconfigure(1, weight=1)
 
-        tk.Label(
-            pointcloud_repair_frame,
-            text="KdTree NN:",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=0, column=0, padx=10, pady=0)
+        tk.Label(pointcloud_repair_frame, text="KdTree NN:", anchor="w").grid(row=0, column=0, padx=5, pady=2, sticky="ew")
         self.kdtree_nn = tk.Entry(pointcloud_repair_frame, width=self.entry_width)
-        self.kdtree_nn.grid(row=0, column=1, padx=10, pady=0)
+        self.kdtree_nn.grid(row=0, column=1, padx=5, pady=2, sticky="ew")
 
-        tk.Label(
-            pointcloud_repair_frame,
-            text="Depth:",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=1, column=0, padx=10, pady=0)
+        tk.Label(pointcloud_repair_frame, text="Depth:", anchor="w").grid(row=1, column=0, padx=5, pady=2, sticky="ew")
         self.depth = tk.Entry(pointcloud_repair_frame, width=self.entry_width)
-        self.depth.grid(row=1, column=1, padx=10, pady=0)
+        self.depth.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
 
-        tk.Label(
-            pointcloud_repair_frame,
-            text="Quantile value (float):",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=2, column=0, padx=10, pady=0)
+        tk.Label(pointcloud_repair_frame, text="Quantile value (float):", anchor="w").grid(row=2, column=0, padx=5, pady=2, sticky="ew")
         self.quantile_value = tk.Entry(pointcloud_repair_frame, width=self.entry_width)
-        self.quantile_value.grid(row=2, column=1, padx=10, pady=0)
+        self.quantile_value.grid(row=2, column=1, padx=5, pady=2, sticky="ew")
 
-        tk.Label(
-            pointcloud_repair_frame,
-            text="Scale (float):",
-            width=self.label_width,
-            anchor="w"
-        ).grid(row=3, column=0, padx=10, pady=0)
+        tk.Label(pointcloud_repair_frame, text="Scale (float):", anchor="w").grid(row=3, column=0, padx=5, pady=2, sticky="ew")
         self.scale = tk.Entry(pointcloud_repair_frame, width=self.entry_width)
-        self.scale.grid(row=3, column=1, padx=10, pady=0)
+        self.scale.grid(row=3, column=1, padx=5, pady=2, sticky="ew")
 
-        self.pointcloud_show_button = tk.Button(
-            pointcloud_repair_frame,
-            text="Show Result",
-            width=self.label_width,
-            command=self.pointcloud_repair_show
-        )
-        self.pointcloud_show_button.grid(row=4, column=0, padx=5, pady=5, sticky="e")
-
-        self.pointcloud_start_button = tk.Button(
-            pointcloud_repair_frame,
-            text="Start",
-            width=self.entry_width - 4,
-            command=self.pointcloud_repair_start
-        )
-        self.pointcloud_start_button.grid(row=4, column=1, padx=10, pady=5, sticky="e")
+        self.pointcloud_show_button = tk.Button(pointcloud_repair_frame, text="Show Result", command=self.pointcloud_repair_show)
+        self.pointcloud_show_button.grid(row=4, column=0, padx=5, pady=5, sticky="ew")
+        self.pointcloud_start_button = tk.Button(pointcloud_repair_frame, text="Start", command=self.pointcloud_repair_start)
+        self.pointcloud_start_button.grid(row=4, column=1, padx=5, pady=5, sticky="ew")
 
         # Save Button at the Bottom
-        self.save_button = tk.Button(self.root, text="Save", height=2, width=self.entry_width, command=self.save)
-        self.save_button.grid(row=3, padx=10, pady=5, sticky="ew")
+        self.save_button = tk.Button(self.root, text="Save", height=2, command=self.save)
+        self.save_button.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
 
-        # Configure the root window's column to expand
+        # Make the main window's column expand
         self.root.grid_columnconfigure(0, weight=1)
 
     def validate_integer(self, value):
@@ -277,6 +194,35 @@ class App:
             self.root.quit()  # Exit the Tkinter main loop
             self.root.destroy()  # Close the Tkinter window
             exit()
+
+
+class Tooltip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tipwindow = None
+        widget.bind("<Enter>", self.show_tip)
+        widget.bind("<Leave>", self.hide_tip)
+
+    def show_tip(self, event=None):
+        if self.tipwindow or not self.text:
+            return
+        x, y, cx, cy = self.widget.bbox("insert") if hasattr(self.widget, "bbox") else (0, 0, 0, 0)
+        x = x + self.widget.winfo_rootx() + 25
+        y = y + self.widget.winfo_rooty() + 20
+        self.tipwindow = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(tw, text=self.text, justify='left',
+                         background="#ffffe0", relief='solid', borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hide_tip(self, event=None):
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
 
 
 if __name__ == "__main__":
