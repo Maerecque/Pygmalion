@@ -149,18 +149,23 @@ class PointCloudApp:
         modules_frame = ttk.LabelFrame(self.root, text="Modules")
         modules_frame.grid(row=3, column=0, padx=10, pady=5, sticky="ew")
 
-        self.btn_repair_save = tk.Button(
-            self.root, text="Repair pointcloud\nand save as a new file", width=self.button_width * 2, height=self.button_height,
-            state='disabled', command=self.open_repair_save_module,
-        )
-        self.btn_repair_save.grid(row=5, column=0, padx=10, pady=5, sticky='w')
-
         self.btn_open_3d_printing = tk.Button(
             modules_frame, text="Open 3D printing\nmodule", width=self.button_width, height=self.button_height,
             state='disabled', command=self.open_3d_printing_module
         )
-        self.btn_open_3d_printing.grid(row=0, column=1, padx=10, pady=5, sticky='w')
+        self.btn_open_3d_printing.grid(row=0, column=1, padx=10, pady=5, sticky='ew')
         Tooltip(self.btn_open_3d_printing, "Open the 3D printing module to prepare the pointcloud for printing.")
+
+        self.btn_repair_save = tk.Button(
+            modules_frame, text="Repair pointcloud\nand save as a new file", width=self.button_width, height=self.button_height,
+            state='disabled', command=self.open_repair_save_module,
+        )
+        self.btn_repair_save.grid(row=0, column=2, padx=10, pady=5, sticky='ew')
+        Tooltip(self.btn_repair_save, "Repair the pointcloud and save it as a new file.")
+
+        # Make both columns expand equally
+        modules_frame.grid_columnconfigure(1, weight=1)
+        modules_frame.grid_columnconfigure(2, weight=1)
 
         # Miscellaneous Section
         misc_frame = ttk.LabelFrame(self.root, text="Miscellaneous")
@@ -171,12 +176,14 @@ class PointCloudApp:
             command=self.reset
         )
         self.btn_reset.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+        Tooltip(self.btn_reset, "Reset the application to its initial state.")
 
         self.btn_view_point_cloud = tk.Button(
             misc_frame, text="View pointcloud", width=self.button_width, height=self.button_height,
             state='disabled', command=self.start_view_point_cloud_thread
         )
         self.btn_view_point_cloud.grid(row=0, column=1, padx=10, pady=5, sticky='w')
+        Tooltip(self.btn_view_point_cloud, "View the current pointcloud in a separate window using Open3D.")
 
         # Configure column weights within each LabelFrame to make widgets expand properly
         for frame in [file_selection_frame, downsampling_frame, noise_removal_frame, modules_frame, misc_frame]:
