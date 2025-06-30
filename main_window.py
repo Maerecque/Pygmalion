@@ -17,9 +17,6 @@ from Interfaces.RepairModule import App as RepairApp
 
 
 class Tooltip:
-    """
-    Class to create tooltips for widgets in Tkinter applications.
-    """
     def __init__(self, widget, text):
         self.widget = widget
         self.text = text
@@ -28,14 +25,9 @@ class Tooltip:
         widget.bind("<Leave>", self.hide_tip)
 
     def show_tip(self, event=None):
-        """Show the tooltip when the mouse enters the widget.
-
-        Args:
-            event (tk.Event, optional): The event that triggered the tooltip display. Defaults to None.
-        """
         if self.tipwindow or not self.text:
             return
-        x, y, _, _ = self.widget.bbox("insert") if hasattr(self.widget, "bbox") else (0, 0, 0, 0)
+        x, y, cx, cy = self.widget.bbox("insert") if hasattr(self.widget, "bbox") else (0, 0, 0, 0)
         x = x + self.widget.winfo_rootx() + 25
         y = y + self.widget.winfo_rooty() + 20
         self.tipwindow = tw = tk.Toplevel(self.widget)
@@ -47,11 +39,6 @@ class Tooltip:
         label.pack(ipadx=1)
 
     def hide_tip(self, event=None):
-        """Hide the tooltip when the mouse leaves the widget.
-
-        Args:
-            event (tk.Event, optional): The event that triggered the tooltip hide. Defaults to None.
-        """
         tw = self.tipwindow
         self.tipwindow = None
         if tw:
