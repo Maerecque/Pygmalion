@@ -62,7 +62,8 @@ class PointCloudApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Pointcloud Processing")
-        self.root.geometry("500x480")  # Adjusted height for new sections
+        self.root.update_idletasks()  # Ensure the window is updated before setting geometry
+        self.root.geometry("")  # Adjusted height for new sections
         self.root.resizable(False, False)
         self.root.iconbitmap("Source\\support_files\\logo.ico")
 
