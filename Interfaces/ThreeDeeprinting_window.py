@@ -260,31 +260,55 @@ class App:
 
         kdtree_nn_label = tk.Label(input_frame, text="Kdtree NN:", anchor="e", width=12)
         kdtree_nn_label.grid(row=0, column=0)
-        Tooltip(kdtree_nn_label, "Number of nearest neighbors for KDTree search (e.g., 100).")
+        Tooltip(
+            kdtree_nn_label,
+            "Number of nearest neighbors for KDTree search (e.g., 100).\nHigher values may improve robustness but increase computation time."  # noqa: E501
+        )
         self.kdtree_nn_entry = tk.Entry(input_frame, validate="key", validatecommand=(self.validate_int, '%P'))
         self.kdtree_nn_entry.grid(row=0, column=1)
-        Tooltip(self.kdtree_nn_entry, "Number of nearest neighbors for KDTree search (e.g., 100).")
+        Tooltip(
+            self.kdtree_nn_entry,
+            "Number of nearest neighbors for KDTree search (e.g., 100).\nHigher values may improve robustness but increase computation time."  # noqa: E501
+        )
 
         quantile_value_label = tk.Label(input_frame, text="Quantile Value:", anchor="e", width=12)
         quantile_value_label.grid(row=1, column=0)
-        Tooltip(quantile_value_label, "Quantile value for outlier removal (e.g., 0.01).")
+        Tooltip(
+            quantile_value_label,
+            "Quantile value for outlier removal (e.g., 0.01).\nLower values remove more outliers but may remove valid points. Higher values keep more points but may leave noise."  # noqa: E501
+        )
         self.quantile_value_entry = tk.Entry(input_frame, validate="key", validatecommand=(self.validate_flt, '%P'))
         self.quantile_value_entry.grid(row=1, column=1)
-        Tooltip(self.quantile_value_entry, "Quantile value for outlier removal (e.g., 0.01).")
+        Tooltip(
+            self.quantile_value_entry,
+            "Quantile value for outlier removal (e.g., 0.01).\nLower values remove more outliers but may remove valid points. Higher values keep more points but may leave noise."  # noqa: E501
+        )
 
         depth_label = tk.Label(input_frame, text="Depth:", anchor="e", width=12)
         depth_label.grid(row=0, column=2)
-        Tooltip(depth_label, "Depth of the KDTree for nearest neighbor search (e.g., 13).")
+        Tooltip(
+            depth_label,
+            "Depth of the KDTree for nearest neighbor search (e.g., 13).\nHigher values allow more complex structures but increase computation time."  # noqa: E501
+        )
         self.depth_entry = tk.Entry(input_frame, validate="key", validatecommand=(self.validate_int, '%P'))
         self.depth_entry.grid(row=0, column=3)
-        Tooltip(self.depth_entry, "Depth of the KDTree for nearest neighbor search (e.g., 13).")
+        Tooltip(
+            self.depth_entry,
+            "Depth of the KDTree for nearest neighbor search (e.g., 13).\nHigher values allow more complex structures but increase computation time."  # noqa: E501
+        )
 
         scale_label = tk.Label(input_frame, text="Scale:", anchor="e", width=12)
         scale_label.grid(row=1, column=2)
-        Tooltip(scale_label, "Scale factor for the point cloud (e.g., 2.2).")
+        Tooltip(
+            scale_label,
+            "Scale factor for the point cloud (e.g., 2.2).\nHigher values may capture more detail but can introduce noise and slow down processing."  # noqa: E501
+        )
         self.scale_entry = tk.Entry(input_frame, validate="key", validatecommand=(self.validate_flt, '%P'))
         self.scale_entry.grid(row=1, column=3)
-        Tooltip(self.scale_entry, "Scale factor for the point cloud (e.g., 2.2).")
+        Tooltip(
+            self.scale_entry,
+            "Scale factor for the point cloud (e.g., 2.2).\nHigher values may capture more detail but can introduce noise and slow down processing."  # noqa: E501
+        )
 
         # Row 2: Simplification
         simplification_labelframe = tk.LabelFrame(main_frame, text="Simplification")
@@ -303,10 +327,16 @@ class App:
 
         distance_threshold_label = tk.Label(input_frame2, text="Distance threshold:", anchor="e", width=15)
         distance_threshold_label.grid(row=0, column=0)
-        Tooltip(distance_threshold_label, "Distance threshold for mesh simplification (e.g., 0.01).")
+        Tooltip(
+            distance_threshold_label,
+            "Distance threshold for mesh simplification (e.g., 0.01).\nLower values produce a more detailed mesh but increase processing time."  # noqa: E501
+        )
         self.distance_threshold_entry = tk.Entry(input_frame2, validate="key", validatecommand=(self.validate_flt, '%P'))
         self.distance_threshold_entry.grid(row=0, column=1)
-        Tooltip(self.distance_threshold_entry, "Distance threshold for mesh simplification (e.g., 0.01).")
+        Tooltip(
+            self.distance_threshold_entry,
+            "Distance threshold for mesh simplification (e.g., 0.01).\nLower values produce a more detailed mesh but increase processing time."  # noqa: E501
+        )
 
         # Row 3: Heightmap
         heightmap_labelframe = tk.LabelFrame(main_frame, text="Heightmap")
@@ -329,10 +359,16 @@ class App:
 
         gridsize_label = tk.Label(input_frame3, text="Gridsize:", anchor="e", width=12)
         gridsize_label.grid(row=0, column=0)
-        Tooltip(gridsize_label, "Gridsize for the heightmap (e.g., 100).")
+        Tooltip(
+            gridsize_label,
+            "Gridsize for the heightmap (e.g., 100).\nHigher values create a finer grid (more detail, slower). Lower values create a coarser grid (less detail, faster)."  # noqa: E501
+        )
         self.gridsize_entry = tk.Entry(input_frame3, validate="key", validatecommand=(self.validate_int, '%P'))
         self.gridsize_entry.grid(row=0, column=1)
-        Tooltip(self.gridsize_entry, "Gridsize for the heightmap (e.g., 100).")
+        Tooltip(
+            self.gridsize_entry,
+            "Gridsize for the heightmap (e.g., 100).\nHigher values create a finer grid (more detail, slower). Lower values create a coarser grid (less detail, faster)."  # noqa: E501
+        )
 
         # Adding Ceiling, Walls, and Floor LabelFrames inside Heightmap
         ceiling_labelframe = tk.LabelFrame(heightmap_labelframe, text="Ceiling")
@@ -386,26 +422,44 @@ class App:
 
             alpha_offset_label = tk.Label(entry_frame, text="Alpha Offset:", anchor="e", width=12)
             alpha_offset_label.grid(row=0, column=0)
-            Tooltip(alpha_offset_label, "Alpha offset for the heightmap (e.g., 0.1).")
+            Tooltip(
+                alpha_offset_label,
+                "Alpha offset for the heightmap (e.g., 0.1).\nHigher values may fill more gaps but can oversmooth details."  # noqa: E501
+            )
             alpha_offset_entry = tk.Entry(entry_frame, validate="key", validatecommand=(self.validate_flt, '%P'))
             alpha_offset_entry.grid(row=0, column=1)
-            Tooltip(alpha_offset_entry, "Alpha offset for the heightmap (e.g., 0.1).")
+            Tooltip(
+                alpha_offset_entry,
+                "Alpha offset for the heightmap (e.g., 0.1).\nHigher values may fill more gaps but can oversmooth details."  # noqa: E501
+            )
             setattr(self, alpha_offset_entry_name, alpha_offset_entry)
 
             tolerance_label = tk.Label(entry_frame, text="Tolerance:", anchor="e", width=12)
             tolerance_label.grid(row=1, column=0)
-            Tooltip(tolerance_label, "Tolerance for the heightmap (e.g., 0.000001).")
+            Tooltip(
+                tolerance_label,
+                "Tolerance for the heightmap (e.g., 0.000001).\nLower values increase precision but slow down processing."  # noqa: E501
+            )
             tolerance_entry = tk.Entry(entry_frame, validate="key", validatecommand=(self.validate_flt, '%P'))
             tolerance_entry.grid(row=1, column=1)
-            Tooltip(tolerance_label, "Tolerance for the heightmap (e.g., 0.000001).")
+            Tooltip(
+                tolerance_label,
+                "Tolerance for the heightmap (e.g., 0.000001).\nLower values increase precision but slow down processing."  # noqa: E501
+            )
             setattr(self, tolerance_entry_name, tolerance_entry)
 
             threshold_label = tk.Label(entry_frame, text="Threshold:", anchor="e", width=12)
             threshold_label.grid(row=2, column=0)
-            Tooltip(threshold_label, "Threshold for the heightmap (e.g., 1).")
+            Tooltip(
+                threshold_label,
+                "Threshold for the heightmap (e.g., 1).\nHigher values may include more points but can introduce noise."  # noqa: E501
+            )
             threshold_entry = tk.Entry(entry_frame, validate="key", validatecommand=(self.validate_flt, '%P'))
             threshold_entry.grid(row=2, column=1)
-            Tooltip(threshold_label, "Threshold for the heightmap (e.g., 1).")
+            Tooltip(
+                threshold_label,
+                "Threshold for the heightmap (e.g., 1).\nHigher values may include more points but can introduce noise."  # noqa: E501
+            )
             setattr(self, threshold_entry_name, threshold_entry)
 
         # Add Buttons at the Bottom
