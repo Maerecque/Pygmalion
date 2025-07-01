@@ -11,7 +11,9 @@ from Source.arrayNormalizer import normalize_array
 
 
 class FileFormatError(Exception): pass   # noqa: E701
-class noFileGivenError(Exception): pass  # noqa: E701
+class NoFileGivenError(Exception): pass  # noqa: E701
+class NoSaveLocationGivenError(Exception): pass  # noqa: E701
+class NoPointCloudGivenError(Exception): pass  # noqa: E701
 
 
 def get_file_path(description: str, fileformat: any) -> str:
@@ -83,7 +85,7 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
     Raises:
         FileNotFoundError: If a given path does not exist.
 
-        noFileGivenError: If no file is selected.
+        NoFileGivenError: If no file is selected.
 
         FileFormatError: If the format of the given file is not supported.
 
@@ -95,7 +97,7 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
     """
     try:
         if not filename:
-            raise noFileGivenError
+            raise NoFileGivenError
 
         las = laspy.read(filename)
 
@@ -137,7 +139,7 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
     except FileNotFoundError:
         print("Could not find a file on the given PATH,  please check if the PATH exists.")
         exit()
-    except noFileGivenError:
+    except NoFileGivenError:
         print("No file was selected, script will not be stopped.")
         return
     except laspy.errors.LaspyException:
@@ -164,7 +166,7 @@ def convert_ply_to_las(input_las_path: str = None):
         input_las_path (str): The path to the LAS file to be used as header template.
 
     Raises:
-        noFileGivenError: If no file is selected.
+        NoFileGivenError: If no file is selected.
     """
     try:
         print("Select your created ply file to convert it to a LAS file.")
@@ -172,7 +174,7 @@ def convert_ply_to_las(input_las_path: str = None):
 
         # if no PLY file is selected this if statement will be ran.
         if not ply_to_convert_to_las:
-            raise noFileGivenError
+            raise NoFileGivenError
 
         ply_file = PlyData.read(ply_to_convert_to_las, False)
         new_las_file_name = os.path.splitext(ply_to_convert_to_las)[0] + ".las"
@@ -196,7 +198,7 @@ def convert_ply_to_las(input_las_path: str = None):
         outfile.green = ply_file['vertex']['green'] * 257
         outfile.blue = ply_file['vertex']['blue'] * 257
 
-    except noFileGivenError:
+    except NoFileGivenError:
         print("No file was selected, script will be stopped.")
         exit()
     except Exception as e:
@@ -219,7 +221,25 @@ def save_pcd_as_las(input_pcd: o3d.cpu.pybind.geometry.PointCloud):
 
     Args:
         input_pcd (o3d.cpu.pybind.geometry.PointCloud): An Open3D point cloud to be saved as a LAS file.
+
+    Raises:
+        TypeError: If the input is not an Open3D point cloud.
+        NoPointCloudGivenError: If the input point cloud is empty.
+        NoSaveLocationGivenError: If no save location is selected.
     """
+    try:
+        if not isinstance(input_pcd, o3d.cpu.pybind.geometry.PointCloud):
+            raise TypeError("The input must be an Open3D point cloud.")
+
+        if len(input_pcd.points) == 0:
+            raise NoPointCloudGivenError
+
+    except NoPointCloudGivenError:
+        print("The input point cloud is empty. Please provide a valid point cloud.")
+
+    except TypeError as e:
+        print(e)
+
     try:
         file_name = get_save_file_path("LAS files", "*.las", "default_name.las")
         if not file_name:
@@ -251,10 +271,8 @@ def save_pcd_as_las(input_pcd: o3d.cpu.pybind.geometry.PointCloud):
         # Write the las file to the given file name
         las_file.write(file_name)
         print("The point cloud was saved as a LAS file.")
-    except noFileGivenError:
-        print("No file was selected, script will be stopped.")
-        exit()
+    except NoSaveLocationGivenError:
+        print("No save location was selected.")
     except Exception as e:
         print("Something went wrong during the saving process.")
         print(e)
-        exit()
