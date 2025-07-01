@@ -95,7 +95,7 @@ class App:
         threading.Thread(target=self.plane_detection).start()
 
     def start_repair_point_cloud_thread(self):
-        self.disable_section(self.repair_point_cloud_button, "Point cloud repair in progress...")
+        self.disable_section(self.repair_point_cloud_button, "Busy repairing...")
         threading.Thread(target=self.repair_point_cloud).start()
 
     def grid_division(self):
@@ -115,8 +115,9 @@ class App:
                 self.point_cloud_data, self.grid, self.min_cell_size.get(), self.min_plane_size.get()
             )
             self.plane_detection_result_label.config(
-                text=f"Plane detection completed.\n{len(self.plane_pointcloud)} planes found."
+                text="Plane detection completed."
             )
+            self.plane_detection_button.config(state=tk.NORMAL, text="Start Plane Detection")
             self.enable_repair_section()
         except Exception as e:
             print(e)
@@ -142,7 +143,7 @@ class App:
         if self.mesh is not None:
             transformed_pcd = transform_mesh_to_pcd(self.mesh, self.point_cloud_data)
             save_pcd_as_las(transformed_pcd)
-            print("Repaired point cloud saved.")
+            print("Repaired Pointcloud saved.")
         else:
             print("Repair must be completed first.")
 
@@ -224,8 +225,8 @@ class App:
             row=0, column=2, padx=5, pady=5, sticky="ew"
         )
 
-        # Repair Point Cloud Frame
-        repair_point_cloud_frame = tk.LabelFrame(main_frame, text="Repair Point Cloud")
+        # Repair Pointcloud Frame
+        repair_point_cloud_frame = tk.LabelFrame(main_frame, text="Repair Pointcloud")
         repair_point_cloud_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         for i in range(4):
             repair_point_cloud_frame.grid_columnconfigure(i, weight=1)
@@ -265,7 +266,7 @@ class App:
 
         self.repair_point_cloud_button = tk.Button(
             repair_point_cloud_frame,
-            text="Start Point Cloud Repair",
+            text="Start Pointcloud Repair",
             width=self.button_width,
             state=tk.DISABLED,
             command=self.start_repair_point_cloud_thread
@@ -274,20 +275,20 @@ class App:
 
         self.repair_point_cloud_result_label = tk.Label(
             repair_point_cloud_frame,
-            text="Point cloud not repaired yet.",
+            text="Pointcloud not repaired yet.",
             anchor="w"
         )
         self.repair_point_cloud_result_label.grid(row=2, column=2, columnspan=2, padx=5, pady=5, sticky="ew")
 
-        # Save Repaired Point Cloud Frame
-        save_frame = tk.LabelFrame(main_frame, text="Save Repaired Point Cloud")
+        # Save Repaired Pointcloud Frame
+        save_frame = tk.LabelFrame(main_frame, text="Save Repaired Pointcloud")
         save_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         for i in range(2):
             save_frame.grid_columnconfigure(i, weight=1)
 
         self.save_button = tk.Button(
             save_frame,
-            text="Save Repaired Point Cloud",
+            text="Save Repaired Pointcloud",
             width=self.button_width,
             height=2,
             state=tk.DISABLED,
@@ -296,7 +297,7 @@ class App:
 
         self.show_button = tk.Button(
             save_frame,
-            text="Show Repaired Point Cloud",
+            text="Show Repaired Pointcloud",
             width=self.button_width,
             height=2,
             state=tk.DISABLED,
@@ -321,7 +322,7 @@ class App:
         self.min_plane_size_entry.config(state=tk.NORMAL)
 
     def enable_repair_section(self):
-        self.repair_point_cloud_button.config(state=tk.NORMAL, text="Start Point Cloud Repair")
+        self.repair_point_cloud_button.config(state=tk.NORMAL, text="Start Pointcloud Repair")
         self.kdtree_max_nn_entry.config(state=tk.NORMAL)
         self.depth_entry.config(state=tk.NORMAL)
         self.quantile_value_entry.config(state=tk.NORMAL)
@@ -349,11 +350,11 @@ if __name__ == "__main__":
 
 # open_point_cloud_editor(plane_pointcloud, False)
 
-# # Repair the point cloud with the planes found.
+# # Repair the Pointcloud with the planes found.
 # # With these parameters, just try higher NN and depth and lower quantile value (and maybe scale)
 # mesh = repair_point_cloud_module(plane_pointcloud, visualize=True, kdtree_max_nn=100, depth=13, quantile_value=0.01, scale=2.2)
 
-# # Transform the mesh back to a point cloud.
+# # Transform the mesh back to a Pointcloud.
 # transformed_pcd = transform_mesh_to_pcd(mesh, plane_pointcloud)
 
 # open_point_cloud_editor(transformed_pcd, False)
