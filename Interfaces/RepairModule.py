@@ -54,6 +54,7 @@ class App:
         self.grid = None
         self.plane_pointcloud = None
         self.mesh = None
+        self.pcd_tbs = None
 
         # Initialize the parameters with default values
         self.grid_size = tk.DoubleVar(value=1.0)
@@ -132,7 +133,9 @@ class App:
             quantile_value=self.quantile_value.get(),
             scale=self.scale.get()
         )
-        self.repair_point_cloud_result_label.config(text="Point cloud repair completed.")
+        self.pcd_tbs = transform_mesh_to_pcd(self.mesh, self.point_cloud_data)
+        self.repair_point_cloud_result_label.config(text="Pointcloud repair completed.")
+        self.repair_point_cloud_button.config(state=tk.NORMAL, text="Start Pointcloud Repair")
         self.enable_save_section()
 
     def save_repaired_point_cloud(self):
@@ -297,7 +300,7 @@ class App:
             width=self.button_width,
             height=2,
             state=tk.DISABLED,
-            command=lambda: open_point_cloud_editor(self.mesh, False) if self.mesh else print("No repaired point cloud to show."))
+            command=lambda: open_point_cloud_editor(self.pcd_tbs, False) if self.pcd_tbs else print("No repaired pointcloud to show."))  # noqa: E501
         self.show_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         # Exit Button
