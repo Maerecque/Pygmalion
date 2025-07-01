@@ -122,6 +122,93 @@ def generate_wall_points(
     return np.array(wall_points)
 
 
+def transform_pointcloud_to_height_map(
+    pcd: o3d.geometry.PointCloud,
+    grid_size: int = 200,
+    visualize_map: bool = False,
+    debugging_logs: bool = False
+) -> tuple:
+    """
+    Transforms a point cloud into a height map by projecting it onto the x-y plane.
+
+    Args:
+        pcd (o3d.geometry.PointCloud): The point cloud to be transformed into a height map.
+        grid_size (int, optional): Number of grid points. Defaults to 200.
+        visualize_map (bool, optional): Boolean to visualize the height map. Defaults to False.
+        debugging_logs (bool, optional): Boolean to print debugging logs. Defaults to False.
+
+    Returns:
+        tuple: Three Open3D PointCloud objects representing the floor plan, ceiling, and wall points.
+
+    Raises:
+        ValueError: If the point cloud is empty.
+    """
+    if not pcd or len(pcd.points) == 0:
+        raise ValueError("The point cloud is empty.")
+
+    # Project points onto the x-y plane
+    points = np.asarray(pcd.points)
+    x, y, z = project_vertices_to_plane(points)
+
+    if debugging_logs:
+        print(f"x range: {x.min()} to {x.max()}, y range: {y.min()} to {y.max()}, z range: {z.min()} to {z.max()}")
+
+    # Create a grid for contour mapping
+    (X, Y), x_grid, y_grid = create_grid((x.min(), x.max()), (y.min(), y.max()), grid_size)
+
+    # Generate a height map
+    height_map = generate_height_map(x, y, z, x_grid, y_grid)
+
+    if visualize_map:
+        # Visualize the height map
+        plt.imshow(height_map, cmap="viridis", norm=Normalize(vmin=z.min(), vmax=z.max()))
+        plt.colorbar()
+        plt.show()
+
+    # Generate floor plan coordinates
+    floor_plan_coords = np.column_stack([
+        x_grid[np.argwhere(height_map != -np.inf)[:, 0]],
+        y_grid[np.argwhere(height_map != -np.inf)[:, 1]],
+        np.full(np.argwhere(height_map != -np.inf).shape[0], z.min())
+    ])
+
+    # Generate ceiling coordinates
+    ceiling_coords = np.column_stack([
+        x_grid[np.argwhere(height_map != -np.inf)[:, 0]],
+        y_grid[np.argwhere(height_map != -np.inf)[:, 1]],
+        height_map[np.argwhere(height_map != -np.inf)[:, 0], np.argwhere(height_map != -np.inf)[:, 1]]
+    ])
+
+    # Create floor plan point cloud
+    floor_plan_point_cloud = create_point_cloud(floor_plan_coords)
+
+    # Create ceiling point cloud
+    ceiling_point_cloud = create_point_cloud(ceiling_coords)
+
+    # Calculate point density
+    point_density = len(floor_plan_coords) / (grid_size * grid_size)
+
+    if debugging_logs:
+        print(f"Point density: {point_density:.2f} points per grid cell")
+
+    # Find edges of the height map
+    floor_edges = find_edges(height_map)
+    ceiling_edges = find_edges(height_map)
+
+    # Generate wall points
+    wall_points = generate_wall_points(floor_edges, ceiling_edges, height_map, x_grid, y_grid, z.min(), point_density)
+
+    # Create wall point cloud
+    wall_point_cloud = create_point_cloud(wall_points) if wall_points.size > 0 else o3d.geometry.PointCloud()
+
+    if visualize_map:
+        # Visualize the floor plan, ceiling, and wall point clouds
+        o3d.visualization.draw_geometries([floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud],
+                                          mesh_show_back_face=True)
+
+    return floor_plan_point_cloud, ceiling_point_cloud, wall_point_cloud
+
+
 def transform_mesh_to_height_map(
     mesh: o3d.cpu.pybind.geometry.TriangleMesh,
     grid_size: int = 200,
@@ -183,6 +270,9 @@ def transform_mesh_to_height_map(
 
     # Calculate point density
     point_density = len(floor_plan_coords) / (grid_size * grid_size)
+
+    if debugging_logs:
+        print(f"Point density: {point_density:.2f} points per grid cell")
 
     # Find edges of the height map
     floor_edges = find_edges(height_map)
