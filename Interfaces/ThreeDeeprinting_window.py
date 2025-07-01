@@ -480,12 +480,6 @@ class App:
         self.root.destroy()
 
 
-def main():
-    root = tk.Tk()
-    app = App(root)  # noqa: F841
-    root.mainloop()
-
-
 class Tooltip:
     def __init__(self, widget, text):
         self.widget = widget
@@ -513,6 +507,12 @@ class Tooltip:
         self.tipwindow = None
         if tw:
             tw.destroy()
+
+
+def main():
+    root = tk.Tk()
+    app = App(root)  # noqa: F841
+    root.mainloop()
 
 
 if __name__ == "__main__":
