@@ -1,5 +1,10 @@
 /Werfkelderscans
 /.vscode
 */__pycache__
+# 3d model files
 *.stl
 *.pcd
+*.las
+*.laz
+*.obj
+*.ply
