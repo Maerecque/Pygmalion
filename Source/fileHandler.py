@@ -223,7 +223,11 @@ def save_pcd_as_las(input_pcd: o3d.cpu.pybind.geometry.PointCloud):
     try:
         file_name = get_save_file_path("LAS files", "*.las", "default_name.las")
         if not file_name:
-            raise noFileGivenError
+            raise NoFileGivenError
+
+        # Check if the file name ends with .las, if not, add it
+        if not file_name.lower().endswith('.las'):
+            file_name += '.las'
 
         # Create a new las file
         las_file = laspy.create(point_format=3, file_version='1.2')
