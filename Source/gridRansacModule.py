@@ -168,9 +168,17 @@ def ransac_plane_finder(
             current_plane = plane_pcd
 
             pcd = leftover_pcd
-            if previous_plane is not None and current_plane is not None:
-                print(current_plane)
-                print(previous_plane)
+            if (
+                previous_plane is not None and
+                current_plane is not None and
+                len(current_plane.points) > 0 and
+                len(previous_plane.points) > 0
+            ):
+                # THIS IS A DEBUGGING LINE WHICH SHOULD BE REMOVED LATER
+                # THE EXISTENCE OF THIS LINE IS THE BANE OF MY EXISTENCE
+                if print_found_planes:
+                    print(current_plane)
+                    print(previous_plane)
                 current_plane = su.merge_pcd(current_plane, previous_plane)
 
         # If the plane that was found is too small, skip it and continue with the next plane.
