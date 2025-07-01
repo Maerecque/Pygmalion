@@ -12,6 +12,7 @@ from Source.fileHandler import get_save_file_path
 from Source.shapeUtils import repair_point_cloud_module
 from Source.meshAlterer import mesh_simple_downsample, transform_pcd_to_mesh
 from Source.heightMapModule import transform_mesh_to_height_map
+from Source.fileHandler import get_file_path, readout_LAS_file
 
 
 class App:
@@ -24,6 +25,17 @@ class App:
         # Store the point cloud data and path
         self.point_cloud_data = point_cloud_data
         self.point_cloud_path = point_cloud_path
+
+        # If no point cloud data or path is provided, let the user select a file
+        if self.point_cloud_data is None or self.point_cloud_path is None:
+            # Open a file dialog to select a point cloud file
+            self.point_cloud_path = get_file_path(
+                "Point Cloud files", ["*.las", "*.laz"]
+            )
+            if not self.point_cloud_path:
+                raise ValueError("No point cloud file selected.")
+            # Read the point cloud data from the selected file
+            self.point_cloud_data = readout_LAS_file(self.point_cloud_path)
 
         # Register the validation functions
         self.validate_int = self.root.register(self.validate_integer)
@@ -517,3 +529,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    exit()
