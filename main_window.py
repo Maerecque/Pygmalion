@@ -6,6 +6,7 @@ import threading
 import traceback
 import subprocess  # For launching the pointcloud visualization script
 import open3d as o3d  # Ensure open3d is installed and imported if used
+import time
 
 sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 
@@ -345,6 +346,8 @@ class PointCloudApp:
     def start_view_point_cloud_thread(self):
         # Start a new thread for viewing the pointcloud
         threading.Thread(target=self.view_point_cloud).start()
+        time.sleep(2)  # Small delay to ensure the thread starts properly and the temporary file is created before viewing
+        self.remove_temporary_files()  # Clean up any temporary files before viewing
 
     def view_point_cloud(self):
         """ Launches a separate process to visualize the pointcloud using Open3D.
