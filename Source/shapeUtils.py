@@ -66,13 +66,24 @@ def merge_list_of_pointclouds(pcd_list: list) -> o3d.cpu.pybind.geometry.PointCl
 
     # Check if the input list contains point clouds with points
     if not all(len(pcd.points) > 0 for pcd in pcd_list):
-        raise ValueError("The input list contains point clouds with no points.")
+        # remove the point clouds with no points
+        pcd_list = [pcd for pcd in pcd_list if len(pcd.points) > 0]
+
+        # Check again if there are still point clouds in the list that have no points
+        if not all(len(pcd.points) > 0 for pcd in pcd_list):
+            raise ValueError("The input list contains point clouds with no points.")
 
     # Add each point cloud from the list to a new point cloud
     pcd = o3d.geometry.PointCloud()
     print("Merging point clouds...")
     for i in tqdm(range(len(pcd_list))):
+        if i == 0:
+            # If it's the first point cloud, just copy it
+            pcd = copy.deepcopy(pcd_list[i])
         pcd = merge_pcd(pcd, pcd_list[i])
+
+    print("Merging point clouds done.")
+    print(f"Merged {len(pcd_list)} point clouds into one point cloud with {len(pcd.points)} points.")
 
     return pcd
 
