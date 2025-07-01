@@ -226,7 +226,7 @@ def save_pcd_as_las(input_pcd: o3d.cpu.pybind.geometry.PointCloud):
             raise noFileGivenError
 
         # Create a new las file
-        las_file = laspy.create(point_format=3, file_version=1.2)
+        las_file = laspy.create(point_format=3, file_version='1.2')
 
         # Get the point data from the Open3D point cloud
         point_data = np.asarray(input_pcd.points)
