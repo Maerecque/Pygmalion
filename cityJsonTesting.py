@@ -117,14 +117,37 @@ def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10) ->
         return None
 
 
+def find_corners_in_lines(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray:
+    """Find corners in detected lines using a simple distance threshold.
+
+    Args:
+        lines (np.ndarray): The detected line points.
+        threshold (float, optional): Distance threshold to consider as a corner. Defaults to 0.1.
+
+    Returns:
+        np.ndarray: The corner points.
+    """
+    if len(lines) < 2:
+        return np.array([])
+
+    corners = []
+    for i in range(1, len(lines)):
+        dist = np.linalg.norm(lines[i] - lines[i - 1])
+        if dist > threshold:
+            corners.append(lines[i])
+
+    return np.array(corners)
+
+
 def main():
     pcd = load_and_preprocess_pointcloud()
 
-    pcd = grid_subsampling(pcd, 0.05)
+    pcd = grid_subsampling(pcd, 0.1)
     pcd = rns(pcd)
 
     new_pcd_tuple = transform_pointcloud_to_height_map(
         pcd,
+        grid_size=500,
         visualize_map=False,
         debugging_logs=False
     )
@@ -132,10 +155,16 @@ def main():
     new_pcd = merge_pcds(new_pcd_tuple)
     opce(new_pcd)
 
-    floor_edges = find_lines_in_pointcloud(new_pcd_tuple[0])
-    print(type(floor_edges))
-    floor_pcd = create_point_cloud(floor_edges)
+    floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0])
+    print(type(floor_lines))
+    floor_pcd = create_point_cloud(floor_lines)
     opce(floor_pcd)
+
+    floor_corners = find_corners_in_lines(floor_lines, 0.05)
+    print(f"Detected {len(floor_corners)} corners in the floor lines.")
+    floor_corners_pcd = create_point_cloud(floor_corners)
+    opce(floor_corners_pcd)
+
     # wall_pcd = new_pcd_tuple[1]
     # ceiling_pcd = new_pcd_tuple[2]
 
