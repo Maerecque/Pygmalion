@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
 from Source.fileHandler import get_file_path, readout_LAS_file
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.pointCloudEditor import open_point_cloud_editor as opce
-from Source.pointCloudAltering import grid_subsampling, remove_noise_statistical as rns, merge_point_clouds as merge_pcds
+from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds  # , grid_subsampling
 
 
 def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
@@ -136,13 +136,35 @@ def find_corners_in_lines(lines: np.ndarray, threshold: float = 0.1) -> np.ndarr
         if dist > threshold:
             corners.append(lines[i])
 
-    return np.array(corners)
+    # Now order the corners based on their position with nearest neighbor search
+    if not corners:
+        return np.array([])
+
+    corners = np.array(corners)
+    tree = cKDTree(corners)
+
+    ordered_corners = []
+    visited = np.zeros(len(corners), dtype=bool)
+    current_index = 0
+    ordered_corners.append(corners[current_index])
+    visited[current_index] = True
+
+    for _ in range(1, len(corners)):
+        distances, indices = tree.query(corners[current_index], k=len(corners))
+        for idx in indices:
+            if not visited[idx]:
+                ordered_corners.append(corners[idx])
+                visited[idx] = True
+                current_index = idx
+                break
+
+    return np.array(ordered_corners)
 
 
 def main():
     pcd = load_and_preprocess_pointcloud()
 
-    pcd = grid_subsampling(pcd, 0.1)
+    # pcd = grid_subsampling(pcd, 0.1)
     pcd = rns(pcd)
 
     new_pcd_tuple = transform_pointcloud_to_height_map(
@@ -162,7 +184,10 @@ def main():
 
     floor_corners = find_corners_in_lines(floor_lines, 0.05)
     print(f"Detected {len(floor_corners)} corners in the floor lines.")
-    floor_corners_pcd = create_point_cloud(floor_corners)
+
+    sampled_corners = floor_corners[:(len(floor_corners) // 2)]
+
+    floor_corners_pcd = create_point_cloud(sampled_corners)
     opce(floor_corners_pcd)
 
     # wall_pcd = new_pcd_tuple[1]
