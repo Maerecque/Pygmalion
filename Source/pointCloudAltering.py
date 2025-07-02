@@ -127,6 +127,25 @@ def get_difference_point_cloud(
     return pcd1_without_duplicates
 
 
+def merge_point_clouds(pcd_list: list[o3d.cpu.pybind.geometry.PointCloud]) -> o3d.cpu.pybind.geometry.PointCloud:
+    """Merges a list of point clouds into a single point cloud.
+
+    Args:
+        pcd_list (list[o3d.cpu.pybind.geometry.PointCloud]): List of point clouds to merge.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Merged point cloud containing all points and colors from the input list.
+    """
+    merged_pcd = o3d.geometry.PointCloud()
+    merged_pcd.points = o3d.utility.Vector3dVector(
+        np.vstack([np.asarray(pcd.points) for pcd in pcd_list])
+    )
+    merged_pcd.colors = o3d.utility.Vector3dVector(
+        np.vstack([np.asarray(pcd.colors) for pcd in pcd_list])
+    )
+    return merged_pcd
+
+
 if __name__ == "__main__":
     # Get the path to the LAS/LAZ file
     filename = fh.get_file_path("Select a LAS or LAZ file", ["*.las", "*.laz"])
