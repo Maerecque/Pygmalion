@@ -179,15 +179,16 @@ def main():
 
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0])
     print(type(floor_lines))
+    print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
     floor_pcd = create_point_cloud(floor_lines)
     opce(floor_pcd)
 
     floor_corners = find_corners_in_lines(floor_lines, 0.05)
-    print(f"Detected {len(floor_corners)} corners in the floor lines.")
+    print(f"Detected {len(floor_corners)} corners in the floor lines.")  # Lies
 
-    sampled_corners = floor_corners[:(len(floor_corners) // 2)]
+    floor_corners = floor_corners[:(len(floor_corners) // 2)]
 
-    floor_corners_pcd = create_point_cloud(sampled_corners)
+    floor_corners_pcd = create_point_cloud(floor_corners)
     opce(floor_corners_pcd)
 
     # wall_pcd = new_pcd_tuple[1]
