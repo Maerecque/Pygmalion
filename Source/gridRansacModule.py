@@ -169,9 +169,9 @@ def ransac_plane_finder(
 
             pcd = leftover_pcd
             if (
-                previous_plane is not None and
-                current_plane is not None and
-                len(current_plane.points) > 0 and
+                previous_plane is not None and      # noqa: W504
+                current_plane is not None and       # noqa: W504
+                len(current_plane.points) > 0 and   # noqa: W504
                 len(previous_plane.points) > 0
             ):
                 # THIS IS A DEBUGGING LINE WHICH SHOULD BE REMOVED LATER
