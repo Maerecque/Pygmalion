@@ -58,6 +58,7 @@ def generate_height_map(x: np.ndarray, y: np.ndarray, z: np.ndarray, x_grid: np.
 
 def create_point_cloud(coords: np.ndarray) -> o3d.cpu.pybind.geometry.PointCloud:
     """Create an Open3D point cloud from coordinates.
+    Note: These pointclouds are not colored.
 
     Args:
         coords (numpy.ndarray): Array of coordinates.
@@ -65,6 +66,16 @@ def create_point_cloud(coords: np.ndarray) -> o3d.cpu.pybind.geometry.PointCloud
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Open3D point cloud object.
     """
+    try:
+        if type(coords) is not np.ndarray:
+            if type(coords) is list:
+                coords = np.vstack(coords)
+            else:
+                raise TypeError("Input coordinates must be a numpy array or a list of arrays.")
+    except Exception as e:
+        print(f"Error creating point cloud: {e}")
+        return None
+
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(coords)
     return point_cloud
