@@ -118,37 +118,44 @@ def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10) ->
 
 
 def find_corners_in_lines(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray:
-    """Find corners in detected lines using a simple distance threshold.
+    """
+    Find corners in detected lines using a simple distance threshold and order them.
 
     Args:
         lines (np.ndarray): The detected line points.
         threshold (float, optional): Distance threshold to consider as a corner. Defaults to 0.1.
 
     Returns:
-        np.ndarray: The corner points.
+        np.ndarray: The corner points, ordered by proximity.
     """
+    # If there are fewer than 2 points, no corners can be found
     if len(lines) < 2:
         return np.array([])
 
     corners = []
+    # Iterate through the line points and check the distance between consecutive points
     for i in range(1, len(lines)):
         dist = np.linalg.norm(lines[i] - lines[i - 1])
+        # If the distance exceeds the threshold, consider it a corner
         if dist > threshold:
             corners.append(lines[i])
 
-    # Now order the corners based on their position with nearest neighbor search
+    # If no corners were found, return an empty array
     if not corners:
         return np.array([])
 
     corners = np.array(corners)
+    # Build a KD-tree for efficient nearest neighbor search
     tree = cKDTree(corners)
 
     ordered_corners = []
     visited = np.zeros(len(corners), dtype=bool)
     current_index = 0
+    # Start ordering from the first corner
     ordered_corners.append(corners[current_index])
     visited[current_index] = True
 
+    # Greedily order corners by always picking the nearest unvisited neighbor
     for _ in range(1, len(corners)):
         distances, indices = tree.query(corners[current_index], k=len(corners))
         for idx in indices:
@@ -157,6 +164,11 @@ def find_corners_in_lines(lines: np.ndarray, threshold: float = 0.1) -> np.ndarr
                 visited[idx] = True
                 current_index = idx
                 break
+
+    # Ensure the corners are ordered in a consistent manner, by sorting by x-coordinate.
+    # This assumes the first corner is the leftmost point. Works well for most cases.
+    max_x_index = np.argmax([corner[0] for corner in ordered_corners])
+    ordered_corners = np.roll(ordered_corners, -max_x_index, axis=0)
 
     return np.array(ordered_corners)
 
