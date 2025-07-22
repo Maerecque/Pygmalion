@@ -194,7 +194,6 @@ def main():
     opce(new_pcd)
 
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0])
-    print(type(floor_lines))
     print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
     floor_pcd = create_point_cloud(floor_lines)
     opce(floor_pcd)
