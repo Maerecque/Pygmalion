@@ -270,13 +270,13 @@ def main():
         debugging_logs=False
     )
 
-    # new_pcd = merge_pcds(new_pcd_tuple)
-    # opce(new_pcd)
+    new_pcd = merge_pcds(new_pcd_tuple)
+    opce(new_pcd)
 
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0])
     print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
-    # floor_pcd = create_point_cloud(floor_lines)
-    # opce(floor_pcd)
+    floor_pcd = create_point_cloud(floor_lines)
+    opce(floor_pcd)
 
     floor_hull = sort_points_in_hull(floor_lines, 0.05)
     floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
