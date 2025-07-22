@@ -253,6 +253,55 @@ def find_corners_clean(points, angle_threshold_deg=45, window=3, merge_radius=3)
     return points[corner_indices]
 
 
+def create_point_pairs(points: np.ndarray) -> np.ndarray:
+    """Create pairs of points from a 2D array of points with the index of each point.
+
+    Args:
+        points (np.ndarray): A 2D array of shape (N, 3) containing 3D points.
+
+    Returns:
+        np.ndarray: A 2D array of shape (M, 2, 3) where M is the number of pairs.
+
+    Raises:
+        TypeError: If the input is not a NumPy array.
+        ValueError: If the input array is empty or does not have the correct shape.
+        ValueError: If there are fewer than two points to create pairs.
+    """
+    try:
+        if not isinstance(points, np.ndarray):
+            raise TypeError("Input must be a NumPy array.")
+        if points.size == 0:
+            raise ValueError("Input array is empty.")
+        if not isinstance(points, np.ndarray) or points.ndim != 2 or points.shape[1] != 3:
+            raise ValueError("Input must be a 2D NumPy array with shape (N, 3).")
+        if len(points) < 2:
+            raise ValueError("At least two points are required to create pairs.")
+    except Exception as e:
+        print(f"Error in create_point_pairs: {e}")
+        return np.array([])
+
+    pairs = []
+    for i in range(len(points) - 1):
+        pairs.append([i, i + 1])
+
+    # Close the loop
+    pairs.append([len(points) - 1, 0])
+    return np.array(pairs)
+
+
+def create_lineset_from_contour(points: np.ndarray) -> o3d.geometry.LineSet:
+    pnt_hull = sort_points_in_hull(points, 0.05)
+    pnt_corners = find_corners_clean(pnt_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+    pnt_pairs = create_point_pairs(pnt_corners)
+
+    print(f"Creating lineset from {len(pnt_corners)} corner points and {len(pnt_pairs)} pairs.")
+
+    lines = o3d.geometry.LineSet()
+    lines.points = o3d.utility.Vector3dVector(pnt_corners)
+    lines.lines = o3d.utility.Vector2iVector(pnt_pairs)
+    return lines
+
+
 def main():
     pcd = load_and_preprocess_pointcloud()
 
@@ -275,8 +324,6 @@ def main():
 
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0], 11)
     print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
-    floor_pcd = create_point_cloud(floor_lines)
-    opce(floor_pcd)
 
     floor_hull = sort_points_in_hull(floor_lines, 0.05)
     floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
