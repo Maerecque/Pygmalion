@@ -129,6 +129,9 @@ def get_difference_point_cloud(
 
 def merge_point_clouds(pcd_list: list[o3d.cpu.pybind.geometry.PointCloud]) -> o3d.cpu.pybind.geometry.PointCloud:
     """Merges a list of point clouds into a single point cloud.
+    This function assumes that all point clouds in the list have the same structure (i.e., they all have points and colors).
+    The function does not check for duplicates or overlapping points.
+    The first point cloud that is passed will overrule overlapping points.
 
     Args:
         pcd_list (list[o3d.cpu.pybind.geometry.PointCloud]): List of point clouds to merge.
