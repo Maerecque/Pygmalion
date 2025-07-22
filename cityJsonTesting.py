@@ -199,6 +199,60 @@ def get_extent(points: np.ndarray) -> dict:
     ])
     return extends
 
+
+def find_corners_clean(points, angle_threshold_deg=45, window=3, merge_radius=3):
+    """
+    Detects corner points in a noisy 3D contour by analyzing direction changes and merging nearby detections.
+
+    Args:
+        points (np.ndarray): A NumPy array of shape (N, 3) containing 3D points ordered along a contour.
+        angle_threshold_deg (float, optional): Minimum angle (in degrees) between smoothed direction vectors
+            to consider a corner. Defaults to 45.
+        window (int, optional): Number of points to skip forward and backward when computing direction vectors.
+            Larger values reduce sensitivity to small noise. Defaults to 3.
+        merge_radius (int, optional): Maximum index distance between consecutive corner candidates to consider
+            them part of the same corner cluster. Only one point is kept per cluster. Defaults to 3.
+
+    Returns:
+        np.ndarray: A NumPy array of shape (M, 3) containing the filtered corner points, including the first
+        and last point of the input.
+
+    Example:
+        >>> points = np.array([[0, 0, 0], [1, 0, 0], [2, 0, 0], [2, 1, 0], [2, 2, 0]])
+        >>> corners = find_corners_clean(points, angle_threshold_deg=45, window=1, merge_radius=1)
+        >>> print(corners)
+    """
+    angle_threshold_rad = np.deg2rad(angle_threshold_deg)
+    candidate_indices = []
+
+    for i in range(window, len(points) - window):
+        vec1 = points[i] - points[i - window]
+        vec2 = points[i + window] - points[i]
+
+        vec1 /= np.linalg.norm(vec1)
+        vec2 /= np.linalg.norm(vec2)
+
+        angle = np.arccos(np.clip(np.dot(vec1, vec2), -1.0, 1.0))
+        if angle > angle_threshold_rad:
+            candidate_indices.append(i)
+
+    # Merge nearby candidate indices into a single representative index per corner
+    merged_indices = []
+    if candidate_indices:
+        current_cluster = [candidate_indices[0]]
+        for idx in candidate_indices[1:]:
+            if idx - current_cluster[-1] <= merge_radius:
+                current_cluster.append(idx)
+            else:
+                merged_indices.append(current_cluster[len(current_cluster) // 2])
+                current_cluster = [idx]
+        merged_indices.append(current_cluster[len(current_cluster) // 2])  # Final cluster
+
+    # Always include the first and last point
+    corner_indices = [0] + merged_indices + [len(points) - 1]
+    return points[corner_indices]
+
+
 def main():
     pcd = load_and_preprocess_pointcloud()
 
@@ -216,21 +270,31 @@ def main():
         debugging_logs=False
     )
 
-    new_pcd = merge_pcds(new_pcd_tuple)
-    opce(new_pcd)
+    # new_pcd = merge_pcds(new_pcd_tuple)
+    # opce(new_pcd)
 
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0])
     print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
-    floor_pcd = create_point_cloud(floor_lines)
-    opce(floor_pcd)
+    # floor_pcd = create_point_cloud(floor_lines)
+    # opce(floor_pcd)
 
-    floor_corners = sort_points_in_hull(floor_lines, 0.05)
-    print(f"Detected {len(floor_corners)} corners in the floor lines.")  # Lies
+    floor_hull = sort_points_in_hull(floor_lines, 0.05)
+    floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
 
-    floor_corners = floor_corners[:(len(floor_corners) // 2)]
+    print(f"Detected {len(floor_hull)} points in the floor hull.")
+    print(f"Detected {len(floor_corners)} corners in the floor hull.")
 
-    floor_corners_pcd = create_point_cloud(floor_corners)
-    opce(floor_corners_pcd)
+    floor_hull_pcd = create_point_cloud(floor_hull, color=[0, 1, 0])  # Green color for hull
+    floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
+    floor_merge = merge_pcds((floor_corners_pcd, floor_hull_pcd))
+    opce(floor_merge)
+
+    get_extent(floor_hull)
+
+    # floor_corners = floor_corners[:(len(floor_corners) // 2)]
+
+    # floor_corners_pcd = create_point_cloud(floor_corners)
+    # opce(floor_corners_pcd)
 
     # wall_pcd = new_pcd_tuple[1]
     # ceiling_pcd = new_pcd_tuple[2]
