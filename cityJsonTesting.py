@@ -202,6 +202,10 @@ def get_extent(points: np.ndarray) -> dict:
 def main():
     pcd = load_and_preprocess_pointcloud()
 
+    if pcd is None:
+        print("No point cloud loaded. Exiting.")
+        return
+
     # pcd = grid_subsampling(pcd, 0.1)
     pcd = rns(pcd)
 
