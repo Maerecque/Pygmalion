@@ -117,60 +117,60 @@ def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10) ->
         return None
 
 
-def find_corners_in_lines(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray:
+def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray:
     """
-    Find corners in detected lines using a simple distance threshold and order them.
+    Sort points in a point cloud hull based on their proximity to each other.
 
     Args:
         lines (np.ndarray): The detected line points.
         threshold (float, optional): Distance threshold to consider as a corner. Defaults to 0.1.
 
     Returns:
-        np.ndarray: The corner points, ordered by proximity.
+        np.ndarray: An array of sorted points based on proximity.
     """
-    # If there are fewer than 2 points, no corners can be found
+    # If there are fewer than 2 points, no order can be found
     if len(lines) < 2:
         return np.array([])
 
-    corners = []
+    pnts = []
     # Iterate through the line points and check the distance between consecutive points
     for i in range(1, len(lines)):
         dist = np.linalg.norm(lines[i] - lines[i - 1])
         # If the distance exceeds the threshold, consider it a corner
         if dist > threshold:
-            corners.append(lines[i])
+            pnts.append(lines[i])
 
-    # If no corners were found, return an empty array
-    if not corners:
+    # If no points were found, return an empty array
+    if not pnts:
         return np.array([])
 
-    corners = np.array(corners)
+    pnts = np.array(pnts)
     # Build a KD-tree for efficient nearest neighbor search
-    tree = cKDTree(corners)
+    tree = cKDTree(pnts)
 
-    ordered_corners = []
-    visited = np.zeros(len(corners), dtype=bool)
+    ordered_pnts = []
+    visited = np.zeros(len(pnts), dtype=bool)
     current_index = 0
-    # Start ordering from the first corner
-    ordered_corners.append(corners[current_index])
+    # Start ordering from the first point
+    ordered_pnts.append(pnts[current_index])
     visited[current_index] = True
 
-    # Greedily order corners by always picking the nearest unvisited neighbor
-    for _ in range(1, len(corners)):
-        distances, indices = tree.query(corners[current_index], k=len(corners))
+    # Greedily order points by always picking the nearest unvisited neighbor
+    for _ in range(1, len(pnts)):
+        distances, indices = tree.query(pnts[current_index], k=len(pnts))
         for idx in indices:
             if not visited[idx]:
-                ordered_corners.append(corners[idx])
+                ordered_pnts.append(pnts[idx])
                 visited[idx] = True
                 current_index = idx
                 break
 
-    # Ensure the corners are ordered in a consistent manner, by sorting by x-coordinate.
-    # This assumes the first corner is the leftmost point. Works well for most cases.
-    max_x_index = np.argmax([corner[0] for corner in ordered_corners])
-    ordered_corners = np.roll(ordered_corners, -max_x_index, axis=0)
+    # Ensure the points are ordered in a consistent manner, by sorting by x-coordinate.
+    # This assumes the first point is the leftmost point. Works well for most cases.
+    max_x_index = np.argmax([pnt[0] for pnt in ordered_pnts])
+    ordered_pnts = np.roll(ordered_pnts, -max_x_index, axis=0)
 
-    return np.array(ordered_corners)
+    return np.array(ordered_pnts)
 
 
 def main():
@@ -195,7 +195,7 @@ def main():
     floor_pcd = create_point_cloud(floor_lines)
     opce(floor_pcd)
 
-    floor_corners = find_corners_in_lines(floor_lines, 0.05)
+    floor_corners = sort_points_in_hull(floor_lines, 0.05)
     print(f"Detected {len(floor_corners)} corners in the floor lines.")  # Lies
 
     floor_corners = floor_corners[:(len(floor_corners) // 2)]
