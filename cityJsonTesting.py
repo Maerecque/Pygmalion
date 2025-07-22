@@ -177,6 +177,28 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
     return np.array(ordered_pnts)
 
 
+def get_extent(points: np.ndarray) -> dict:
+    """Get the spatial extent of a set of 3D points.
+
+    Args:
+        points (np.ndarray): The input point cloud data.
+
+    Returns:
+        dict: A dictionary containing the minimum and maximum coordinates of the point cloud.
+    """
+    x_coords = points[:, 0]
+    y_coords = points[:, 1]
+    z_coords = points[:, 2]
+    extends = np.array([
+        np.min(x_coords),
+        np.min(z_coords),
+        np.min(y_coords),
+        np.max(x_coords),
+        np.max(z_coords),
+        np.max(y_coords)
+    ])
+    return extends
+
 def main():
     pcd = load_and_preprocess_pointcloud()
 
