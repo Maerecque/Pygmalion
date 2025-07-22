@@ -14,7 +14,7 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud, show_help: 
             Defaults to True.
     """
     # Check if the input point cloud is empty
-    if len(pcd.points) == 0:
+    if not isinstance(pcd, list) and len(pcd.points) == 0:
         # If the point cloud is empty, show an error message and return
         raise ValueError("The point cloud is empty")
 
@@ -27,4 +27,8 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud, show_help: 
         print("4) Press 'C' to get a selected geometry")
         print("5) Press 'S' to save the selected geometry")
         print("6) Press 'F' to switch to freeview mode")
-    o3d.visualization.draw_geometries_with_editing([pcd], left=0, top=45)
+
+    if not isinstance(pcd, list):
+        o3d.visualization.draw_geometries_with_editing([pcd], left=0, top=45)
+    if isinstance(pcd, list):
+        o3d.visualization.draw_geometries_with_editing(pcd, left=0, top=45)
