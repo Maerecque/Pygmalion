@@ -56,19 +56,19 @@ def generate_height_map(x: np.ndarray, y: np.ndarray, z: np.ndarray, x_grid: np.
     return height_map
 
 
-def create_point_cloud(coords: np.ndarray) -> o3d.cpu.pybind.geometry.PointCloud:
-    """Create an Open3D point cloud from coordinates.
-    Note: These pointclouds are not colored.
+def create_point_cloud(coords: np.ndarray, color: tuple = None) -> o3d.cpu.pybind.geometry.PointCloud:
+    """Create an Open3D point cloud from coordinates, with optional uniform color.
 
     Args:
-        coords (numpy.ndarray): Array of coordinates.
+        coords (numpy.ndarray): Array of coordinates of shape (N, 3).
+        color (tuple, optional): RGB color as a tuple (R, G, B) in [0, 1].
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Open3D point cloud object.
     """
     try:
-        if type(coords) is not np.ndarray:
-            if type(coords) is list:
+        if not isinstance(coords, np.ndarray):
+            if isinstance(coords, list):
                 coords = np.vstack(coords)
             else:
                 raise TypeError("Input coordinates must be a numpy array or a list of arrays.")
@@ -78,6 +78,13 @@ def create_point_cloud(coords: np.ndarray) -> o3d.cpu.pybind.geometry.PointCloud
 
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(coords)
+
+    if color is not None:
+        if len(color) != 3 or not all(0 <= c <= 1 for c in color):
+            raise ValueError("Color must be a tuple of 3 floats in range [0, 1].")
+        colors = np.tile(color, (coords.shape[0], 1))
+        point_cloud.colors = o3d.utility.Vector3dVector(colors)
+
     return point_cloud
 
 
