@@ -58,8 +58,8 @@ def alpha_shape(points, alpha, min_triangle_area=1e-10):
             area = np.sqrt(s * (s - a) * (s - b) * (s - c))
             if area < min_triangle_area or area <= 0:
                 raise ValueError("Triangle area is too small or zero, skipping this triangle.")
-        except Exception as e:
-            print(f"Error computing area: {e}")
+        except Exception:
+            # print(f"Error computing area: {e}")
             continue
         circum_r = a * b * c / (4.0 * area)
         if circum_r < 1.0 / alpha:
