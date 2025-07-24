@@ -290,15 +290,16 @@ def create_point_pairs(points: np.ndarray) -> np.ndarray:
 
 
 def create_lineset_from_contour(points: np.ndarray) -> o3d.geometry.LineSet:
-    pnt_hull = sort_points_in_hull(points, 0.05)
-    pnt_corners = find_corners_clean(pnt_hull, angle_threshold_deg=45, window=2, merge_radius=1)
-    pnt_pairs = create_point_pairs(pnt_corners)
+    # Floor
+    flr_hull = sort_points_in_hull(points, 0.05)
+    flr_corners = find_corners_clean(flr_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+    flr_pnt_pairs = create_point_pairs(flr_corners)
 
-    print(f"Creating lineset from {len(pnt_corners)} corner points and {len(pnt_pairs)} pairs.")
+    print(f"Creating lineset from {len(flr_corners)} corner points and {len(flr_pnt_pairs)} pairs.")
 
     lines = o3d.geometry.LineSet()
-    lines.points = o3d.utility.Vector3dVector(pnt_corners)
-    lines.lines = o3d.utility.Vector2iVector(pnt_pairs)
+    lines.points = o3d.utility.Vector3dVector(flr_corners)
+    lines.lines = o3d.utility.Vector2iVector(flr_pnt_pairs)
     return lines
 
 
