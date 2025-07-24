@@ -180,6 +180,8 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
 def get_extent(points: np.ndarray) -> dict:
     """Get the spatial extent of a set of 3D points.
 
+    Meant for CityJSON metadata generation.
+
     Args:
         points (np.ndarray): The input point cloud data.
 
