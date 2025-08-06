@@ -311,6 +311,30 @@ def create_lineset_from_contour(points: np.ndarray) -> o3d.geometry.LineSet:
     return lines
 
 
+def create_correct_height_wall_slice(points: np.ndarray, height: float = 1.75) -> np.ndarray:
+    """
+    Create a slice of the point cloud at a specified height.
+    Args:
+        points (np.ndarray): A 2D array of shape (N, 3) containing 3D points.
+        height (float): The height at which to slice the point cloud. Defaults to 1.75.
+
+    Returns:
+        np.ndarray: A 2D array of shape (M, 3) containing the sliced points at the specified height.
+    """
+
+    # Note: Nog niet zeker of deze functie correct werkt, moet het op 1.75 liggen of moet het 1.75 boven de vloer zijn?
+
+    if not isinstance(points, np.ndarray):
+        raise TypeError("Input must be a NumPy array.")
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError("Input must be a 2D NumPy array with shape (N, 3).")
+
+    # Create a copy of the points array to avoid modifying the original
+    sliced_points = points.copy()
+    sliced_points[:, 2] = height  # Set the z-coordinate to the specified height
+    return sliced_points
+
+
 def main():
     pcd = load_and_preprocess_pointcloud()
 
