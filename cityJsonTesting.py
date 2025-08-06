@@ -364,20 +364,20 @@ def main():
     print(f"Detected {len(floor_hull)} points in the floor hull.")
     print(f"Detected {len(floor_corners)} corners in the floor hull.")
 
-    floor_hull_pcd = create_point_cloud(floor_hull)  # Green color for hull
+    # floor_lineset = create_lineset_from_contour(floor_lines)
+
+    # # Show how many points are in the lineset
+    # print(f"Lineset contains {len(floor_lineset.points)} points and {len(floor_lineset.lines)} lines.")
+
+    # opce([floor_lineset])  # Display the lineset and hull
+
+    # floor_hull_pcd = create_point_cloud(floor_hull)  # Green color for hull
+    wall_hull_pcd = create_point_cloud(create_correct_height_wall_slice(floor_corners), color=[0, 1, 0])  # Green color for wall slice  # noqa: E501
     floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
+    wall_floor_merge = merge_pcds((floor_corners_pcd, wall_hull_pcd))
+    opce(wall_floor_merge)
 
-    floor_lineset = create_lineset_from_contour(floor_lines)
-
-    # Show how many points are in the lineset
-    print(f"Lineset contains {len(floor_lineset.points)} points and {len(floor_lineset.lines)} lines.")
-
-    opce([floor_lineset])  # Display the lineset and hull
-
-    # floor_merge = merge_pcds((floor_corners_pcd, floor_hull_pcd))
-    # opce(floor_merge)
-
-    get_extent(floor_hull)
+    # get_extent(floor_hull)
 
     # floor_corners = floor_corners[:(len(floor_corners) // 2)]
 
