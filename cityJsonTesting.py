@@ -378,6 +378,31 @@ def keep_ceiling_points_from_x_height(
     return filtered_ceiling_pcd
 
 
+def filter_ceiling_points(
+    input_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    percentage_to_keep: float = 0.1
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    # Sort the points by their z-coordinate
+    # Keep only a percentage of the points with the highest z-coordinates
+    if not isinstance(input_pcd, o3d.cpu.pybind.geometry.PointCloud):
+        raise TypeError("Input must be an Open3D PointCloud object.")
+    if len(input_pcd.points) == 0:
+        raise ValueError("Input point cloud is empty. Cannot filter ceiling points.")
+    if not (0 < percentage_to_keep <= 1):
+        raise ValueError("percentage_to_keep must be between 0 and 1.")
+    points = np.asarray(input_pcd.points)
+    # Sort points by z-coordinate
+    sorted_indices = np.argsort(points[:, 2])
+    # Calculate the number of points to keep
+    num_points_to_keep = int(len(points) * percentage_to_keep)
+    # Get the indices of the points to keep
+    indices_to_keep = sorted_indices[-num_points_to_keep:]
+    # Select the points to keep
+    filtered_pcd = input_pcd.select_by_index(indices_to_keep)
+    # Make all new points blue
+    filtered_pcd.colors = o3d.utility.Vector3dVector(np.tile([0, 0, 1], (len(filtered_pcd.points), 1)))
+    return filtered_pcd
+
 
 def main():
     pcd = load_and_preprocess_pointcloud()
@@ -397,7 +422,7 @@ def main():
     )
 
     new_pcd = merge_pcds(new_pcd_tuple)
-    opce(new_pcd)
+    # opce(new_pcd)
 
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0], 11)
     print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
@@ -427,6 +452,10 @@ def main():
         height=1.5
     )
 
+    new_small_ceiling_pcd = filter_ceiling_points(new_ceiling_pcd, percentage_to_keep=0.02)
+
+    all_merge = merge_pcds([wall_floor_merge, new_small_ceiling_pcd])
+    opce(all_merge)
 
     # get_extent(floor_hull)
 
