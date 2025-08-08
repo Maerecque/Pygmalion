@@ -340,6 +340,45 @@ def create_correct_height_wall_slice(points: np.ndarray, height: float = 1.5) ->
     return wall_slice
 
 
+def keep_ceiling_points_from_x_height(
+    ceiling_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    floor_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    height: float = 1.5
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    # Step one, get height of the floor from the floor point cloud
+    # Step two, add given height to the floor height (height + floor_height) = minimum z value of the ceiling points
+    # Step three, filter the ceiling point cloud to keep only points above the minimum z value
+    if not isinstance(
+        ceiling_pcd, o3d.cpu.pybind.geometry.PointCloud
+    ) or not isinstance(
+        floor_pcd, o3d.cpu.pybind.geometry.PointCloud
+    ):
+        raise TypeError("Both ceiling_pcd and floor_pcd must be Open3D PointCloud objects.")
+    if len(ceiling_pcd.points) == 0 or len(floor_pcd.points) == 0:
+        raise ValueError("Both ceiling_pcd and floor_pcd must contain points.")
+    # Get the minimum z value from the floor point cloud
+    floor_height = np.min(np.asarray(floor_pcd.points)[:, 2])
+
+    # Calculate the minimum z value for the ceiling points
+    min_z_value = floor_height + height
+
+    # Filter the ceiling point cloud to keep only points above the minimum z value
+    ceiling_points = np.asarray(ceiling_pcd.points)
+    ceiling_points_filtered = ceiling_points[ceiling_points[:, 2] > min_z_value]
+
+    if ceiling_points_filtered.size == 0:
+        raise ValueError("No ceiling points found above the specified height.")
+
+    # Create a new point cloud with the filtered points
+    filtered_ceiling_pcd = o3d.cpu.pybind.geometry.PointCloud()
+    filtered_ceiling_pcd.points = o3d.utility.Vector3dVector(ceiling_points_filtered)
+    # Make all new points blue
+    filtered_ceiling_pcd.colors = o3d.utility.Vector3dVector(np.tile([0, 0, 1], (len(filtered_ceiling_pcd.points), 1)))
+
+    return filtered_ceiling_pcd
+
+
+
 def main():
     pcd = load_and_preprocess_pointcloud()
 
@@ -379,8 +418,15 @@ def main():
     # floor_hull_pcd = create_point_cloud(floor_hull)  # Green color for hull
     wall_hull_pcd = create_point_cloud(create_correct_height_wall_slice(floor_corners), color=[0, 1, 0])  # Green color for wall slice  # noqa: E501
     floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
-    wall_floor_merge = merge_pcds((floor_corners_pcd, wall_hull_pcd))
-    opce(wall_floor_merge)
+    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_hull_pcd])
+    # opce(wall_floor_merge)  # Display the merged point cloud with wall slice and floor corners
+
+    new_ceiling_pcd = keep_ceiling_points_from_x_height(
+        new_pcd_tuple[1],
+        floor_corners_pcd,
+        height=1.5
+    )
+
 
     # get_extent(floor_hull)
 
