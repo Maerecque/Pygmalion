@@ -421,7 +421,7 @@ def main():
         debugging_logs=False
     )
 
-    new_pcd = merge_pcds(new_pcd_tuple)
+    new_pcd = merge_pcds(new_pcd_tuple)  # noqa: F841
     # opce(new_pcd)
 
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0], 11)
@@ -433,12 +433,16 @@ def main():
     print(f"Detected {len(floor_hull)} points in the floor hull.")
     print(f"Detected {len(floor_corners)} corners in the floor hull.")
 
+    ### FLOOR EXPORT SECTION START ###
+
     # floor_lineset = create_lineset_from_contour(floor_lines)
 
     # # Show how many points are in the lineset
     # print(f"Lineset contains {len(floor_lineset.points)} points and {len(floor_lineset.lines)} lines.")
 
     # opce([floor_lineset])  # Display the lineset and hull
+
+    ### FLOOR EXPORT SECTION END ###
 
     # floor_hull_pcd = create_point_cloud(floor_hull)  # Green color for hull
     wall_hull_pcd = create_point_cloud(create_correct_height_wall_slice(floor_corners), color=[0, 1, 0])  # Green color for wall slice  # noqa: E501
