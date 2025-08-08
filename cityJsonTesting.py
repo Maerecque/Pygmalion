@@ -71,12 +71,13 @@ def alpha_shape(points, alpha, min_triangle_area=1e-10):
     return concave
 
 
-def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10) -> np.ndarray:
+def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10, min_triangle_area: float = 1e-10) -> np.ndarray:
     """Find lines in a 3D point cloud by projecting to 2D and detecting boundaries.
 
     Args:
         pcd (o3d.geometry.PointCloud): The input point cloud.
         alpha (float, optional): The alpha parameter for the alpha shape. Defaults to 10.
+        min_triangle_area (float, optional): Minimum area of triangles to consider. Defaults to 1e-10.
 
     Raises:
         TypeError: If the input is not a valid Open3D PointCloud.
@@ -101,7 +102,7 @@ def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10) ->
         points_2d = points[:, :2]
 
         # Choose alpha parameter (smaller = tighter fit, adjust as needed)
-        boundary = alpha_shape(points_2d, alpha)
+        boundary = alpha_shape(points_2d, alpha, min_triangle_area=1e-10)
 
         # Get boundary coordinates as indices in the original array
         if boundary.geom_type == 'Polygon':
