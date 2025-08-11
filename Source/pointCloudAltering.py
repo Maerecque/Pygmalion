@@ -38,41 +38,40 @@ def remove_noise_statistical(
     std_ratio: float = 2.0,
     print_removal_amount: bool = True,
 ) -> o3d.cpu.pybind.geometry.PointCloud:
-    """A function to remove noise from a point cloud. This removes points that are further away from their neighbors in average.
+    """Remove noise from a point cloud using statistical outlier removal.
 
     Args:
-        input_pcd (open3d.cpu.pybind.geometry.PointCloud): A point cloud where the noise will be removed from.
+        input_pcd (open3d.cpu.pybind.geometry.PointCloud): Point cloud to clean.
 
-        show_removed_points (bool, optional): Boolean to show an example with the removed points from the cloud marked in red.
-            Defaults to False.
+        show_removed_points (bool, optional): Show removed points marked in red. Defaults to False.
 
-        nb_neighbors (int, optional): Number of neighbors around the target point.
-            Defaults to 20.
+        nb_neighbors (int, optional): Number of neighbors to analyze for each point. Defaults to 20.
 
-        std_ratio (float, optional): Standard deviation ratio.
-            Defaults to 2.0.
+        std_ratio (float, optional): Standard deviation multiplier for thresholding. Defaults to 2.0.
 
-        print_removal_amount (bool, optional):
-            Boolean to print the amount of points that were removed.
-            Defaults to True.
+        print_removal_amount (bool, optional): Print how many points were removed. Defaults to True.
 
     Returns:
-        open3d.cpu.pybind.geometry.PointCloud: A cleaned up version of the point cloud.
+        open3d.cpu.pybind.geometry.PointCloud: Cleaned point cloud.
     """
     cl, ind = input_pcd.remove_statistical_outlier(nb_neighbors, std_ratio)
 
-    amount_removed_points = len(input_pcd.points) - len(cl.points)
-    if amount_removed_points < 1:
-        amount_removed_points = "No"
+    total_points = len(input_pcd.points)
+    kept_points = len(cl.points)
+    removed_points = total_points - kept_points
 
-    if len(input_pcd.points) == len(cl.points):
-        amount_removed_points = f"All the ({len(cl.points)})"
-
-    if print_removal_amount: print(str(amount_removed_points) + " points were removed as outliers.")
+    if print_removal_amount:
+        if removed_points == 0:
+            print("No points were removed as outliers.")
+        elif removed_points == total_points:
+            print(f"All the points ({total_points}) were removed as outliers.")
+        else:
+            print(f"{removed_points} points were removed as outliers.")
 
     if show_removed_points:
         outlier_cloud = input_pcd.select_by_index(ind, invert=True)
-        outlier_cloud.paint_uniform_color([1, 0, 0])
+        outlier_cloud.paint_uniform_color([1, 0, 0])  # Mark outliers in red
+
         inlier_cloud_ex = get_difference_point_cloud(input_pcd, outlier_cloud)
         o3d.visualization.draw_geometries(
             [inlier_cloud_ex, outlier_cloud],
@@ -80,6 +79,7 @@ def remove_noise_statistical(
             top=45,
             window_name="Remove noise with statistical"
         )
+
     return cl
 
 
