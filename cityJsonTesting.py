@@ -2,6 +2,7 @@ import open3d as o3d
 import sys
 import os
 import numpy as np  # noqa: F401
+from tqdm import tqdm
 
 # Use alpha shape to find concave boundary (captures inner/underlying edges)
 from shapely.geometry import MultiPoint, LineString
