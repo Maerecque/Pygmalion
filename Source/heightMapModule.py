@@ -49,10 +49,22 @@ def generate_height_map(x: np.ndarray, y: np.ndarray, z: np.ndarray, x_grid: np.
         numpy.ndarray: 2D array representing the height map.
     """
     height_map = np.full((len(x_grid), len(y_grid)), -np.inf)
-    for i in tqdm(range(len(x)), desc="Creating height map"):
-        x_idx = np.argmin(np.abs(x_grid - x[i]))
-        y_idx = np.argmin(np.abs(y_grid - y[i]))
-        height_map[x_idx, y_idx] = max(height_map[x_idx, y_idx], z[i])
+
+    # Precompute scaling factors for direct index mapping
+    x_min, x_max = x_grid[0], x_grid[-1]
+    y_min, y_max = y_grid[0], y_grid[-1]
+    x_step = (x_max - x_min) / (len(x_grid) - 1)
+    y_step = (y_max - y_min) / (len(y_grid) - 1)
+
+    # Compute grid indices for all points in one go
+    x_idx = np.clip(((x - x_min) / x_step).astype(int), 0, len(x_grid) - 1)
+    y_idx = np.clip(((y - y_min) / y_step).astype(int), 0, len(y_grid) - 1)
+
+    # Update height map (keeping max z per cell)
+    for xi, yi, zi in tqdm(zip(x_idx, y_idx, z), total=len(z), desc="Creating height map (fast)"):
+        if zi > height_map[xi, yi]:
+            height_map[xi, yi] = zi
+
     return height_map
 
 
