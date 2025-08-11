@@ -108,34 +108,31 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
 
         geom = o3d.geometry.PointCloud()
 
-        # Create an Open3d model that contains the points from the LAS/LAZ file.
-        point_data = np.stack([
-            las.X,
-            las.Y,
-            las.Z
-        ], axis=0).transpose((1, 0))
+        scales = las.header.scales
+        offsets = las.header.offsets
 
-        # With the line below the visualization will look "odd", but is needed for export to PLY and turn back to the LAS format.
-        geom.points = o3d.utility.Vector3dVector((point_data * las.header.scales) + las.header.offsets)
-        # geom.points = o3d.utility.Vector3dVector(point_data)
+        # stack coordinates directly along axis=1 (shape: (N,3))
+        point_data = np.stack([las.X, las.Y, las.Z], axis=1)
 
-        # Assign the colours of the points to the Open3d model.
-        # Open3d only takes in colour values between 0 and 1, so therefore the colour values will be normalized accordingly.
+        # apply scaling and offset with broadcasting
+        point_data = point_data * scales + offsets
+
+        geom.points = o3d.utility.Vector3dVector(point_data)
+
+        # normalize colors once, stack axis=1
         colour_data = np.stack([
             normalize_array(las.red, True),
             normalize_array(las.green, True),
             normalize_array(las.blue, True)
-        ], axis=0).transpose((1, 0))
-        geom.colors = o3d.utility.Vector3dVector(colour_data)
+        ], axis=1)
 
-        # # It seems like Open3d does not accept the use gps as a variable. Find a way to give this to the ply file.
-        # gpsData = np.stack([las.gps_time], axis=0).transpose((1, 0))
-        # geom.gps = o3d.utility.Vector2dVector(gpsData)
+        geom.colors = o3d.utility.Vector3dVector(colour_data)
 
         if prnt_bool:
             print("A " + str(geom)[:-1] + " was extracted from the given LAS/LAZ file.")
 
         return geom
+
     except FileNotFoundError:
         print("Could not find a file on the given PATH,  please check if the PATH exists.")
         exit()
