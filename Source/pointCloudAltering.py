@@ -139,6 +139,16 @@ def merge_point_clouds(pcd_list: list[o3d.cpu.pybind.geometry.PointCloud]) -> o3
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Merged point cloud containing all points and colors from the input list.
     """
+    # Check that all point clouds have points if one misses points, drop it from the list
+    pcd_list = [pcd for pcd in pcd_list if len(pcd.points) > 0]
+    if not pcd_list:
+        raise ValueError("All point clouds must have points.")
+
+    # Check if all point clouds have colour, if one misses color, make it grey
+    for pcd in pcd_list:
+        if not pcd.has_colors():
+            pcd.colors = o3d.utility.Vector3dVector(np.tile([0.5, 0.5, 0.5], (len(pcd.points), 1)))
+
     merged_pcd = o3d.geometry.PointCloud()
     merged_pcd.points = o3d.utility.Vector3dVector(
         np.vstack([np.asarray(pcd.points) for pcd in pcd_list])
