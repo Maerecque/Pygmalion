@@ -61,7 +61,7 @@ def generate_height_map(x: np.ndarray, y: np.ndarray, z: np.ndarray, x_grid: np.
     y_idx = np.clip(((y - y_min) / y_step).astype(int), 0, len(y_grid) - 1)
 
     # Update height map (keeping max z per cell)
-    for xi, yi, zi in tqdm(zip(x_idx, y_idx, z), total=len(z), desc="Creating height map (fast)"):
+    for xi, yi, zi in tqdm(zip(x_idx, y_idx, z), total=len(z), desc="Creating height map"):
         if zi > height_map[xi, yi]:
             height_map[xi, yi] = zi
 
@@ -140,7 +140,7 @@ def generate_wall_points(
 
     wall_points = []
 
-    for fr, fc in tqdm(floor_edges[:, :2], desc="Creating walls (fast)"):
+    for fr, fc in tqdm(floor_edges[:, :2], desc="Creating walls"):
         key = (int(fr), int(fc))
         if key in ceiling_lookup:
             cr, cc = ceiling_lookup[key][:2]  # matching ceiling coords
