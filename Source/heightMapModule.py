@@ -123,20 +123,29 @@ def generate_wall_points(
     Returns:
         numpy.ndarray: Array of wall points.
     """
+    # Dictionary lookup for ceiling edges keyed by (row, col)
+    ceiling_lookup = {(int(edge[0]), int(edge[1])): edge for edge in ceiling_edges}
+
     wall_points = []
-    for floor_edge in tqdm(floor_edges, desc="Creating walls"):
-        floor_x, floor_y = x_grid[floor_edge[0]], y_grid[floor_edge[1]]
-        corresponding_ceiling = next(
-            (ceiling_edge for ceiling_edge in ceiling_edges if np.array_equal(ceiling_edge[:2], floor_edge[:2])), None
-        )
-        if corresponding_ceiling is not None:
-            ceiling_z = height_map[corresponding_ceiling[0], corresponding_ceiling[1]]
-            height_difference = ceiling_z - z_min
-            if np.isfinite(height_difference) and height_difference > 0:
-                num_points = int(height_difference / point_density) + 1
-                wall_points.extend(
-                    [[floor_x, floor_y, z_min + i * (height_difference / num_points)] for i in range(num_points + 1)]
-                )
+
+    for fr, fc in tqdm(floor_edges[:, :2], desc="Creating walls (fast)"):
+        key = (int(fr), int(fc))
+        if key in ceiling_lookup:
+            cr, cc = ceiling_lookup[key][:2]  # matching ceiling coords
+            ceiling_z = height_map[int(cr), int(cc)]
+            height_diff = ceiling_z - z_min
+
+            if np.isfinite(height_diff) and height_diff > 0:
+                num_points = int(height_diff / point_density) + 1
+                z_values = z_min + np.linspace(0, height_diff, num_points + 1)
+                x_val = x_grid[int(fr)]
+                y_val = y_grid[int(fc)]
+                wall_points.extend(np.column_stack((
+                    np.full(z_values.shape, x_val),
+                    np.full(z_values.shape, y_val),
+                    z_values
+                )))
+
     return np.array(wall_points)
 
 
