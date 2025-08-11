@@ -532,10 +532,29 @@ def main():
     print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
 
     floor_hull = sort_points_in_hull(floor_lines, 0.05)
-    floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+    floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)  
 
     print(f"Detected {len(floor_hull)} points in the floor hull.")
     print(f"Detected {len(floor_corners)} corners in the floor hull.")
+
+    # floor_hull_pcd = create_point_cloud(floor_hull)  # Green color for hull
+    wall_hull_pcd = create_point_cloud(create_correct_height_wall_slice(floor_corners), color=[0, 1, 0])  # Green color for wall slice  # noqa: E501
+    floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
+    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_hull_pcd])
+
+    new_wall_pcd = keep_wall_points_from_x_height(
+        new_pcd_tuple[1],
+        floor_corners_pcd,
+        height=1.5
+    )
+    print("new_wall_pcd")
+    opce(new_wall_pcd)  # This is all what is left of the roof
+
+    combine_till_here = merge_pcds([wall_floor_merge, new_wall_pcd])
+    print("combine_till_here")
+    opce(combine_till_here)
+
+    # WORKS UNTILL HERE!
 
     ### FLOOR EXPORT SECTION START ###
 
