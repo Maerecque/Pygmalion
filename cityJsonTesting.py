@@ -347,6 +347,21 @@ def keep_ceiling_points_from_x_height(
     floor_pcd: o3d.cpu.pybind.geometry.PointCloud,
     height: float = 1.5
 ) -> o3d.cpu.pybind.geometry.PointCloud:
+    """Keep wall points above a certain height.
+
+    Args:
+        wall_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing wall points.
+        floor_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing floor points.
+        height (float, optional): Height above the floor to keep wall points. Defaults to 1.5.
+
+    Raises:
+        TypeError: If the input is not an Open3D PointCloud object.
+        ValueError: If the input point cloud is empty.
+        ValueError: If height is not positive.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Point cloud containing wall points above the specified height.
+    """
     # Step one, get height of the floor from the floor point cloud
     # Step two, add given height to the floor height (height + floor_height) = minimum z value of the ceiling points
     # Step three, filter the ceiling point cloud to keep only points above the minimum z value
