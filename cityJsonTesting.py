@@ -292,13 +292,15 @@ def create_point_pairs(points: np.ndarray) -> np.ndarray:
     return np.array(pairs)
 
 
-def create_lineset_from_contour(points: np.ndarray) -> o3d.geometry.LineSet:
-    # Floor
-    flr_hull = sort_points_in_hull(points, 0.05)
-    flr_corners = find_corners_clean(flr_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+def create_lineset_from_contour(points: np.ndarray, generalize=True) -> o3d.geometry.LineSet:
+    if generalize:
+        # Floor
+        flr_hull = sort_points_in_hull(points, 0.05)
+        flr_corners = find_corners_clean(flr_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+        points = flr_corners
 
     # Show the points in the corners in print statement, print the points without e+ notation
-    flr_corners = np.array([np.round(corner, 3) for corner in flr_corners])
+    flr_corners = np.array([np.round(corner, 3) for corner in points])
     print(f"Floor corners: {flr_corners.tolist()}")
 
     # Not sure about this line, it's a bit too early. The previous two lines work perfect for the floor.
