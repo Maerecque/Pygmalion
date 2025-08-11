@@ -399,6 +399,23 @@ def filter_ceiling_points(
     input_pcd: o3d.cpu.pybind.geometry.PointCloud,
     percentage_to_keep: float = 0.1
 ) -> o3d.cpu.pybind.geometry.PointCloud:
+    """Filter ceiling points based on their z-coordinates.
+
+    Args:
+        input_pcd (o3d.cpu.pybind.geometry.PointCloud): Input point cloud containing ceiling points.
+        percentage_to_keep (float, optional): Percentage of points to keep based on z-coordinates. Defaults to 0.1.
+
+    Raises:
+        TypeError: If the input is not an Open3D PointCloud object.
+        ValueError: If the input point cloud is empty.
+        ValueError: If percentage_to_keep is not between 0 and 1.
+
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Filtered point cloud containing ceiling points.
+
+    MAYBE NOT NEEDED
+    """
     # Sort the points by their z-coordinate
     # Keep only a percentage of the points with the highest z-coordinates
     if not isinstance(input_pcd, o3d.cpu.pybind.geometry.PointCloud):
