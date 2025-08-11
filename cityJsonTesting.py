@@ -438,6 +438,76 @@ def filter_ceiling_points(
     return filtered_pcd
 
 
+def find_highest_point_above_point_pair(
+    ceiling_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    floor_corners: np.ndarray,
+    search_radius: float = 0.3
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """
+    For each pair of floor corner indices (i,i+1) compute the midpoint and find the highest ceiling point above that midpoint.
+    If `search_radius` is provided, choose the highest point among all ceiling points within that radius (XY),
+    otherwise fall back to the single nearest neighbor (in XY).
+
+    Args:
+        ceiling_pcd: Open3D point cloud with ceiling points (Nx3).
+        floor_corners: (M,3) numpy array of floor corner coordinates.
+        search_radius: optional float. If set, consider only points within this radius (XY-plane). Default is 0.3
+
+    Returns:
+        Open3D point cloud containing one point (highest) per corner-pair.
+    """
+    # basic validation
+    if not isinstance(ceiling_pcd, o3d.cpu.pybind.geometry.PointCloud):
+        raise TypeError("ceiling_pcd must be an Open3D PointCloud.")
+    if len(ceiling_pcd.points) == 0:
+        raise ValueError("ceiling_pcd is empty.")
+    if not isinstance(floor_corners, np.ndarray):
+        raise TypeError("floor_corners must be a NumPy array.")
+    if floor_corners.ndim != 2 or floor_corners.shape[1] != 3:
+        raise ValueError("floor_corners must have shape (M, 3).")
+    if len(floor_corners) < 2:
+        raise ValueError("At least two floor corners required to form pairs.")
+
+    corner_pairs = create_point_pairs(floor_corners)
+    ceiling_points = np.asarray(ceiling_pcd.points)  # (N,3)
+    highest_points = []
+
+    # Optionally you can create an Open3D KDTree for faster spatial queries on big clouds:
+    # kdtree = o3d.geometry.KDTreeFlann(ceiling_pcd)
+
+    for pair in corner_pairs:
+        i0, i1 = int(pair[0]), int(pair[1])  # indices into floor_corners
+        p0 = floor_corners[i0]
+        p1 = floor_corners[i1]
+        middle_point = (p0 + p1) / 2.0  # (3,)
+
+        # XY distances from ceiling points to the midpoint
+        vec_xy = ceiling_points[:, :2] - middle_point[:2]
+        dists_xy = np.linalg.norm(vec_xy, axis=1)
+
+        if search_radius is None:
+            # pick nearest neighbor in XY
+            closest_idx = int(np.argmin(dists_xy))
+            highest_points.append(ceiling_points[closest_idx])
+        else:
+            # consider only points within search_radius (XY)
+            mask = dists_xy <= float(search_radius)
+            if np.any(mask):
+                candidates = ceiling_points[mask]
+                # pick the candidate with maximum Z (highest)
+                max_z_idx = int(np.argmax(candidates[:, 2]))
+                highest_points.append(candidates[max_z_idx])
+            else:
+                # fallback to nearest if nothing in radius
+                closest_idx = int(np.argmin(dists_xy))
+                highest_points.append(ceiling_points[closest_idx])
+
+    highest_points = np.array(highest_points, dtype=float)
+    highest_points_pcd = o3d.cpu.pybind.geometry.PointCloud()
+    highest_points_pcd.points = o3d.utility.Vector3dVector(highest_points)
+    return highest_points_pcd
+
+
 def main():
     pcd = load_and_preprocess_pointcloud()
 
