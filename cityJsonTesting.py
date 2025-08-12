@@ -315,35 +315,78 @@ def create_lineset_from_contour(points: np.ndarray, generalize=True) -> o3d.geom
     return lines
 
 
-def create_correct_height_wall_slice(points: np.ndarray, height: float = 1.5) -> np.ndarray:
+def create_correct_height_slice(
+    tbp_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    floor_contour_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    height: float = 1.5,
+    search_radius: float = 0.025
+) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     Create a slice of the point cloud at a specified height above the floor.
 
     Args:
-        points (np.ndarray): A 2D array of shape (N, 3) containing 3D points.
-        height (float): The height at which to slice the point cloud. Defaults to 1.5.
+        tbp_pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be sliced.
+        floor_contour_pcd (o3d.cpu.pybind.geometry.PointCloud): The floor point cloud to reference for height.
+        height (float): The height at which to slice the point cloud in meters. Defaults to 1.5.
+        search_radius (float): The radius within which to search for points in the tbp_pcd.
+            Must be a positive float. Defaults to 0.025.
 
     Returns:
-        np.ndarray: A 2D array of shape (M, 3) containing the sliced points at the specified height.
-
-    NOTE: This may not be needed anymore since I'm doubting the functioning of it
+        o3d.cpu.pybind.geometry.PointCloud: A new point cloud containing the sliced points.
     """
-    # So this places an identical set of points on top of the floor points,
-    # if the points are originally are at 0,8m and the height is 1.5m,
-    # the points will be at 0.8 + 1.5 = 2.3
-    if not isinstance(points, np.ndarray) or points.ndim != 2 or points.shape[1] != 3:
-        raise ValueError("Input must be a 2D NumPy array with shape (N, 3).")
+    if not all(isinstance(pc, o3d.cpu.pybind.geometry.PointCloud) for pc in [tbp_pcd, floor_contour_pcd]):
+        raise TypeError("Both tbp_pcd and floor_contour_pcd must be Open3D PointCloud objects.")
 
-    if len(points) == 0:
-        raise ValueError("Input array is empty. Cannot create a wall slice.")
+    if len(tbp_pcd.points) == 0 or len(floor_contour_pcd.points) == 0:
+        raise ValueError("Both tbp_pcd and floor_contour_pcd must contain points.")
 
-    # Create a new array with the same shape as points
-    wall_slice = np.copy(points)
+    if search_radius <= 0:
+        raise ValueError("search_radius must be a positive float.")
 
-    # Add the height to the z-coordinate of each point
-    wall_slice[:, 2] += height
+    # Find at what height the wall points should be
+    floor_height = np.min(np.asarray(floor_contour_pcd.points)[:, 2])
+    slice_height = floor_height + height
 
-    return wall_slice
+    tbp_countour_points = []
+    floor_points = np.asarray(floor_contour_pcd.points)
+    tbp_all_points = np.asarray(tbp_pcd.points)
+
+    # Show amount of floor points
+    print(f"Number of floor points: {floor_points.shape[0]}")
+    print(f"Number of TBP points: {tbp_all_points.shape[0]}")
+
+    for floor_pt in floor_points:
+        mask = (
+            (np.abs(tbp_all_points[:, 0] - floor_pt[0]) <= (search_radius)) &  # X-axis tolerance
+            (np.abs(tbp_all_points[:, 1] - floor_pt[1]) <= (search_radius))   # Y-axis tolerance
+        )
+        candidates = tbp_all_points[mask]
+        if candidates.size > 0:
+            print(f"Found {len(candidates)} candidates for floor point {floor_pt}.")
+            # Pick the closest point that is not above the slice height but as close as possible
+            below_slice = candidates[candidates[:, 2] <= slice_height]
+            if below_slice.size > 0:
+                print(f"Found {len(below_slice)} candidates below the slice height for floor point {floor_pt}.")
+
+                idx = np.argmin(np.abs(below_slice[:, 2] - slice_height))
+
+                # If there are more than one point near the floor point, pick the one closest to the floor point
+                if below_slice.shape[0] > 1:
+                    distances = np.linalg.norm(below_slice[:, :2] - floor_pt[:2], axis=1)
+                    idx = np.argmin(distances)
+
+                tbp_countour_points.append(below_slice[idx])
+            else:
+                # If there are no points at or below the slice height the ceiling should be above the slice height
+                # Which would mean you can place a point at the slice height
+                new_point = np.array([floor_pt[0], floor_pt[1], slice_height])
+                tbp_countour_points.append(new_point)
+
+    tbp_countour_points = np.array(tbp_countour_points)
+
+    auspuf = create_point_cloud(tbp_countour_points, [0, 0, 1])
+
+    return auspuf
 
 
 def keep_wall_points_from_x_height(
