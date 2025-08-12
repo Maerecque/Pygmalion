@@ -204,7 +204,8 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
         >>> print(f"Detected {len(sorted_corners)} corners")
 
     Note:
-        - Uses greedy nearest-neighbor approach which may not be optimal for complex hulls
+        - Uses greedy nearest-neighbor approach which may not be optimal for complex hulls,
+          but this is chosen regardless, because of its simplicity and efficiency.
         - Points are reordered starting from leftmost point (maximum x-coordinate)
     """
     # If there are fewer than 2 points, no order can be found
@@ -317,6 +318,10 @@ def find_corners(points, angle_threshold_deg=45, window=3, merge_radius=3) -> np
         >>> points = np.array([[0, 0, 0], [1, 0, 0], [2, 0, 0], [2, 1, 0], [2, 2, 0]])
         >>> corners = find_corners(points, angle_threshold_deg=45, window=1, merge_radius=1)
         >>> print(corners)
+
+    Note:
+        - The function is sensitive to the choice of parameters, especially `angle_threshold_deg` and `window`.
+        - Smaller window sizes may detect more corners but can also pick up noise.
     """
     angle_threshold_rad = np.deg2rad(angle_threshold_deg)
     candidate_indices = []
@@ -495,7 +500,7 @@ def create_correct_height_slice(
         - Uses floor minimum Z-coordinate as reference height
         - For points above slice height, creates new points at the slice level
         - Prints progress information during processing
-        - Returns blue-colored point cloud for visualization
+        - Returns blue-colored point cloud for visualization 🟦.
     """
     if not all(isinstance(pc, o3d.cpu.pybind.geometry.PointCloud) for pc in [tbp_pcd, floor_contour_pcd]):
         raise TypeError("Both tbp_pcd and floor_contour_pcd must be Open3D PointCloud objects.")
@@ -655,7 +660,7 @@ def keep_highest_point_above_corner(
 
     Note:
         - Uses rectangular search area (±search_radius in X and Y)
-        - Returns red-colored points for visualization
+        - Returns red-colored points for visualization 🟥.
         - With compare_with_corner=True, opens interactive visualization
         - Useful for finding roof peaks above building corners
     """
