@@ -1,6 +1,4 @@
 import open3d as o3d
-import sys
-import os
 import numpy as np
 from tqdm import tqdm
 
@@ -11,12 +9,10 @@ from scipy.spatial import Delaunay
 from scipy.spatial import cKDTree
 
 
-sys.path.insert(0, os.path.realpath(os.path.dirname(__file__)) + '\\Source')
-
-from Source.fileHandler import get_file_path, readout_LAS_file
-from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
-from Source.pointCloudEditor import open_point_cloud_editor as opce
-from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds  # , grid_subsampling
+from fileHandler import get_file_path, readout_LAS_file
+from heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
+from pointCloudEditor import open_point_cloud_editor as opce
+from pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds  # , grid_subsampling
 
 
 def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
