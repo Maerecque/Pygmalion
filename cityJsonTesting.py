@@ -524,42 +524,50 @@ def filter_ceiling_points(
     input_pcd: o3d.cpu.pybind.geometry.PointCloud,
     percentage_to_keep: float = 0.1
 ) -> o3d.cpu.pybind.geometry.PointCloud:
-    """Filter ceiling points based on their z-coordinates.
+    """
+    Filter ceiling points by retaining only the top percentage of points based on their z-coordinates.
 
     Args:
         input_pcd (o3d.cpu.pybind.geometry.PointCloud): Input point cloud containing ceiling points.
-        percentage_to_keep (float, optional): Percentage of points to keep based on z-coordinates. Defaults to 0.1.
+        percentage_to_keep (float, optional): Fraction of points to keep (0 < percentage_to_keep <= 1). Defaults to 0.1.
 
     Raises:
-        TypeError: If the input is not an Open3D PointCloud object.
-        ValueError: If the input point cloud is empty.
-        ValueError: If percentage_to_keep is not between 0 and 1.
-
+        TypeError: If input_pcd is not an Open3D PointCloud.
+        ValueError: If input_pcd is empty.
+        ValueError: If percentage_to_keep is not in (0, 1].
 
     Returns:
-        o3d.cpu.pybind.geometry.PointCloud: Filtered point cloud containing ceiling points.
-
-    MAYBE NOT NEEDED
+        o3d.cpu.pybind.geometry.PointCloud: Filtered point cloud with the top ceiling points.
     """
-    # Sort the points by their z-coordinate
-    # Keep only a percentage of the points with the highest z-coordinates
+
+    # Validate input type and parameters
     if not isinstance(input_pcd, o3d.cpu.pybind.geometry.PointCloud):
         raise TypeError("Input must be an Open3D PointCloud object.")
     if len(input_pcd.points) == 0:
-        raise ValueError("Input point cloud is empty. Cannot filter ceiling points.")
+        raise ValueError("Input point cloud is empty; cannot filter ceiling points.")
     if not (0 < percentage_to_keep <= 1):
-        raise ValueError("percentage_to_keep must be between 0 and 1.")
-    points = np.asarray(input_pcd.points)
-    # Sort points by z-coordinate
-    sorted_indices = np.argsort(points[:, 2])
-    # Calculate the number of points to keep
-    num_points_to_keep = int(len(points) * percentage_to_keep)
-    # Get the indices of the points to keep
-    indices_to_keep = sorted_indices[-num_points_to_keep:]
-    # Select the points to keep
-    filtered_pcd = input_pcd.select_by_index(indices_to_keep)
-    # Make all new points blue
-    filtered_pcd.colors = o3d.utility.Vector3dVector(np.tile([0, 0, 1], (len(filtered_pcd.points), 1)))
+        raise ValueError("percentage_to_keep must be between 0 (exclusive) and 1 (inclusive).")
+
+    # Convert points to numpy array for processing
+    points_np = np.asarray(input_pcd.points)
+
+    # Sort indices by z-coordinate in ascending order
+    sorted_indices = np.argsort(points_np[:, 2])
+
+    # Determine how many points to keep from the top (highest z)
+    num_to_keep = int(len(points_np) * percentage_to_keep)
+
+    # Select indices corresponding to the highest z values
+    top_indices = sorted_indices[-num_to_keep:]
+
+    # Extract the filtered point cloud
+    filtered_pcd = input_pcd.select_by_index(top_indices)
+
+    # Color filtered points blue for visualization
+    blue_color = np.array([0, 0, 1])
+    colors = np.tile(blue_color, (len(filtered_pcd.points), 1))
+    filtered_pcd.colors = o3d.utility.Vector3dVector(colors)
+
     return filtered_pcd
 
 
