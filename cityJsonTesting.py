@@ -596,57 +596,54 @@ def slice_roof_up(
     slab_fatness: float = 0.01
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
-    Slice a point cloud into horizontal slices along the Z-axis and return a new point cloud
-    containing points within ±0.01 of each slice's Z-value.
-
-    The function divides the range of Z-values in the input point cloud into `slices_amount` equal parts.
-    For each slice, it selects points with Z-values in the range [z_slice - 0.01, z_slice + 0.01]
-    and combines all these points into a new point cloud.
+    Slice a point cloud along Z into horizontal slices, then run find_lines_in_pointcloud
+    on each slice to detect line points and combine all detected line points into one point cloud.
 
     Args:
-        roof_pcd (open3d.cpu.pybind.geometry.PointCloud): Input Open3D point cloud to slice.
-        slices_amount (int): Number of slices to divide the Z-range into. Must be at least 1. Default is 2.
-        slab_fatness (float): Thickness of each slab. Must be greater than 0. Default is 0.01.
+        roof_pcd (open3d.cpu.pybind.geometry.PointCloud): Input point cloud.
+        slices_amount (int): Number of horizontal slices.
+        slab_fatness (float): Half-fatness around slice center to include points (default 0.01).
 
     Returns:
-        open3d.cpu.pybind.geometry.PointCloud: New point cloud containing points from all slices.
-
-    Raises:
-        TypeError: If `roof_pcd` is not an instance of open3d.cpu.pybind.geometry.PointCloud.
-        ValueError: If `slices_amount` is less than 1.
+        open3d.cpu.pybind.geometry.PointCloud: New point cloud containing all detected line points.
     """
     if not isinstance(roof_pcd, o3d.cpu.pybind.geometry.PointCloud):
         raise TypeError("roof_pcd must be an Open3D PointCloud.")
 
     if not isinstance(slices_amount, int):
-        # Round to nearest integer
         slices_amount = int(round(slices_amount))
 
     if slices_amount < 1:
         raise ValueError("slices_amount must be at least 1.")
 
-    if slab_fatness <= 0:
-        raise ValueError("slab_fatness must be greater than 0.")
-
     points = np.asarray(roof_pcd.points)
     z_vals = points[:, 2]
 
     z_min, z_max = z_vals.min(), z_vals.max()
-    slice_height = (z_max - z_min) / slices_amount
+    slice_centers = np.linspace(z_min, z_max, slices_amount)
 
-    # Slice centers shifted half slice height above z_min
-    slice_z_values = z_min + slice_height * (0.5 + np.arange(slices_amount))
+    all_flattened_points = []
 
-    combined_mask = np.zeros_like(z_vals, dtype=bool)
+    for z_center in tqdm(slice_centers, desc="Processing slices"):
+        mask = (z_vals >= z_center - slab_fatness) & (z_vals <= z_center + slab_fatness)
+        slice_points = points[mask]
 
-    for z in slice_z_values:
-        mask = (z_vals >= z - slab_fatness) & (z_vals <= z + slab_fatness)
-        combined_mask = combined_mask | mask
+        if len(slice_points) == 0:
+            continue
 
-    filtered_points = points[combined_mask]
+        # Flatten all points in this slice to z_center
+        slice_points[:, 2] = z_center
+
+        all_flattened_points.append(slice_points)
+
+    if len(all_flattened_points) == 0:
+        # No points found in any slice, return empty PointCloud
+        return o3d.geometry.PointCloud()
+
+    combined_points = np.vstack(all_flattened_points)
 
     new_pcd = o3d.geometry.PointCloud()
-    new_pcd.points = o3d.utility.Vector3dVector(filtered_points)
+    new_pcd.points = o3d.utility.Vector3dVector(combined_points)
 
     return new_pcd
 
