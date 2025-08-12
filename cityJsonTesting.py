@@ -346,8 +346,8 @@ def create_correct_height_wall_slice(points: np.ndarray, height: float = 1.5) ->
     return wall_slice
 
 
-def keep_ceiling_points_from_x_height(
-    ceiling_pcd: o3d.cpu.pybind.geometry.PointCloud,
+def keep_wall_points_from_x_height(
+    wall_pcd: o3d.cpu.pybind.geometry.PointCloud,
     floor_pcd: o3d.cpu.pybind.geometry.PointCloud,
     height: float = 1.5
 ) -> o3d.cpu.pybind.geometry.PointCloud:
