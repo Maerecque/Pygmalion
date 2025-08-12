@@ -973,7 +973,7 @@ def main():
 
     # 5. Sort the hull points and find corners in the floor boundary
     floor_hull = sort_points_in_hull(floor_lines, 0.05)
-    floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+    floor_corners = find_corners(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
 
     print(f"Detected {len(floor_hull)} points in the floor hull.")
     print(f"Detected {len(floor_corners)} corners in the floor hull.")
@@ -1002,40 +1002,40 @@ def main():
 
     exit()
 
-    ### FLOOR EXPORT SECTION START ###
-    floor_corners_pcd_array = np.asarray(floor_corners_pcd.points)
-    wall_points_array = np.asarray(wall_hull_pcd.points)
-    highest_ridge_points_array = np.asarray(highest_ridge_points.points)
-    floor_lineset = create_lineset_from_contour(floor_corners_pcd_array, False)
-    # opce(floor_lineset)  # Display the floor lineset
-    wall_lineset = create_lineset_from_contour(wall_points_array, False)
-    # opce(wall_lineset)  # Display the wall lineset
-    highest_ridge_points_lineset = create_lineset_from_contour(highest_ridge_points_array, False)
-    # opce(highest_ridge_points_lineset)  # Display the highest ridge points lineset
+    # ### FLOOR EXPORT SECTION START ###
+    # floor_corners_pcd_array = np.asarray(floor_corners_pcd.points)
+    # wall_points_array = np.asarray(wall_slice.points)
+    # highest_ridge_points_array = np.asarray(highest_ridge_points.points)
+    # floor_lineset = create_lineset_from_contour(floor_corners_pcd_array, False)
+    # # opce(floor_lineset)  # Display the floor lineset
+    # wall_lineset = create_lineset_from_contour(wall_points_array, False)
+    # # opce(wall_lineset)  # Display the wall lineset
+    # highest_ridge_points_lineset = create_lineset_from_contour(highest_ridge_points_array, False)
+    # # opce(highest_ridge_points_lineset)  # Display the highest ridge points lineset
 
-    # opce([floor_lineset, wall_lineset, highest_ridge_points_lineset])  # Display the linesets
+    # # opce([floor_lineset, wall_lineset, highest_ridge_points_lineset])  # Display the linesets
 
-    # # Show how many points are in the lineset
-    # print(f"Lineset contains {len(floor_lineset.points)} points and {len(floor_lineset.lines)} lines.")
+    # # # Show how many points are in the lineset
+    # # print(f"Lineset contains {len(floor_lineset.points)} points and {len(floor_lineset.lines)} lines.")
 
-    # opce([floor_lineset])  # Display the lineset and hull
+    # # opce([floor_lineset])  # Display the lineset and hull
 
-    ### FLOOR EXPORT SECTION END ###
+    # ### FLOOR EXPORT SECTION END ###
 
-    # new_small_ceiling_pcd = filter_ceiling_points(new_ceiling_pcd, percentage_to_keep=0.02)
+    # # new_small_ceiling_pcd = filter_ceiling_points(new_ceiling_pcd, percentage_to_keep=0.02)
 
-    all_merge = merge_pcds([wall_floor_merge, highest_ridge_points])
-    opce(all_merge)
+    # all_merge = merge_pcds([wall_floor_merge, highest_ridge_points])
+    # opce(all_merge)
 
-    # get_extent(floor_hull)
+    # # get_extent(floor_hull)
 
-    # floor_corners = floor_corners[:(len(floor_corners) // 2)]
+    # # floor_corners = floor_corners[:(len(floor_corners) // 2)]
 
-    # floor_corners_pcd = create_point_cloud(floor_corners)
-    # opce(floor_corners_pcd)
+    # # floor_corners_pcd = create_point_cloud(floor_corners)
+    # # opce(floor_corners_pcd)
 
-    # wall_pcd = new_pcd_tuple[1]
-    # ceiling_pcd = new_pcd_tuple[2]
+    # # wall_pcd = new_pcd_tuple[1]
+    # # ceiling_pcd = new_pcd_tuple[2]
 
 
 if __name__ == "__main__":
