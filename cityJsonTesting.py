@@ -1,7 +1,7 @@
 import open3d as o3d
 import sys
 import os
-import numpy as np  # noqa: F401
+import numpy as np
 from tqdm import tqdm
 
 # Use alpha shape to find concave boundary (captures inner/underlying edges)
@@ -999,7 +999,7 @@ def main():
     sliced_roof = slice_roof_up(new_roof_pcd, 5, slab_fatness=0.0075)
 
     # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
-    filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.025, True)
+    filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.025)
 
     # 10. Merge the wall, floor, and roof outline for visualization
     combine_till_here = merge_pcds([wall_floor_merge, filtered_sliced_roof])
