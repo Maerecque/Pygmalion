@@ -318,12 +318,15 @@ def create_lineset_from_contour(points: np.ndarray, generalize=True) -> o3d.geom
 def create_correct_height_wall_slice(points: np.ndarray, height: float = 1.5) -> np.ndarray:
     """
     Create a slice of the point cloud at a specified height above the floor.
+
     Args:
         points (np.ndarray): A 2D array of shape (N, 3) containing 3D points.
         height (float): The height at which to slice the point cloud. Defaults to 1.5.
 
     Returns:
         np.ndarray: A 2D array of shape (M, 3) containing the sliced points at the specified height.
+
+    NOTE: This may not be needed anymore since I'm doubting the functioning of it
     """
     # So this places an identical set of points on top of the floor points,
     # if the points are originally are at 0,8m and the height is 1.5m,
