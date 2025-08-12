@@ -399,6 +399,82 @@ def keep_wall_points_from_x_height(
     return filtered_wall_pcd
 
 
+def keep_highest_point_above_corner(
+    corner_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    full_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    search_radius: float = 0.01,
+    compare_with_corner: bool = False
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """
+    Find the highest point in `full_pcd` that lies approximately above each point in `corner_pcd`.
+
+    For each corner point, this function looks for points in `full_pcd` within a horizontal
+    distance ±`search_radius` in both x and y directions and selects the point with the highest z-coordinate.
+
+    Args:
+        corner_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing corner points.
+        full_pcd (o3d.cpu.pybind.geometry.PointCloud): Larger point cloud to search for points above corners.
+        search_radius (float, optional): Search radius for finding points above corners. Must be greater than 0.
+            Defaults to 0.01.
+        compare_with_corner (bool, optional): If True, compare the resulting highest points with the corner points.
+            The user should define what happens with this boolean.
+
+    Raises:
+        TypeError: If inputs are not Open3D PointCloud objects.
+        ValueError: If either point cloud is empty.
+        ValueError: If no points are found above any corner point.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: A point cloud containing the highest points above each corner point,
+            colored red for visualization.
+    """
+
+    # Validate input types
+    if not isinstance(corner_pcd, o3d.cpu.pybind.geometry.PointCloud) or not isinstance(full_pcd, o3d.cpu.pybind.geometry.PointCloud):
+        raise TypeError("Both corner_pcd and full_pcd must be Open3D PointCloud objects.")
+
+    # Validate non-empty point clouds
+    if len(corner_pcd.points) == 0 or len(full_pcd.points) == 0:
+        raise ValueError("Both corner_pcd and full_pcd must contain points.")
+
+    # Validate search radius
+    if search_radius <= 0 and isinstance(search_radius, (int, float)):
+        raise ValueError("search_radius must be greater than 0.")
+
+    corner_points = np.asarray(corner_pcd.points)
+    full_points = np.asarray(full_pcd.points)
+
+    highest_points = []
+
+    # For each corner point, find points in full_pcd close in x,y and pick the highest z
+
+    for corner in tqdm(corner_points, desc="Finding highest points above corners", unit="corner"):
+        mask = (
+            (full_points[:, 0] >= corner[0] - search_radius) & (full_points[:, 0] <= corner[0] + search_radius) &
+            (full_points[:, 1] >= corner[1] - search_radius) & (full_points[:, 1] <= corner[1] + search_radius)
+        )
+        above_points = full_points[mask]
+
+        if above_points.size > 0:
+            highest_point = above_points[np.argmax(above_points[:, 2])]
+            highest_points.append(highest_point)
+
+    if not highest_points:
+        raise ValueError("No points found above the corner points.")
+
+    # Create point cloud from highest points
+    highest_pcd = o3d.cpu.pybind.geometry.PointCloud()
+    highest_pcd.points = o3d.utility.Vector3dVector(highest_points)
+    highest_pcd.colors = o3d.utility.Vector3dVector(np.tile([1, 0, 0], (len(highest_pcd.points), 1)))  # red color
+
+    if not highest_pcd.has_points():
+        raise ValueError("No points found above the corner points.")
+
+    # Placeholder for user-defined comparison logic
+    if compare_with_corner:
+        opce(merge_pcds([corner_pcd, highest_pcd]), show_help=False)
+
+    return highest_pcd
 
 
 def filter_ceiling_points(
