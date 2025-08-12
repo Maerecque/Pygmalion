@@ -138,6 +138,9 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
     if len(lines) < 2:
         return np.array([])
 
+    if threshold <= 0:
+        raise ValueError("Threshold must be greater than 0.")
+
     pnts = []
     # Iterate through the line points and check the distance between consecutive points
     for i in range(1, len(lines)):
