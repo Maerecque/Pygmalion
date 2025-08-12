@@ -368,14 +368,14 @@ def keep_wall_points_from_x_height(
     """
     # Step one, get height of the floor from the floor point cloud
     # Step two, add given height to the floor height (height + floor_height) = minimum z value of the ceiling points
-    # Step three, filter the ceiling point cloud to keep only points above the minimum z value
+    # Step three, filter the wall point cloud to keep only points above the minimum z value
     if not isinstance(
-        ceiling_pcd, o3d.cpu.pybind.geometry.PointCloud
+        wall_pcd, o3d.cpu.pybind.geometry.PointCloud
     ) or not isinstance(
         floor_pcd, o3d.cpu.pybind.geometry.PointCloud
     ):
-        raise TypeError("Both ceiling_pcd and floor_pcd must be Open3D PointCloud objects.")
-    if len(ceiling_pcd.points) == 0 or len(floor_pcd.points) == 0:
+        raise TypeError("Both wall_pcd and floor_pcd must be Open3D PointCloud objects.")
+    if len(wall_pcd.points) == 0 or len(floor_pcd.points) == 0:
         raise ValueError("Both ceiling_pcd and floor_pcd must contain points.")
     # Get the minimum z value from the floor point cloud
     floor_height = np.min(np.asarray(floor_pcd.points)[:, 2])
@@ -383,20 +383,22 @@ def keep_wall_points_from_x_height(
     # Calculate the minimum z value for the ceiling points
     min_z_value = floor_height + height
 
-    # Filter the ceiling point cloud to keep only points above the minimum z value
-    ceiling_points = np.asarray(ceiling_pcd.points)
-    ceiling_points_filtered = ceiling_points[ceiling_points[:, 2] > min_z_value]
+    # Filter the wall point cloud to keep only points above the minimum z value
+    wall_points = np.asarray(wall_pcd.points)
+    wall_points_filtered = wall_points[wall_points[:, 2] > min_z_value]
 
-    if ceiling_points_filtered.size == 0:
-        raise ValueError("No ceiling points found above the specified height.")
+    if wall_points_filtered.size == 0:
+        raise ValueError("No wall points found above the specified height.")
 
     # Create a new point cloud with the filtered points
-    filtered_ceiling_pcd = o3d.cpu.pybind.geometry.PointCloud()
-    filtered_ceiling_pcd.points = o3d.utility.Vector3dVector(ceiling_points_filtered)
+    filtered_wall_pcd = o3d.cpu.pybind.geometry.PointCloud()
+    filtered_wall_pcd.points = o3d.utility.Vector3dVector(wall_points_filtered)
     # Make all new points blue
-    filtered_ceiling_pcd.colors = o3d.utility.Vector3dVector(np.tile([0, 0, 1], (len(filtered_ceiling_pcd.points), 1)))
+    filtered_wall_pcd.colors = o3d.utility.Vector3dVector(np.tile([0, 0, 1], (len(filtered_wall_pcd.points), 1)))
 
-    return filtered_ceiling_pcd
+    return filtered_wall_pcd
+
+
 
 
 def filter_ceiling_points(
