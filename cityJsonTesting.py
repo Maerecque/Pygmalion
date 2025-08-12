@@ -21,27 +21,66 @@ from Source.pointCloudAltering import remove_noise_statistical as rns, merge_poi
 
 def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
     """
-    Loads a pointcloud file selected by the user and applies voxel downsampling and normal estimation.
+    Load a point cloud file selected by the user through a file dialog.
+
+    Prompts the user to select a LAS or LAZ point cloud file using a file dialog,
+    then loads the file using the custom file handler. No preprocessing is applied.
+
     Returns:
-        o3d.geometry.PointCloud: The processed point cloud.
+        o3d.geometry.PointCloud: The loaded point cloud from the selected file.
+                                Returns None if no file is selected or if loading fails.
+
+    Raises:
+        FileNotFoundError: If the selected file does not exist or cannot be accessed.
+        ValueError: If the selected file is not a valid LAS/LAZ format.
+        IOError: If there are issues reading the file (corrupted data, permissions, etc.).
+
+    Example:
+        >>> pcd = load_and_preprocess_pointcloud()
+        Point cloud loaded and preprocessed. Now starting surface reconstruction...
+        >>> print(f"Loaded point cloud with {len(pcd.points)} points")
+        Loaded point cloud with 125000 points
+
+    Note:
+        - Only LAS and LAZ file formats are supported
+        - Despite the function name suggesting preprocessing, no actual preprocessing is performed
+        - The user can cancel the file dialog, in which case None may be returned
     """
     pcd = readout_LAS_file(get_file_path("Select a point cloud file to process", "LAS files (*.las *.laz)"))
     print("Point cloud loaded and preprocessed. Now starting surface reconstruction...")
     return pcd
 
 
-def alpha_shape(points, alpha, min_triangle_area=1e-10):
+def alpha_shape(points, alpha, min_triangle_area=1e-10) -> MultiPoint:
     """
     Compute the alpha shape (concave hull) of a set of 2D points.
-    This function is used in find_lines_in_pointcloud to detect boundaries in a 2D projection of a 3D point cloud.
+
+    Uses Delaunay triangulation and circumradius filtering to create a concave boundary
+    that can capture inner edges and complex shapes, unlike convex hulls.
 
     Args:
-        points: np.array of shape (n, 2)
-        alpha: alpha value controlling concavity (higher = looser)
-        min_triangle_area: threshold to ignore near-degenerate triangles
+        points (np.ndarray): Array of shape (n, 2) containing 2D point coordinates.
+        alpha (float): Alpha value controlling concavity. Higher values create looser boundaries,
+            lower values create tighter, more detailed boundaries.
+        min_triangle_area (float, optional): Minimum area threshold to ignore degenerate triangles.
+            Defaults to 1e-10.
 
     Returns:
-        A Shapely Polygon or MultiPolygon representing the alpha shape.
+        shapely.geometry.Polygon or MultiPolygon: The computed alpha shape as a Shapely geometry object.
+        Returns convex hull if fewer than 4 input points.
+
+    Example:
+        >>> import numpy as np
+        >>> # L-shaped building footprint
+        >>> points = np.array([[0,0], [2,0], [2,1], [1,1], [1,2], [0,2]])
+        >>> boundary = alpha_shape(points, alpha=0.5)
+        >>> print(f"Boundary type: {boundary.geom_type}")
+        Boundary type: Polygon
+
+    Note:
+        - Used internally by find_lines_in_pointcloud for boundary detection
+        - Alpha parameter requires tuning: too low = noisy, too high = over-simplified
+        - Handles degenerate triangles by skipping those with area below threshold
     """
     if len(points) < 4:
         return MultiPoint(points).convex_hull
@@ -73,20 +112,38 @@ def alpha_shape(points, alpha, min_triangle_area=1e-10):
 
 
 def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10, min_triangle_area: float = 1e-10) -> np.ndarray:
-    """Find lines in a 3D point cloud by projecting to 2D and detecting boundaries.
+    """
+    Find boundary/contour lines in a 3D point cloud by projecting to 2D and detecting alpha shape boundaries.
+
+    Projects a 3D point cloud onto the XY plane, computes an alpha shape (concave hull)
+    to detect boundaries, and returns the 3D coordinates of points on the detected boundary.
 
     Args:
-        pcd (o3d.geometry.PointCloud): The input point cloud.
-        alpha (float, optional): The alpha parameter for the alpha shape. Defaults to 10.
-        min_triangle_area (float, optional): Minimum area of triangles to consider. Defaults to 1e-10.
-
-    Raises:
-        TypeError: If the input is not a valid Open3D PointCloud.
-        ValueError: If the point cloud is empty.
-        TypeError: If the point cloud is not of type Vector3dVector.
+        pcd (o3d.geometry.PointCloud): The input 3D point cloud containing structural data.
+        alpha (float, optional): Alpha parameter controlling boundary concavity.
+            Lower values (1-5) create tighter boundaries, higher values (10-20) create smoother ones. Defaults to 10.
+        min_triangle_area (float, optional): Minimum area threshold for triangles in Delaunay triangulation.
+            Defaults to 1e-10.
 
     Returns:
-        np.ndarray: The detected line points.
+        np.ndarray: Array of shape (N, 3) containing 3D coordinates of detected boundary points.
+                   Returns None if an error occurs.
+
+    Raises:
+        TypeError: If input is not a valid Open3D PointCloud object.
+        ValueError: If the point cloud is empty or contains no points.
+
+    Example:
+        >>> building_points = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
+        >>> pcd = o3d.geometry.PointCloud()
+        >>> pcd.points = o3d.utility.Vector3dVector(building_points)
+        >>> boundary_points = find_lines_in_pointcloud(pcd, alpha=8.0)
+        >>> print(f"Detected {len(boundary_points)} boundary points")
+
+    Note:
+        - Projects all points to XY plane (Z coordinates preserved in output)
+        - Works best with point clouds having clear structural boundaries
+        - For noisy data, consider preprocessing with noise removal
     """
     try:
         if not isinstance(pcd, o3d.geometry.PointCloud):
@@ -125,14 +182,30 @@ def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10, mi
 
 def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray:
     """
-    Sort points in a point cloud hull based on their proximity to each other.
+    Sort points in a point cloud hull based on proximity using nearest neighbor approach.
+
+    Identifies corner points by analyzing distance jumps between consecutive points,
+    then reorders them by connecting nearest neighbors to create a coherent spatial sequence.
 
     Args:
-        lines (np.ndarray): The detected line points.
+        lines (np.ndarray): Array of shape (N, 3) containing 3D hull/boundary points.
         threshold (float, optional): Distance threshold to consider as a corner. Defaults to 0.1.
 
     Returns:
-        np.ndarray: An array of sorted points based on proximity.
+        np.ndarray: Array of shape (M, 3) containing sorted corner points,
+                   with M <= N. Returns empty array if fewer than 2 input points.
+
+    Raises:
+        ValueError: If threshold is less than or equal to 0.
+
+    Example:
+        >>> hull_points = np.array([[0.0, 0.0, 0.0], [0.05, 0.02, 0.0], [1.0, 0.0, 0.0]])
+        >>> sorted_corners = sort_points_in_hull(hull_points, threshold=0.1)
+        >>> print(f"Detected {len(sorted_corners)} corners")
+
+    Note:
+        - Uses greedy nearest-neighbor approach which may not be optimal for complex hulls
+        - Points are reordered starting from leftmost point (maximum x-coordinate)
     """
     # If there are fewer than 2 points, no order can be found
     if len(lines) < 2:
@@ -182,16 +255,32 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
     return np.array(ordered_pnts)
 
 
-def get_extent(points: np.ndarray) -> dict:
-    """Get the spatial extent of a set of 3D points.
+def get_extent(points: np.ndarray) -> np.ndarray:
+    """
+    Get the spatial extent (bounding box) of 3D points in CityJSON format.
 
-    Meant for CityJSON metadata generation.
+    Computes min/max coordinates and returns them in CityJSON metadata order:
+    [min_x, min_z, min_y, max_x, max_z, max_y]. Note the Y/Z coordinate swap.
 
     Args:
-        points (np.ndarray): The input point cloud data.
+        points (np.ndarray): Array of shape (N, 3) containing 3D point coordinates [x, y, z].
 
     Returns:
-        dict: A dictionary containing the minimum and maximum coordinates of the point cloud.
+        np.ndarray: Array of shape (6,) containing spatial extent in CityJSON format.
+
+    Raises:
+        TypeError: If input is not a numpy array.
+        ValueError: If the input array is empty or doesn't have shape (N, 3).
+
+    Example:
+        >>> building_points = np.array([[10.0, 20.0, 0.0], [15.0, 25.0, 3.0]])
+        >>> extent = get_extent(building_points)
+        >>> print("CityJSON extent:", extent)
+        CityJSON extent: [10.  0. 20. 15.  3. 25.]
+
+    Note:
+        - CityJSON format swaps Y and Z coordinates: [min_x, min_z, min_y, max_x, max_z, max_y]
+        - Standard 3D extent would be [min_x, min_y, min_z, max_x, max_y, max_z]
     """
     x_coords = points[:, 0]
     y_coords = points[:, 1]
@@ -207,7 +296,7 @@ def get_extent(points: np.ndarray) -> dict:
     return extends
 
 
-def find_corners_clean(points, angle_threshold_deg=45, window=3, merge_radius=3):
+def find_corners(points, angle_threshold_deg=45, window=3, merge_radius=3) -> np.ndarray:
     """
     Detects corner points in a noisy 3D contour by analyzing direction changes and merging nearby detections.
 
@@ -226,7 +315,7 @@ def find_corners_clean(points, angle_threshold_deg=45, window=3, merge_radius=3)
 
     Example:
         >>> points = np.array([[0, 0, 0], [1, 0, 0], [2, 0, 0], [2, 1, 0], [2, 2, 0]])
-        >>> corners = find_corners_clean(points, angle_threshold_deg=45, window=1, merge_radius=1)
+        >>> corners = find_corners(points, angle_threshold_deg=45, window=1, merge_radius=1)
         >>> print(corners)
     """
     angle_threshold_rad = np.deg2rad(angle_threshold_deg)
@@ -261,18 +350,37 @@ def find_corners_clean(points, angle_threshold_deg=45, window=3, merge_radius=3)
 
 
 def create_point_pairs(points: np.ndarray) -> np.ndarray:
-    """Create pairs of points from a 2D array of points with the index of each point.
+    """
+    Create pairs of consecutive point indices for connecting points in a contour.
+
+    Creates index pairs for each consecutive point (0->1, 1->2, etc.) and closes
+    the loop by connecting the last point back to the first point.
 
     Args:
-        points (np.ndarray): A 2D array of shape (N, 3) containing 3D points.
+        points (np.ndarray): Array of shape (N, 3) containing 3D points.
 
     Returns:
-        np.ndarray: A 2D array of shape (M, 2, 3) where M is the number of pairs.
+        np.ndarray: Array of shape (N, 2) containing index pairs for connecting points.
+                   Each row contains [current_index, next_index] for creating line segments.
 
     Raises:
         TypeError: If the input is not a NumPy array.
-        ValueError: If the input array is empty or does not have the correct shape.
+        ValueError: If the input array is empty or doesn't have shape (N, 3).
         ValueError: If there are fewer than two points to create pairs.
+
+    Example:
+        >>> points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
+        >>> pairs = create_point_pairs(points)
+        >>> print(pairs)
+        [[0 1]
+         [1 2]
+         [2 3]
+         [3 0]]  # Closes the loop
+
+    Note:
+        - Automatically closes the contour by connecting last point to first
+        - Returns index pairs, not the actual point coordinates
+        - Useful for creating Open3D LineSet objects from contour points
     """
     try:
         if not isinstance(points, np.ndarray):
@@ -297,10 +405,40 @@ def create_point_pairs(points: np.ndarray) -> np.ndarray:
 
 
 def create_lineset_from_contour(points: np.ndarray, generalize=True) -> o3d.geometry.LineSet:
+    """
+    Create an Open3D LineSet from contour points with optional generalization.
+
+    Processes input points to create a connected line visualization. When generalization
+    is enabled, sorts points by proximity and detects corners to simplify the contour.
+
+    Args:
+        points (np.ndarray): Array of shape (N, 3) containing 3D contour points.
+        generalize (bool, optional): Whether to apply hull sorting and corner detection
+            to simplify the contour. Defaults to True.
+
+    Returns:
+        o3d.geometry.LineSet: LineSet object with points and line connections for visualization.
+
+    Example:
+        >>> contour_points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
+        >>> lineset = create_lineset_from_contour(contour_points, generalize=True)
+        >>> print(f"Created lineset with {len(lineset.points)} points")
+        Created lineset with 4 points
+
+    Example without generalization:
+        >>> raw_lineset = create_lineset_from_contour(contour_points, generalize=False)
+        >>> # Uses points as-is without hull sorting or corner detection
+
+    Note:
+        - With generalization: applies sort_points_in_hull() and find_corners() for cleaner contours
+        - Without generalization: uses input points directly with create_point_pairs()
+        - Prints detected corner points and connection pairs for debugging
+        - Automatically creates closed contours by connecting last point to first
+    """
     if generalize:
         # Floor
         flr_hull = sort_points_in_hull(points, 0.05)
-        flr_corners = find_corners_clean(flr_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+        flr_corners = find_corners(flr_hull, angle_threshold_deg=45, window=2, merge_radius=1)
         points = flr_corners
 
     # Show the points in the corners in print statement, print the points without e+ notation
@@ -327,15 +465,37 @@ def create_correct_height_slice(
     """
     Create a slice of the point cloud at a specified height above the floor.
 
+    For each floor contour point, finds the closest point in the target point cloud
+    within the search radius that is at or below the slice height, creating a horizontal
+    slice at the specified height above the floor reference level.
+
     Args:
         tbp_pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be sliced.
         floor_contour_pcd (o3d.cpu.pybind.geometry.PointCloud): The floor point cloud to reference for height.
-        height (float): The height at which to slice the point cloud in meters. Defaults to 1.5.
-        search_radius (float): The radius within which to search for points in the tbp_pcd.
+        height (float, optional): The height at which to slice the point cloud in meters. Defaults to 1.5.
+        search_radius (float, optional): The radius within which to search for points in the tbp_pcd.
             Must be a positive float. Defaults to 0.025.
 
     Returns:
-        o3d.cpu.pybind.geometry.PointCloud: A new point cloud containing the sliced points.
+        o3d.cpu.pybind.geometry.PointCloud: A new point cloud containing the sliced points at the target height.
+
+    Raises:
+        TypeError: If either input is not an Open3D PointCloud object.
+        ValueError: If either point cloud is empty.
+        ValueError: If search_radius is not positive.
+
+    Example:
+        >>> # Create a wall slice 1.5m above floor level
+        >>> floor_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])
+        >>> wall_slice = create_correct_height_slice(building_pcd, floor_pcd, height=1.5)
+        >>> print(f"Created slice with {len(wall_slice.points)} points")
+        Created slice with 24 points
+
+    Note:
+        - Uses floor minimum Z-coordinate as reference height
+        - For points above slice height, creates new points at the slice level
+        - Prints progress information during processing
+        - Returns blue-colored point cloud for visualization
     """
     if not all(isinstance(pc, o3d.cpu.pybind.geometry.PointCloud) for pc in [tbp_pcd, floor_contour_pcd]):
         raise TypeError("Both tbp_pcd and floor_contour_pcd must be Open3D PointCloud objects.")
@@ -397,24 +557,37 @@ def keep_wall_points_from_x_height(
     floor_pcd: o3d.cpu.pybind.geometry.PointCloud,
     height: float = 1.5
 ) -> o3d.cpu.pybind.geometry.PointCloud:
-    """Keep wall points above a certain height.
+    """
+    Keep wall points above a certain height relative to the floor.
+
+    Filters the wall point cloud to retain only points that are above a specified
+    height threshold relative to the minimum floor height.
 
     Args:
         wall_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing wall points.
-        floor_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing floor points.
+        floor_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing floor points for height reference.
         height (float, optional): Height above the floor to keep wall points. Defaults to 1.5.
 
-    Raises:
-        TypeError: If the input is not an Open3D PointCloud object.
-        ValueError: If the input point cloud is empty.
-        ValueError: If height is not positive.
-
     Returns:
-        o3d.cpu.pybind.geometry.PointCloud: Point cloud containing wall points above the specified height.
+        o3d.cpu.pybind.geometry.PointCloud: Point cloud containing wall points above the specified height,
+                                           colored blue for visualization.
+
+    Raises:
+        TypeError: If either input is not an Open3D PointCloud object.
+        ValueError: If either point cloud is empty.
+        ValueError: If no wall points are found above the specified height.
+
+    Example:
+        >>> floor_pcd = create_point_cloud(floor_points, color=[1, 0, 0])
+        >>> filtered_walls = keep_wall_points_from_x_height(wall_pcd, floor_pcd, height=2.0)
+        >>> print(f"Kept {len(filtered_walls.points)} wall points above 2.0m")
+        Kept 1523 wall points above 2.0m
+
+    Note:
+        - Uses minimum Z-coordinate from floor_pcd as reference height
+        - All filtered points are colored blue for visualization
+        - Useful for removing furniture and lower structural elements
     """
-    # Step one, get height of the floor from the floor point cloud
-    # Step two, add given height to the floor height (height + floor_height) = minimum z value of the ceiling points
-    # Step three, filter the wall point cloud to keep only points above the minimum z value
     if not isinstance(
         wall_pcd, o3d.cpu.pybind.geometry.PointCloud
     ) or not isinstance(
@@ -452,27 +625,39 @@ def keep_highest_point_above_corner(
     compare_with_corner: bool = False
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
-    Find the highest point in `full_pcd` that lies approximately above each point in `corner_pcd`.
+    Find the highest point in full_pcd that lies approximately above each point in corner_pcd.
 
-    For each corner point, this function looks for points in `full_pcd` within a horizontal
-    distance ±`search_radius` in both x and y directions and selects the point with the highest z-coordinate.
+    For each corner point, searches for points in full_pcd within a horizontal
+    distance ±search_radius in both x and y directions and selects the point with the highest z-coordinate.
 
     Args:
         corner_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing corner points.
         full_pcd (o3d.cpu.pybind.geometry.PointCloud): Larger point cloud to search for points above corners.
         search_radius (float, optional): Search radius for finding points above corners. Must be greater than 0.
             Defaults to 0.01.
-        compare_with_corner (bool, optional): If True, compare the resulting highest points with the corner points.
-            The user should define what happens with this boolean.
+        compare_with_corner (bool, optional): If True, opens visualization comparing corner and highest points.
+            Defaults to False.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Point cloud containing the highest points above each corner point,
+            colored red for visualization.
 
     Raises:
         TypeError: If inputs are not Open3D PointCloud objects.
         ValueError: If either point cloud is empty.
         ValueError: If no points are found above any corner point.
 
-    Returns:
-        o3d.cpu.pybind.geometry.PointCloud: A point cloud containing the highest points above each corner point,
-            colored red for visualization.
+    Example:
+        >>> corner_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])
+        >>> ceiling_peaks = keep_highest_point_above_corner(corner_pcd, roof_pcd, search_radius=0.05)
+        >>> print(f"Found {len(ceiling_peaks.points)} highest points")
+        Found 4 highest points
+
+    Note:
+        - Uses rectangular search area (±search_radius in X and Y)
+        - Returns red-colored points for visualization
+        - With compare_with_corner=True, opens interactive visualization
+        - Useful for finding roof peaks above building corners
     """
 
     # Validate input types
@@ -530,17 +715,34 @@ def filter_ceiling_points(
     """
     Filter ceiling points by retaining only the top percentage of points based on their z-coordinates.
 
+    Sorts all points by height and keeps only the specified percentage of highest points,
+    effectively filtering out lower structural elements and retaining ceiling points.
+
     Args:
         input_pcd (o3d.cpu.pybind.geometry.PointCloud): Input point cloud containing ceiling points.
-        percentage_to_keep (float, optional): Fraction of points to keep (0 < percentage_to_keep <= 1). Defaults to 0.1.
+        percentage_to_keep (float, optional): Fraction of points to keep (0 < percentage_to_keep <= 1).
+            Defaults to 0.1.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Filtered point cloud with the top ceiling points,
+                                           colored blue for visualization.
 
     Raises:
         TypeError: If input_pcd is not an Open3D PointCloud.
         ValueError: If input_pcd is empty.
         ValueError: If percentage_to_keep is not in (0, 1].
 
-    Returns:
-        o3d.cpu.pybind.geometry.PointCloud: Filtered point cloud with the top ceiling points.
+    Example:
+        >>> ceiling_pcd = create_point_cloud(ceiling_points, color=[0, 1, 0])
+        >>> filtered_ceiling = filter_ceiling_points(ceiling_pcd, percentage_to_keep=0.05)
+        >>> print(f"Kept {len(filtered_ceiling.points)} ceiling points (top 5%)")
+        Kept 156 ceiling points (top 5%)
+
+    Note:
+        - Sorts points by Z-coordinate and selects the highest percentage
+        - All filtered points are colored blue for visualization
+        - Useful for removing noise and focusing on actual ceiling structure
+        - Higher percentages keep more points but may include non-ceiling elements
     """
 
     # Validate input type and parameters
@@ -581,16 +783,36 @@ def find_highest_point_above_point_pair(
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     For each pair of floor corner indices (i,i+1) compute the midpoint and find the highest ceiling point above that midpoint.
-    If `search_radius` is provided, choose the highest point among all ceiling points within that radius (XY),
-    otherwise fall back to the single nearest neighbor (in XY).
+
+    Creates consecutive pairs of floor corners, computes their midpoints, and searches for the highest
+    ceiling point within the search radius (XY plane) above each midpoint.
+    Falls back to nearest neighbor if no points found within radius.
 
     Args:
-        ceiling_pcd: Open3D point cloud with ceiling points (Nx3).
-        floor_corners: (M,3) numpy array of floor corner coordinates.
-        search_radius: optional float. If set, consider only points within this radius (XY-plane). Default is 0.3
+        ceiling_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing ceiling points to search.
+        floor_corners (np.ndarray): Array of shape (M, 3) containing floor corner coordinates.
+        search_radius (float, optional): Search radius in XY plane for finding points above midpoints.
+            If None, uses nearest neighbor. Defaults to 0.3.
 
     Returns:
-        Open3D point cloud containing one point (highest) per corner-pair.
+        o3d.cpu.pybind.geometry.PointCloud: Point cloud containing one highest point per corner pair.
+
+    Raises:
+        TypeError: If ceiling_pcd is not an Open3D PointCloud or floor_corners is not a NumPy array.
+        ValueError: If ceiling_pcd is empty, floor_corners doesn't have shape (M, 3), or fewer than 2 corners provided.
+
+    Example:
+        >>> floor_corners = np.array([[0,0,0], [1,0,0], [1,1,0], [0,1,0]])
+        >>> ceiling_pcd = create_point_cloud(ceiling_points, color=[0,1,0])
+        >>> ridge_points = find_highest_point_above_point_pair(ceiling_pcd, floor_corners, search_radius=0.2)
+        >>> print(f"Found {len(ridge_points.points)} ridge points")
+        Found 4 ridge points
+
+    Note:
+        - Creates pairs using create_point_pairs() which closes the loop (last->first)
+        - Searches in XY plane only, selects highest Z-coordinate from candidates
+        - Falls back to nearest neighbor if no points within search_radius
+        - Useful for finding roof ridge points above building edge midpoints
     """
     # basic validation
     if not isinstance(ceiling_pcd, o3d.cpu.pybind.geometry.PointCloud):
@@ -650,16 +872,37 @@ def slice_roof_up(
     slab_fatness: float = 0.01
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
-    Slice a point cloud along Z into horizontal slices, then run find_lines_in_pointcloud
-    on each slice to detect line points and combine all detected line points into one point cloud.
+    Slice a point cloud along Z into horizontal slices and flatten each slice to its center height.
+
+    Divides the point cloud into horizontal slices along the Z-axis, then flattens all points
+    in each slice to the slice's center Z-coordinate. Useful for creating horizontal cross-sections
+    of complex roof structures.
 
     Args:
-        roof_pcd (open3d.cpu.pybind.geometry.PointCloud): Input point cloud.
-        slices_amount (int): Number of horizontal slices.
-        slab_fatness (float): Half-fatness around slice center to include points (default 0.01).
+        roof_pcd (o3d.cpu.pybind.geometry.PointCloud): Input point cloud to be sliced.
+        slices_amount (int, optional): Number of horizontal slices to create. Must be at least 1. Defaults to 2.
+        slab_fatness (float, optional): Half-fatness around slice center to include points.
+            Points within ±slab_fatness of slice center are included. Defaults to 0.01.
 
     Returns:
-        open3d.cpu.pybind.geometry.PointCloud: New point cloud containing all detected line points.
+        o3d.cpu.pybind.geometry.PointCloud: New point cloud containing all flattened slice points.
+                                           Returns empty point cloud if no points found in any slice.
+
+    Raises:
+        TypeError: If roof_pcd is not an Open3D PointCloud.
+        ValueError: If slices_amount is less than 1.
+
+    Example:
+        >>> roof_pcd = create_point_cloud(roof_points, color=[0, 1, 0])
+        >>> sliced_roof = slice_roof_up(roof_pcd, slices_amount=5, slab_fatness=0.02)
+        >>> print(f"Created {len(sliced_roof.points)} flattened points from roof slices")
+        Created 1250 flattened points from roof slices
+
+    Note:
+        - Slices are evenly distributed between minimum and maximum Z-coordinates
+        - Points are flattened to their slice center height, losing original Z variation
+        - Empty slices (no points within slab_fatness) are skipped
+        - Uses tqdm progress bar for slice processing visualization
     """
     if not isinstance(roof_pcd, o3d.cpu.pybind.geometry.PointCloud):
         raise TypeError("roof_pcd must be an Open3D PointCloud.")
