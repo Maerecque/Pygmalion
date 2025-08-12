@@ -473,7 +473,7 @@ def keep_highest_point_above_corner(
     """
 
     # Validate input types
-    if not isinstance(corner_pcd, o3d.cpu.pybind.geometry.PointCloud) or not isinstance(full_pcd, o3d.cpu.pybind.geometry.PointCloud):
+    if not all(isinstance(pc, o3d.cpu.pybind.geometry.PointCloud) for pc in [corner_pcd, full_pcd]):
         raise TypeError("Both corner_pcd and full_pcd must be Open3D PointCloud objects.")
 
     # Validate non-empty point clouds
