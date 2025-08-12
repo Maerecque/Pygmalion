@@ -700,15 +700,20 @@ def slice_roof_up(
 
 
 def main():
+    # Set the verbosity level of Open3D to only print severe errors
+    o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
+
+    # 1. Load and preprocess the point cloud (user selects file)
     pcd = load_and_preprocess_pointcloud()
 
     if pcd is None:
         print("No point cloud loaded. Exiting.")
         return
 
-    # pcd = grid_subsampling(pcd, 0.1)
+    # 2. Remove noise from the point cloud
     pcd = rns(pcd)
 
+    # 3. Transform the point cloud into a height map (returns tuple: [floor, wall, ...])
     new_pcd_tuple = transform_pointcloud_to_height_map(
         pcd,
         grid_size=500,
@@ -716,44 +721,53 @@ def main():
         debugging_logs=False
     )
 
-    new_pcd = merge_pcds(new_pcd_tuple)  # noqa: F841
-    # opce(new_pcd)
-
+    # 4. Find the boundary lines (hull) of the floor points
     floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0], 11)
     print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
 
+    # 5. Sort the hull points and find corners in the floor boundary
     floor_hull = sort_points_in_hull(floor_lines, 0.05)
-    floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)  
+    floor_corners = find_corners_clean(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
 
     print(f"Detected {len(floor_hull)} points in the floor hull.")
     print(f"Detected {len(floor_corners)} corners in the floor hull.")
 
-    # floor_hull_pcd = create_point_cloud(floor_hull)  # Green color for hull
-    wall_hull_pcd = create_point_cloud(create_correct_height_wall_slice(floor_corners), color=[0, 1, 0])  # Green color for wall slice  # noqa: E501
+    # 6. Create a wall slice at a certain height above the floor
+    wall_slice = create_correct_height_slice(new_pcd_tuple[1], create_point_cloud(floor_corners, color=[1, 0, 0]), height=1.5)
     floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
-    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_hull_pcd])
+    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])
 
-    new_wall_pcd = keep_wall_points_from_x_height(
+    # 7. Extract the roof points above a certain height (removes everything below)
+    new_roof_pcd = keep_wall_points_from_x_height(
         new_pcd_tuple[1],
         floor_corners_pcd,
         height=1.5
     )
-    print("new_wall_pcd")
-    opce(new_wall_pcd)  # This is all what is left of the roof
 
-    combine_till_here = merge_pcds([wall_floor_merge, new_wall_pcd])
-    print("combine_till_here")
+    # 8. Slice the roof into horizontal slabs and flatten each slice
+    sliced_roof = slice_roof_up(new_roof_pcd, 5, slab_fatness=0.0075)
+
+    # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
+    filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.025, True)
+
+    # 10. Merge the wall, floor, and roof outline for visualization
+    combine_till_here = merge_pcds([wall_floor_merge, filtered_sliced_roof])
     opce(combine_till_here)
 
-    sliced_roof = slice_roof_up(new_pcd, 5, 0.01)
-    print("sliced_roof")
-    opce(sliced_roof)  # Display the sliced roof point cloud
-
-    # WORKS UNTILL HERE!
+    exit()
 
     ### FLOOR EXPORT SECTION START ###
+    floor_corners_pcd_array = np.asarray(floor_corners_pcd.points)
+    wall_points_array = np.asarray(wall_hull_pcd.points)
+    highest_ridge_points_array = np.asarray(highest_ridge_points.points)
+    floor_lineset = create_lineset_from_contour(floor_corners_pcd_array, False)
+    # opce(floor_lineset)  # Display the floor lineset
+    wall_lineset = create_lineset_from_contour(wall_points_array, False)
+    # opce(wall_lineset)  # Display the wall lineset
+    highest_ridge_points_lineset = create_lineset_from_contour(highest_ridge_points_array, False)
+    # opce(highest_ridge_points_lineset)  # Display the highest ridge points lineset
 
-    # floor_lineset = create_lineset_from_contour(floor_lines)
+    # opce([floor_lineset, wall_lineset, highest_ridge_points_lineset])  # Display the linesets
 
     # # Show how many points are in the lineset
     # print(f"Lineset contains {len(floor_lineset.points)} points and {len(floor_lineset.lines)} lines.")
@@ -762,21 +776,9 @@ def main():
 
     ### FLOOR EXPORT SECTION END ###
 
-    # floor_hull_pcd = create_point_cloud(floor_hull)  # Green color for hull
-    wall_hull_pcd = create_point_cloud(create_correct_height_wall_slice(floor_corners), color=[0, 1, 0])  # Green color for wall slice  # noqa: E501
-    floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
-    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_hull_pcd])
-    # opce(wall_floor_merge)  # Display the merged point cloud with wall slice and floor corners
+    # new_small_ceiling_pcd = filter_ceiling_points(new_ceiling_pcd, percentage_to_keep=0.02)
 
-    new_ceiling_pcd = keep_ceiling_points_from_x_height(
-        new_pcd_tuple[1],
-        floor_corners_pcd,
-        height=1.5
-    )
-
-    new_small_ceiling_pcd = filter_ceiling_points(new_ceiling_pcd, percentage_to_keep=0.02)
-
-    all_merge = merge_pcds([wall_floor_merge, new_small_ceiling_pcd])
+    all_merge = merge_pcds([wall_floor_merge, highest_ridge_points])
     opce(all_merge)
 
     # get_extent(floor_hull)
