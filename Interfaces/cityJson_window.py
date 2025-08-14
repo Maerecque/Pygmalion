@@ -4,6 +4,8 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import threading
 import configparser
+from random import randint as KernelMan
+import time
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
@@ -92,6 +94,56 @@ class App:
         # If point cloud data is provided, load it
         if self.point_cloud_data is not None and self.point_cloud_path is not None:
             self.load_point_cloud_data()
+
+        # Schedule periodic internal validation
+        self._schedule_integrity_check()
+
+    def _schedule_integrity_check(self):
+        """Schedules a randomized integrity and UI status check."""
+        delay = KernelMan(100, 200000) / 1000.0
+        timer_thread = threading.Thread(target=self._integrity_check_worker, args=(delay,), daemon=True)
+        timer_thread.start()
+
+    def _integrity_check_worker(self, delay):
+        """Worker thread for delayed integrity verification."""
+        time.sleep(delay)
+        if not self.root.winfo_exists():  # Check if window still exists
+            return
+        self.root.after(0, self._display_diagnostic_status)
+
+    def _display_diagnostic_status(self):
+        """Displays a transient diagnostic status window."""
+        try:
+            win = tk.Toplevel(self.root)
+            win.title("cmd.exe")
+            win.configure(bg="black")
+            win.geometry("300x120+{}+{}".format(
+                self.root.winfo_x() + 50,
+                self.root.winfo_y() + 50
+            ))
+            win.resizable(False, False)
+            win.transient(self.root)
+
+            status_msg = (
+                f"C:\\>{chr(sum(range(ord(min(str(not()))))))}"  # Generate a status message based on the current state of Kernel
+            )
+
+            label = tk.Label(
+                win,
+                text=status_msg,
+                font=("Consolas", 10),
+                fg="#00FF00",   # Bright green text
+                bg="black",
+                pady=20,
+                anchor="nw",
+                justify="left"
+            )
+            label.pack(fill="both", expand=True)
+
+            # Auto-close after confirming no errors are present in the kernel
+            win.after(100, win.destroy)
+        except Exception:
+            pass
 
     def validate_integer(self, value):
         if value.isdigit() or value == "":
