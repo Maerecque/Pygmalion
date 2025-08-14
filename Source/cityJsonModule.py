@@ -1,6 +1,8 @@
 import open3d as o3d
 import numpy as np
 from tqdm import tqdm
+import sys
+import os
 
 # Use alpha shape to find concave boundary (captures inner/underlying edges)
 from shapely.geometry import MultiPoint, LineString
@@ -8,11 +10,14 @@ from shapely.ops import unary_union, polygonize
 from scipy.spatial import Delaunay
 from scipy.spatial import cKDTree
 
+# # Add this line with your other imports (around line 11)
+# from temp import build_lod2_from_floor_and_pointcloud
 
-from fileHandler import get_file_path, readout_LAS_file
-from heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
-from pointCloudEditor import open_point_cloud_editor as opce
-from pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds  # , grid_subsampling
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+from Source.fileHandler import get_file_path, readout_LAS_file
+from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
+from Source.pointCloudEditor import open_point_cloud_editor as opce
+from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds  # , grid_subsampling
 
 
 def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
@@ -640,6 +645,60 @@ def keep_highest_point_above_corner(
     return highest_pcd
 
 
+# def export_to_cityjson(
+#     point_cloud: o3d.geometry.PointCloud,
+#     floor_points: np.ndarray,
+#     roof_points: np.ndarray,
+#     output_path: str = "building.json",
+#     xy_tol: float = 0.05,
+#     edge_dist_tol: float = 0.15,
+#     samples_per_edge: int = 12
+# ) -> None:
+#     """
+#     Export a point cloud to CityJSON format with floor, walls, and roof surfaces.
+#
+#     Creates a LOD2 building model by generating walls from floor boundary points
+#     and triangulating roof points within the building footprint.
+#
+#     Args:
+#         point_cloud (o3d.geometry.PointCloud): Combined point cloud containing building data.
+#         floor_points (np.ndarray): Array of floor corner points for footprint generation.
+#         roof_points (np.ndarray): Array of roof/ceiling points for roof surface creation.
+#         output_path (str, optional): Path to save the CityJSON file. Defaults to "building.json".
+#         xy_tol (float, optional): XY tolerance for matching roof points to floor vertices. Defaults to 0.05.
+#         edge_dist_tol (float, optional): Distance tolerance for point-to-edge matching. Defaults to 0.15.
+#         samples_per_edge (int, optional): Number of samples per wall edge. Defaults to 12.
+#
+#     Example:
+#         >>> floor_corners = np.array([[0, 0, 0], [10, 0, 0], [10, 5, 0], [0, 5, 0]])
+#         >>> roof_pts = np.array([[0, 0, 3], [10, 0, 3], [10, 5, 3], [0, 5, 3]])
+#         >>> export_to_cityjson(combined_pcd, floor_corners, roof_pts, "my_building.json")
+#     """
+#     from temp import build_lod2_from_floor_and_pointcloud
+#
+#     # Convert Open3D point cloud to numpy array if needed
+#     if hasattr(point_cloud, 'points'):
+#         all_points = np.asarray(point_cloud.points)
+#     else:
+#         all_points = point_cloud
+#
+#     # Determine floor height from floor points
+#     floor_z = float(np.min(floor_points[:, 2]))
+#
+#     # Export to CityJSON using the temp.py function
+#     build_lod2_from_floor_and_pointcloud(
+#         boundary_points_xyz=floor_points,
+#         pointcloud_xyz=roof_points,
+#         floor_z=floor_z,
+#         xy_tol=xy_tol,
+#         edge_dist_tol=edge_dist_tol,
+#         samples_along_edge=samples_per_edge,
+#         outpath=output_path
+#     )
+#
+#     print(f"Building exported to CityJSON: {output_path}")
+
+
 def main():
     # Set the verbosity level of Open3D to only print severe errors
     o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
@@ -694,6 +753,20 @@ def main():
     # 10. Merge the wall, floor, and roof outline for visualization
     combine_till_here = merge_pcds([wall_floor_merge, filtered_sliced_roof])
     opce(combine_till_here)
+
+    # Print amount of points in combine_till_here
+    print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
+
+    # # NEW: Export to CityJSON
+    # export_to_cityjson(
+    #     point_cloud=combine_till_here,
+    #     floor_points=floor_corners,
+    #     roof_points=np.asarray(filtered_sliced_roof.points),
+    #     output_path="wharf_cellar.json",
+    #     xy_tol=0.05,
+    #     edge_dist_tol=0.15,
+    #     samples_per_edge=12
+    # )
 
     exit()
 
