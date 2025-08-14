@@ -8,3 +8,4 @@
 *.laz
 *.obj
 *.ply
+*.json # CityJSON files
