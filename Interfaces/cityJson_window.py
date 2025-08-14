@@ -1,7 +1,7 @@
 import os
 import sys
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 import threading
 import configparser
 
@@ -70,14 +70,11 @@ class App:
         self.sliced_roof = None
         self.filtered_sliced_roof = None
 
-        # If no point cloud data or path is provided, let the user select a file
-        if self.point_cloud_data is None or self.point_cloud_path is None:
-            self.point_cloud_path = get_file_path(
-                "Point Cloud files", ["*.las", "*.laz"]
-            )
-            if not self.point_cloud_path:
-                raise ValueError("No point cloud file selected.")
-            self.point_cloud_data = readout_LAS_file(self.point_cloud_path)
+        # If the escape key is pressed, activate the on_close method
+        self.root.bind("<Escape>", lambda e: self.on_close())
+
+        # Bind the window close event to the on_close method
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # Register the validation functions
         self.validate_int = self.root.register(self.validate_integer)
@@ -86,23 +83,15 @@ class App:
         # Button width for consistency
         self.button_width = 20
 
-        # Validate the data and path
-        self.validate_data_and_path()
-
-        # Create widgets
+        # Create widgets first
         self.create_widgets()
 
         # Load presets
         self.load_presets()
 
-    def validate_data_and_path(self):
-        if self.point_cloud_data is None:
-            raise ValueError("No point cloud data provided.")
-        if self.point_cloud_path is None:
-            raise ValueError("No point cloud path provided.")
-        if not os.path.exists(self.point_cloud_path):
-            raise FileNotFoundError("The provided point cloud path does not exist.")
-        return True
+        # If point cloud data is provided, load it
+        if self.point_cloud_data is not None and self.point_cloud_path is not None:
+            self.load_point_cloud_data()
 
     def validate_integer(self, value):
         if value.isdigit() or value == "":
@@ -116,8 +105,43 @@ class App:
         except ValueError:
             return value == ""
 
+    def select_file(self):
+        """Select a point cloud file and load it"""
+        try:
+            file_path = get_file_path("Point Cloud files", ["*.las", "*.laz"])
+            if file_path:
+                self.point_cloud_path = file_path
+
+                # Update the file label
+                self.file_label.config(text=f"Selected file: {os.path.basename(file_path)}")
+
+                # Load the point cloud data
+                self.point_cloud_data = readout_LAS_file(file_path)
+
+                # Enable preprocessing section
+                self.file_select_button.config(text="Change File")
+                self.enable_preprocessing_section()
+
+                self.show_message(
+                    "Success",
+                    f"Point cloud file loaded successfully!\n{len(self.point_cloud_data.points)} points loaded."
+                )
+
+        except Exception as e:
+            self.show_message("Error", f"Failed to load point cloud file: {str(e)}", "error")
+
+    def load_point_cloud_data(self):
+        """Load point cloud data when provided during initialization"""
+        if self.point_cloud_path and os.path.exists(self.point_cloud_path):
+            self.file_label.config(text=f"Selected file: {os.path.basename(self.point_cloud_path)}")
+            self.file_select_button.config(text="Change File")
+            self.enable_preprocessing_section()
+
     # Threading functions for each step
     def start_preprocessing_thread(self):
+        if not self.point_cloud_data:
+            self.show_message("Warning", "Please select a point cloud file first.", "warning")
+            return
         self.disable_section(self.preprocessing_button, "Preprocessing...")
         threading.Thread(target=self.preprocessing_step).start()
 
@@ -342,7 +366,21 @@ class App:
         # File Selection Frame
         file_frame = ttk.LabelFrame(left_column, text="File Selection", padding=10)
         file_frame.pack(fill="x", pady=5)
-        ttk.Label(file_frame, text=f"Selected file: {os.path.basename(self.point_cloud_path)}").pack(anchor="w")
+
+        # File selection layout
+        file_content_frame = tk.Frame(file_frame)
+        file_content_frame.pack(fill="x")
+
+        self.file_select_button = tk.Button(
+            file_content_frame,
+            text="Select Point Cloud File",
+            command=self.select_file,
+            width=self.button_width
+        )
+        self.file_select_button.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.file_label = tk.Label(file_content_frame, text="No file selected", anchor="w")
+        self.file_label.pack(side=tk.LEFT, fill="x", expand=True)
 
         # Downsampling Frame
         downsampling_frame = tk.LabelFrame(left_column, text="Downsampling")
@@ -372,11 +410,12 @@ class App:
             noise_removal_frame,
             text="Start Preprocessing",
             width=self.button_width,
-            command=self.start_preprocessing_thread
+            command=self.start_preprocessing_thread,
+            state=tk.DISABLED
         )
         self.preprocessing_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
-        self.preprocessing_result_label = tk.Label(noise_removal_frame, text="Preprocessing not started.", anchor="w")
+        self.preprocessing_result_label = tk.Label(noise_removal_frame, text="Select a file to start preprocessing.", anchor="w")
         self.preprocessing_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Heightmap Frame
@@ -632,7 +671,7 @@ class App:
         self.combine_results_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Exit Button (spans full width)
-        exit_button = tk.Button(main_frame, text="Back", width=self.button_width, command=self.close_window)
+        exit_button = tk.Button(main_frame, text="Back", width=self.button_width, command=self.on_close)
         exit_button.pack(pady=10, fill=tk.X)
 
         self.root.bind("<Escape>", lambda event: exit_button.invoke())
@@ -642,9 +681,9 @@ class App:
         button.config(state=tk.DISABLED, text=label_text)
 
     def disable_all_sections(self):
-        # Reset all buttons and labels
-        self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
-        self.preprocessing_result_label.config(text="Preprocessing not started.")
+        # Reset all buttons and labels - keep preprocessing disabled until file is selected
+        self.preprocessing_button.config(state=tk.DISABLED, text="Start Preprocessing")
+        self.preprocessing_result_label.config(text="Select a file to start preprocessing.")
 
         self.heightmap_button.config(state=tk.DISABLED, text="Create Heightmap")
         self.heightmap_result_label.config(text="Heightmap not created.")
@@ -682,6 +721,10 @@ class App:
         self.combine_results_result_label.config(text="Results not combined.")
 
         self.view_button.config(state=tk.DISABLED)
+
+    def enable_preprocessing_section(self):
+        self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
+        self.preprocessing_result_label.config(text="Ready to start preprocessing.")
 
     def enable_heightmap_section(self):
         self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
@@ -770,8 +813,11 @@ class App:
             self.layer_fatness_entry.insert(0, '0.0075')
             self.roof_search_radius_entry.insert(0, '0.025')
 
-    def close_window(self):
-        self.root.destroy()
+    def on_close(self):
+        # Perform any cleanup or final actions before closing
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.root.quit()  # Exit the Tkinter main loop
+            exit()
 
 
 def main():
