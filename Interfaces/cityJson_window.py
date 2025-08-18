@@ -292,7 +292,8 @@ class App:
                 pcd = rns(
                     pcd,
                     nb_neighbors=int(self.neighbour_amount_entry.get()),
-                    std_ratio=float(self.std_ratio_entry.get())
+                    std_ratio=float(self.std_ratio_entry.get()),
+                    show_removed_points=self.show_removed_points_var.get()
                 )
 
             # Calculate amount of removed points
@@ -569,13 +570,23 @@ class App:
         )
         self.std_ratio_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
+        # Add visualization checkbox
+        self.show_removed_points_var = tk.BooleanVar()
+        self.show_removed_points_checkbox = tk.Checkbutton(
+            noise_removal_frame,
+            text="Show removed points",
+            variable=self.show_removed_points_var,
+            state=tk.DISABLED
+        )
+        self.show_removed_points_checkbox.grid(row=1, column=2, padx=5, pady=5, sticky="w")
+
         self.preprocessing_button = tk.Button(
             noise_removal_frame,
             text="Start Preprocessing",
             command=self.start_preprocessing_thread,
             state=tk.DISABLED
         )
-        self.preprocessing_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
+        self.preprocessing_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
         self.preprocessing_result_label = tk.Label(noise_removal_frame, text="", anchor="w")
         self.preprocessing_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
@@ -842,6 +853,8 @@ class App:
         self.voxel_resize_result_label.config(text="")
         self.neighbour_amount_entry.config(state=tk.DISABLED)
         self.std_ratio_entry.config(state=tk.DISABLED)
+        self.show_removed_points_checkbox.config(state=tk.DISABLED)
+        self.show_removed_points_var.set(False)  # Reset checkbox to unchecked
 
         # Reset all buttons and labels - keep preprocessing disabled until file is selected
         self.file_label.config(text="No file selected")
@@ -892,6 +905,7 @@ class App:
     def enable_preprocessing_section(self):
         self.neighbour_amount_entry.config(state=tk.NORMAL)
         self.std_ratio_entry.config(state=tk.NORMAL)
+        self.show_removed_points_checkbox.config(state=tk.NORMAL)
         self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
 
     def enable_heightmap_section(self):
