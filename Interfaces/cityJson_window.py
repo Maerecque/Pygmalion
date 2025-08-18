@@ -672,7 +672,7 @@ class App:
         for i in range(3):
             corner_detection_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(corner_detection_frame, text="Distance Threshold").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(corner_detection_frame, text="Distance Threshold", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.distance_threshold_entry = tk.Entry(
             corner_detection_frame,
             validate="key",
@@ -681,7 +681,7 @@ class App:
         )
         self.distance_threshold_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(corner_detection_frame, text="Angle Threshold").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(corner_detection_frame, text="Angle Threshold", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.angle_threshold_entry = tk.Entry(
             corner_detection_frame,
             validate="key",
@@ -690,7 +690,7 @@ class App:
         )
         self.angle_threshold_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(corner_detection_frame, text="Merge Radius").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(corner_detection_frame, text="Merge Radius", anchor="w").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
         self.merge_radius_entry = tk.Entry(
             corner_detection_frame,
             validate="key",
@@ -716,7 +716,7 @@ class App:
         for i in range(3):
             wall_slice_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(wall_slice_frame, text="Slice Height").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(wall_slice_frame, text="Slice Height", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.slice_height_entry = tk.Entry(
             wall_slice_frame,
             validate="key",
@@ -725,7 +725,7 @@ class App:
         )
         self.slice_height_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(wall_slice_frame, text="Search Radius").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(wall_slice_frame, text="Search Radius", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.search_radius_entry = tk.Entry(
             wall_slice_frame,
             validate="key",
@@ -751,7 +751,7 @@ class App:
         for i in range(3):
             roof_slice_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(roof_slice_frame, text="Roof Layers").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_slice_frame, text="Roof Layers", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.roof_layers_entry = tk.Entry(
             roof_slice_frame,
             validate="key",
@@ -760,7 +760,7 @@ class App:
         )
         self.roof_layers_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(roof_slice_frame, text="Layer Fatness").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_slice_frame, text="Layer Fatness", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.layer_fatness_entry = tk.Entry(
             roof_slice_frame,
             validate="key",
@@ -769,7 +769,7 @@ class App:
         )
         self.layer_fatness_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(roof_slice_frame, text="Search Radius").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_slice_frame, text="Search Radius", anchor="w").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
         self.roof_search_radius_entry = tk.Entry(
             roof_slice_frame,
             validate="key",
