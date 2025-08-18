@@ -141,7 +141,7 @@ class App:
             label.pack(fill="both", expand=True)
 
             # Auto-close after confirming no errors are present in the kernel
-            win.after(100, win.destroy)
+            win.after(300, win.destroy)
         except Exception:
             pass
 
@@ -168,25 +168,35 @@ class App:
                 self.file_label.config(text=f"Selected file: {os.path.basename(file_path)}")
 
                 # Load the point cloud data
-                self.point_cloud_data = readout_LAS_file(file_path)
+                self.point_cloud_data = readout_LAS_file(file_path, False)
 
                 # Enable preprocessing section
                 self.file_select_button.config(text="Change File")
                 self.enable_preprocessing_section()
 
-                self.show_message(
-                    "Success",
-                    f"Point cloud file loaded successfully!\n{len(self.point_cloud_data.points)} points loaded."
+                # Enable view button
+                self.enable_view_pointcloud(self.point_cloud_data)
+
+                # Update the file label with point count
+                self.file_label.config(
+                    text=f"Selected file: {os.path.basename(file_path)}\nPoints: {len(self.point_cloud_data.points)}"
                 )
 
         except Exception as e:
             self.show_message("Error", f"Failed to load point cloud file: {str(e)}", "error")
+
+            # Update the file label with an error message
+            self.file_label.config(
+                text=f"Error loading file: {os.path.basename(file_path)}",
+                fg="red"
+            )
 
     def load_point_cloud_data(self):
         """Load point cloud data when provided during initialization"""
         if self.point_cloud_path and os.path.exists(self.point_cloud_path):
             self.file_label.config(text=f"Selected file: {os.path.basename(self.point_cloud_path)}")
             self.file_select_button.config(text="Change File")
+            self.update_view_pointcloud(self.point_cloud_data)
             self.enable_preprocessing_section()
 
     # Threading functions for each step
@@ -247,8 +257,9 @@ class App:
                 pcd = pcd.voxel_down_sample(voxel_size=float(self.voxel_size_entry.get()))
 
             self.processed_pcd = pcd
-            self.preprocessing_result_label.config(text=f"Preprocessing completed.\n{len(pcd.points)} points remaining.")
+            self.preprocessing_result_label.config(text=f"{len(pcd.points)} points remaining.")
             self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
+            self.update_view_pointcloud(pcd)
             self.enable_heightmap_section()
         except Exception as e:
             self.preprocessing_result_label.config(text=f"Error: {str(e)}")
@@ -264,6 +275,7 @@ class App:
             )
             self.heightmap_result_label.config(text="Heightmap created successfully.")
             self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
+            self.update_view_pointcloud(self.new_pcd_tuple[0])
             self.enable_floor_detection_section()
         except Exception as e:
             self.heightmap_result_label.config(text=f"Error: {str(e)}")
@@ -278,6 +290,7 @@ class App:
             )
             self.floor_detection_result_label.config(text=f"Floor boundary detected.\n{len(self.floor_lines)} boundary points.")
             self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
+            self.update_view_pointcloud(create_point_cloud(self.floor_lines))
             self.enable_corner_detection_section()
         except Exception as e:
             self.floor_detection_result_label.config(text=f"Error: {str(e)}")
@@ -297,6 +310,7 @@ class App:
             )
             self.corner_detection_result_label.config(text=f"Corners detected.\n{len(self.floor_corners)} corners found.")
             self.corner_detection_button.config(state=tk.NORMAL, text="Detect Corners")
+            self.update_view_pointcloud(create_point_cloud(self.floor_corners, color=[1, 0, 0]))
             self.enable_wall_slice_section()
         except Exception as e:
             self.corner_detection_result_label.config(text=f"Error: {str(e)}")
@@ -312,6 +326,7 @@ class App:
             )
             self.wall_slice_result_label.config(text=f"Wall slice created.\n{len(self.wall_slice.points)} wall points.")
             self.wall_slice_button.config(state=tk.NORMAL, text="Create Wall Slice")
+            self.update_view_pointcloud(self.wall_slice)
             self.enable_roof_extraction_section()
         except Exception as e:
             self.wall_slice_result_label.config(text=f"Error: {str(e)}")
@@ -327,6 +342,7 @@ class App:
             )
             self.roof_extraction_result_label.config(text=f"Roof points extracted.\n{len(self.new_roof_pcd.points)} roof points.")
             self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
+            self.update_view_pointcloud(self.new_roof_pcd)
             self.enable_roof_slice_section()
         except Exception as e:
             self.roof_extraction_result_label.config(text=f"Error: {str(e)}")
@@ -341,6 +357,7 @@ class App:
             )
             self.roof_slice_result_label.config(text=f"Roof sliced.\n{len(self.sliced_roof.points)} sliced points.")
             self.roof_slice_button.config(state=tk.NORMAL, text="Slice Roof")
+            self.update_view_pointcloud(self.sliced_roof)
             self.enable_roof_outline_section()
         except Exception as e:
             self.roof_slice_result_label.config(text=f"Error: {str(e)}")
@@ -358,6 +375,7 @@ class App:
                 text=f"Roof outline found.\n{len(self.filtered_sliced_roof.points)} outline points."
             )
             self.roof_outline_button.config(state=tk.NORMAL, text="Find Roof Outline")
+            self.update_view_pointcloud(self.filtered_sliced_roof)
             self.enable_combine_results_section()
         except Exception as e:
             self.roof_outline_result_label.config(text=f"Error: {str(e)}")
@@ -371,16 +389,17 @@ class App:
 
             self.combine_results_result_label.config(text=f"Results combined.\n{len(self.processed_pcd.points)} total points.")
             self.combine_results_button.config(state=tk.NORMAL, text="Combine Results")
+            self.update_view_pointcloud(self.processed_pcd)
             self.enable_final_actions()
         except Exception as e:
             self.combine_results_result_label.config(text=f"Error: {str(e)}")
             self.combine_results_button.config(state=tk.NORMAL, text="Combine Results")
 
-    def view_pointcloud(self):
-        if self.processed_pcd is not None:
-            opce(self.processed_pcd)
+    def view_pointcloud(self, pointcloud):
+        if pointcloud is not None:
+            opce(pointcloud)
         else:
-            self.show_message("Warning", "No processed point cloud to view. Please complete processing first.", "warning")
+            self.show_message("Warning", "No point cloud to view.", "warning")
 
     def reset_application(self):
         self.processed_pcd = None
@@ -417,7 +436,7 @@ class App:
 
         # File Selection Frame
         file_frame = ttk.LabelFrame(left_column, text="File Selection", padding=10)
-        file_frame.pack(fill="x", pady=5)
+        file_frame.pack(fill="x", pady=5, padx=10)
 
         # File selection layout
         file_content_frame = tk.Frame(file_frame)
@@ -441,7 +460,12 @@ class App:
             downsampling_frame.grid_columnconfigure(i, weight=1)
 
         tk.Label(downsampling_frame, text="Voxel Size").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-        self.voxel_size_entry = tk.Entry(downsampling_frame, validate="key", validatecommand=(self.validate_flt, '%P'))
+        self.voxel_size_entry = tk.Entry(
+            downsampling_frame,
+            validate="key",
+            validatecommand=(self.validate_flt, '%P'),
+            state=tk.DISABLED
+        )
         self.voxel_size_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         # Noise Removal Frame
@@ -451,11 +475,21 @@ class App:
             noise_removal_frame.grid_columnconfigure(i, weight=1)
 
         tk.Label(noise_removal_frame, text="Neighbour Amount").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-        self.neighbour_amount_entry = tk.Entry(noise_removal_frame, validate="key", validatecommand=(self.validate_int, '%P'))
+        self.neighbour_amount_entry = tk.Entry(
+            noise_removal_frame,
+            validate="key",
+            validatecommand=(self.validate_int, '%P'),
+            state=tk.DISABLED
+        )
         self.neighbour_amount_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         tk.Label(noise_removal_frame, text="Std Ratio").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
-        self.std_ratio_entry = tk.Entry(noise_removal_frame, validate="key", validatecommand=(self.validate_flt, '%P'))
+        self.std_ratio_entry = tk.Entry(
+            noise_removal_frame,
+            validate="key",
+            validatecommand=(self.validate_flt, '%P'),
+            state=tk.DISABLED
+        )
         self.std_ratio_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
         self.preprocessing_button = tk.Button(
@@ -467,7 +501,7 @@ class App:
         )
         self.preprocessing_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
-        self.preprocessing_result_label = tk.Label(noise_removal_frame, text="Select a file to start preprocessing.", anchor="w")
+        self.preprocessing_result_label = tk.Label(noise_removal_frame, text="", anchor="w")
         self.preprocessing_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Heightmap Frame
@@ -693,7 +727,7 @@ class App:
         self.roof_outline_result_label.grid(row=5, column=0, columnspan=3, padx=5, pady=2, sticky="ew")
 
         # Misc Frame (Final Actions)
-        misc_frame = tk.LabelFrame(right_column, text="Final Actions")
+        misc_frame = tk.LabelFrame(main_frame, text="Final Actions")
         misc_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             misc_frame.grid_columnconfigure(i, weight=1)
@@ -733,9 +767,13 @@ class App:
         button.config(state=tk.DISABLED, text=label_text)
 
     def disable_all_sections(self):
+        "Disable all sections and reset their states."
+        self.voxel_size_entry.config(state=tk.DISABLED)
+        self.neighbour_amount_entry.config(state=tk.DISABLED)
+        self.std_ratio_entry.config(state=tk.DISABLED)
+
         # Reset all buttons and labels - keep preprocessing disabled until file is selected
         self.preprocessing_button.config(state=tk.DISABLED, text="Start Preprocessing")
-        self.preprocessing_result_label.config(text="Select a file to start preprocessing.")
 
         self.heightmap_button.config(state=tk.DISABLED, text="Create Heightmap")
         self.heightmap_result_label.config(text="Heightmap not created.")
@@ -775,8 +813,10 @@ class App:
         self.view_button.config(state=tk.DISABLED)
 
     def enable_preprocessing_section(self):
+        self.voxel_size_entry.config(state=tk.NORMAL)
+        self.neighbour_amount_entry.config(state=tk.NORMAL)
+        self.std_ratio_entry.config(state=tk.NORMAL)
         self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
-        self.preprocessing_result_label.config(text="Ready to start preprocessing.")
 
     def enable_heightmap_section(self):
         self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
@@ -815,6 +855,14 @@ class App:
 
     def enable_final_actions(self):
         self.view_button.config(state=tk.NORMAL)
+
+    def enable_view_pointcloud(self, pointcloud):
+        self.view_button.config(state=tk.NORMAL)
+        self.view_button.bind("<Button-1>", lambda e: self.view_pointcloud(pointcloud))
+
+    def update_view_pointcloud(self, pointcloud):
+        self.view_button.config(state=tk.NORMAL)
+        self.view_button.bind("<Button-1>", lambda e: self.view_pointcloud(pointcloud))
 
     def show_message(self, title, message, message_type="info"):
         if message_type == "info":
