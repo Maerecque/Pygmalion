@@ -87,9 +87,6 @@ class App:
         self.validate_int = self.root.register(self.validate_integer)
         self.validate_flt = self.root.register(self.validate_float)
 
-        # Button width for consistency
-        self.button_width = 20
-
         # Create widgets first
         self.create_widgets()
 
@@ -577,7 +574,6 @@ class App:
         self.preprocessing_button = tk.Button(
             noise_removal_frame,
             text="Start Preprocessing",
-            # width=self.button_width,
             command=self.start_preprocessing_thread,
             state=tk.DISABLED
         )
@@ -604,7 +600,6 @@ class App:
         self.heightmap_button = tk.Button(
             heightmap_frame,
             text="Create Heightmap",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_heightmap_thread
         )
@@ -640,7 +635,6 @@ class App:
         self.floor_detection_button = tk.Button(
             floor_detection_frame,
             text="Detect Floor Boundary",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_floor_detection_thread
         )
@@ -687,7 +681,6 @@ class App:
         self.corner_detection_button = tk.Button(
             corner_detection_frame,
             text="Detect Corners",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_corner_detection_thread
         )
@@ -723,7 +716,6 @@ class App:
         self.wall_slice_button = tk.Button(
             wall_slice_frame,
             text="Create Wall Slice",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_wall_slice_thread
         )
@@ -769,7 +761,6 @@ class App:
         self.roof_extraction_button = tk.Button(
             roof_slice_frame,
             text="Extract Roof Points",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_roof_extraction_thread
         )
@@ -778,7 +769,6 @@ class App:
         self.roof_slice_button = tk.Button(
             roof_slice_frame,
             text="Slice Roof",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_roof_slice_thread
         )
@@ -787,7 +777,6 @@ class App:
         self.roof_outline_button = tk.Button(
             roof_slice_frame,
             text="Find Roof Outline",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_roof_outline_thread
         )
