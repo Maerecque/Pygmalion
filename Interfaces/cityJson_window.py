@@ -499,7 +499,7 @@ class App:
 
         self.file_select_button = tk.Button(
             file_content_frame,
-            text="Select Point Cloud File",
+            text="Select Point\nCloud File",
             command=self.select_file,
             # width=self.button_width,
             justify="right"
@@ -848,7 +848,7 @@ class App:
 
     def disable_all_sections(self):
         "Disable all sections and reset their states."
-        self.file_select_button.config(state=tk.NORMAL, text="Select Point Cloud File")
+        self.file_select_button.config(state=tk.NORMAL, text="Select Point\nCloud File")
 
         self.voxel_size_entry.config(state=tk.DISABLED)
         self.voxel_resize_button.config(state=tk.DISABLED, text="Resize Voxel")
