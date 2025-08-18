@@ -66,6 +66,7 @@ class App:
         self.point_cloud_path = point_cloud_path
 
         # Processing results storage
+        self.resized_point_cloud_data = None
         self.processed_pcd = None
         self.new_pcd_tuple = None
         self.floor_lines = None
@@ -267,7 +268,7 @@ class App:
                 text=f"Voxel resized from {len(self.point_cloud_data.points)} → {len(resized_pcd.points)} points."
             )
 
-            self.point_cloud_data = resized_pcd
+            self.resized_point_cloud_data = resized_pcd
             self.voxel_resize_button.config(state=tk.NORMAL, text="Resize Voxel")
             self.update_view_pointcloud(resized_pcd)
             self.enable_preprocessing_section()
@@ -279,7 +280,7 @@ class App:
 
     def preprocessing_step(self):
         try:
-            pcd = self.point_cloud_data
+            pcd = self.resized_point_cloud_data
 
             # Check if user filled in nb_neighours and std_ratio
             if not self.neighbour_amount_entry.get():
@@ -444,6 +445,8 @@ class App:
             self.show_message("Warning", "No point cloud to view.", "warning")
 
     def reset_application(self):
+        self.point_cloud_data = None
+        self.resized_point_cloud_data = None
         self.processed_pcd = None
         self.new_pcd_tuple = None
         self.floor_lines = None
@@ -845,6 +848,8 @@ class App:
 
     def disable_all_sections(self):
         "Disable all sections and reset their states."
+        self.file_select_button.config(state=tk.NORMAL, text="Select Point Cloud File")
+
         self.voxel_size_entry.config(state=tk.DISABLED)
         self.voxel_resize_button.config(state=tk.DISABLED, text="Resize Voxel")
         self.voxel_resize_result_label.config(text="")
