@@ -162,7 +162,7 @@ class App:
     def select_file(self):
         """Select a point cloud file and load it"""
         try:
-            file_path = get_file_path("Point Cloud files", ["*.las", "*.laz"])
+            file_path = get_file_path("Point Cloud files", ["*.las", "*.laz"], False)
             if file_path:
                 self.point_cloud_path = file_path
 
@@ -172,8 +172,10 @@ class App:
                 # Load the point cloud data
                 self.point_cloud_data = readout_LAS_file(file_path, False)
 
-                # Enable voxel section
                 self.file_select_button.config(text="Change File")
+                self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+
+                # Enable voxel section
                 self.enable_voxel_section()
 
                 # Enable view button
@@ -488,25 +490,21 @@ class App:
 
         # File Selection Frame
         file_frame = tk.LabelFrame(left_column, text="File Selection")
-        for i in range(2):
-            file_frame.grid_columnconfigure(i, weight=1, uniform="col")
         file_frame.pack(fill="x", pady=5, padx=10)
+        for i in range(3):
+            file_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        # File selection layout
-        file_content_frame = tk.Frame(file_frame)
-        file_content_frame.pack(fill="x")
-
-        self.file_label = tk.Label(file_content_frame, text="No file selected \n", anchor="w")
-        self.file_label.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
+        self.file_label = tk.Label(file_frame, text="No file selected", anchor="w")
+        self.file_label.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
         self.file_select_button = tk.Button(
-            file_content_frame,
-            text="Select Point\nCloud File",
+            file_frame,
+            text="Select Point Cloud File",
             command=self.select_file,
             anchor="center",
             justify="right"
         )
-        self.file_select_button.pack(side=tk.RIGHT, padx=(5, 10))
+        self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
         # Downsampling Frame
         downsampling_frame = tk.LabelFrame(left_column, text="Downsampling")
@@ -806,7 +804,6 @@ class App:
         self.combine_results_button = tk.Button(
             misc_frame,
             text="Combine Results",
-            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_combine_results_thread
         )
@@ -815,20 +812,19 @@ class App:
         self.view_button = tk.Button(
             misc_frame,
             text="View Result",
-            # width=self.button_width,
             state=tk.DISABLED,
-            command=self.view_pointcloud
+            command=lambda: None  # Default disabled command
         )
         self.view_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        self.reset_button = tk.Button(misc_frame, text="Reset All", width=self.button_width, command=self.reset_application)
+        self.reset_button = tk.Button(misc_frame, text="Reset All", command=self.reset_application)
         self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
         self.combine_results_result_label = tk.Label(misc_frame, text="", anchor="w")
         self.combine_results_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
-        # Exit Button (spans full width)
-        exit_button = tk.Button(main_frame, text="Back", width=self.button_width, command=self.on_close)
+        # Exit Button
+        exit_button = tk.Button(main_frame, text="Back", command=self.on_close)
         exit_button.pack(pady=10, fill=tk.X)
 
         self.root.bind("<Escape>", lambda event: self.on_close())  # Bind Escape key to close the window
@@ -839,7 +835,7 @@ class App:
 
     def disable_all_sections(self):
         "Disable all sections and reset their states."
-        self.file_select_button.config(state=tk.NORMAL, text="Select Point\nCloud File")
+        self.file_select_button.config(state=tk.NORMAL, text="Select Point Cloud File")
 
         self.voxel_size_entry.config(state=tk.DISABLED)
         self.voxel_resize_button.config(state=tk.DISABLED, text="Resize Voxel")
@@ -887,6 +883,7 @@ class App:
         self.combine_results_result_label.config(text="")
 
         self.view_button.config(state=tk.DISABLED)
+        self.view_button.unbind("<Button-1>")  # Remove any bound click events just for good measure
 
     def enable_voxel_section(self):
         self.voxel_size_entry.config(state=tk.NORMAL)
@@ -936,12 +933,16 @@ class App:
         self.view_button.config(state=tk.NORMAL)
 
     def enable_view_pointcloud(self, pointcloud):
-        self.view_button.config(state=tk.NORMAL)
-        self.view_button.bind("<Button-1>", lambda e: self.view_pointcloud(pointcloud))
+        self.view_button.config(
+            state=tk.NORMAL,
+            command=lambda: self.view_pointcloud(pointcloud)
+        )
 
     def update_view_pointcloud(self, pointcloud):
-        self.view_button.config(state=tk.NORMAL)
-        self.view_button.bind("<Button-1>", lambda e: self.view_pointcloud(pointcloud))
+        self.view_button.config(
+            state=tk.NORMAL,
+            command=lambda: self.view_pointcloud(pointcloud)
+        )
 
     def show_message(self, title, message, message_type="info"):
         if message_type == "info":
