@@ -8,4 +8,7 @@
 *.laz
 *.obj
 *.ply
-*.json # CityJSON files
+# 2d vector files
+*.json
+# Diagram files
+*.drawio
