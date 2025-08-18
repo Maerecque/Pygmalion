@@ -16,7 +16,7 @@ class NoSaveLocationGivenError(Exception): pass  # noqa: E701
 class NoPointCloudGivenError(Exception): pass  # noqa: E701
 
 
-def get_file_path(description: str, fileformat: any) -> str:
+def get_file_path(description: str, fileformat: any, print_output: bool = True) -> str:
     """A function to get the filepath of a selected file.
 
     Args:
@@ -24,6 +24,8 @@ def get_file_path(description: str, fileformat: any) -> str:
 
         fileformat (any): Either a string of one specified file format or a list of file formats. e.g.
             "*.txt" or ["*.txt", "*.docx"].
+
+        print_output (bool): Whether to print the selected file path to the console.
 
     Returns:
         str: The filepath of the selected file.
@@ -38,7 +40,8 @@ def get_file_path(description: str, fileformat: any) -> str:
         initialdir=os.path.join(current_folder, '..')
     )
     if filename:
-        print("The following file was selected: \n" + filename)
+        if print_output:
+            print("The following file was selected: \n" + filename)
         return filename
 
     return
