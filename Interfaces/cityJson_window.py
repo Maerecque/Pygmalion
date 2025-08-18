@@ -491,23 +491,25 @@ class App:
 
         # File Selection Frame
         file_frame = tk.LabelFrame(left_column, text="File Selection")
+        for i in range(2):
+            file_frame.grid_columnconfigure(i, weight=1, uniform="col")
         file_frame.pack(fill="x", pady=5, padx=10)
 
         # File selection layout
         file_content_frame = tk.Frame(file_frame)
         file_content_frame.pack(fill="x")
 
+        self.file_label = tk.Label(file_content_frame, text="No file selected \n", anchor="w")
+        self.file_label.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
+
         self.file_select_button = tk.Button(
             file_content_frame,
             text="Select Point\nCloud File",
             command=self.select_file,
-            # width=self.button_width,
+            anchor="center",
             justify="right"
         )
         self.file_select_button.pack(side=tk.RIGHT, padx=(5, 10))
-
-        self.file_label = tk.Label(file_content_frame, text="No file selected \n", anchor="w")
-        self.file_label.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
 
         # Downsampling Frame
         downsampling_frame = tk.LabelFrame(left_column, text="Downsampling")
