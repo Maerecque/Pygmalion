@@ -6,6 +6,7 @@ import threading
 import configparser
 from random import randint as KernelMan
 import time
+import open3d as o3d
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
@@ -28,6 +29,8 @@ class Tooltip:
         self.tipwindow = None
         widget.bind("<Enter>", self.show_tip)
         widget.bind("<Leave>", self.hide_tip)
+
+        o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
 
     def show_tip(self, event=None):
         if self.tipwindow or not self.text:
@@ -244,20 +247,33 @@ class App:
         try:
             pcd = self.point_cloud_data
 
-            # Remove noise from the point cloud
-            if self.neighbour_amount_entry.get() and self.std_ratio_entry.get():
-                pcd = rns(
-                    pcd,
-                    nb_neighbors=int(self.neighbour_amount_entry.get() or 20),
-                    std_ratio=float(self.std_ratio_entry.get() or 2.0)
-                )
+            # Check if user filled in voxel_size
+            if not self.voxel_size_entry.get():
+                self.voxel_size_entry.insert(0, "0.05")
 
             # Downsample if specified
             if self.voxel_size_entry.get():
                 pcd = pcd.voxel_down_sample(voxel_size=float(self.voxel_size_entry.get()))
 
+            # Check if user filled in nb_neighours and std_ratio
+            if not self.neighbour_amount_entry.get():
+                self.neighbour_amount_entry.insert(0, "20")
+            if not self.std_ratio_entry.get():
+                self.std_ratio_entry.insert(0, "2.0")
+
+            # Remove noise from the point cloud
+            if self.neighbour_amount_entry.get() and self.std_ratio_entry.get():
+                pcd = rns(
+                    pcd,
+                    nb_neighbors=int(self.neighbour_amount_entry.get()),
+                    std_ratio=float(self.std_ratio_entry.get())
+                )
+
+            # Calculate amount of removed points
+            amount_removed = len(self.point_cloud_data.points) - len(pcd.points)
+
             self.processed_pcd = pcd
-            self.preprocessing_result_label.config(text=f"{len(pcd.points)} points remaining.")
+            self.preprocessing_result_label.config(text=f"{amount_removed} points removed, {len(pcd.points)} points remaining.")
             self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
             self.update_view_pointcloud(pcd)
             self.enable_heightmap_section()
@@ -450,7 +466,7 @@ class App:
         )
         self.file_select_button.pack(side=tk.LEFT, padx=(0, 10))
 
-        self.file_label = tk.Label(file_content_frame, text="No file selected", anchor="w")
+        self.file_label = tk.Label(file_content_frame, text="No file selected \n", anchor="w")
         self.file_label.pack(side=tk.LEFT, fill="x", expand=True)
 
         # Downsampling Frame
@@ -753,7 +769,7 @@ class App:
         self.reset_button = tk.Button(misc_frame, text="Reset All", width=self.button_width, command=self.reset_application)
         self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
-        self.combine_results_result_label = tk.Label(misc_frame, text="Results not combined.", anchor="w")
+        self.combine_results_result_label = tk.Label(misc_frame, text="", anchor="w")
         self.combine_results_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Exit Button (spans full width)
@@ -773,6 +789,7 @@ class App:
         self.std_ratio_entry.config(state=tk.DISABLED)
 
         # Reset all buttons and labels - keep preprocessing disabled until file is selected
+        self.file_label.config(text="No file selected")
         self.preprocessing_button.config(state=tk.DISABLED, text="Start Preprocessing")
 
         self.heightmap_button.config(state=tk.DISABLED, text="Create Heightmap")
@@ -808,7 +825,7 @@ class App:
         self.roof_search_radius_entry.config(state=tk.DISABLED)
 
         self.combine_results_button.config(state=tk.DISABLED, text="Combine Results")
-        self.combine_results_result_label.config(text="Results not combined.")
+        self.combine_results_result_label.config(text="")
 
         self.view_button.config(state=tk.DISABLED)
 
