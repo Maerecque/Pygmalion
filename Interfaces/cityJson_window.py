@@ -313,7 +313,7 @@ class App:
             self.new_pcd_tuple = transform_pointcloud_to_height_map(
                 self.processed_pcd,
                 grid_size=int(self.grid_size_entry.get() or 500),
-                visualize_map=False,
+                visualize_map=self.visualize_heightmap_var.get(),
                 debugging_logs=False
             )
             self.heightmap_result_label.config(text="Heightmap created successfully.")
@@ -440,7 +440,7 @@ class App:
 
     def view_pointcloud(self, pointcloud):
         if pointcloud is not None:
-            opce(pointcloud)
+            opce(pointcloud, False)
         else:
             self.show_message("Warning", "No point cloud to view.", "warning")
 
@@ -561,7 +561,7 @@ class App:
         )
         self.neighbour_amount_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(noise_removal_frame, text="Std Ratio").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(noise_removal_frame, text="Std Ratio", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.std_ratio_entry = tk.Entry(
             noise_removal_frame,
             validate="key",
@@ -576,7 +576,8 @@ class App:
             noise_removal_frame,
             text="Show removed points",
             variable=self.show_removed_points_var,
-            state=tk.DISABLED
+            state=tk.DISABLED,
+            anchor="w"
         )
         self.show_removed_points_checkbox.grid(row=1, column=2, padx=5, pady=5, sticky="w")
 
@@ -597,7 +598,7 @@ class App:
         for i in range(3):
             heightmap_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(heightmap_frame, text="Grid Size").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(heightmap_frame, text="Grid Size", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.grid_size_entry = tk.Entry(
             heightmap_frame,
             validate="key",
@@ -605,6 +606,17 @@ class App:
             state=tk.DISABLED
         )
         self.grid_size_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        # Add visualization checkbox for heightmap
+        self.visualize_heightmap_var = tk.BooleanVar()
+        self.visualize_heightmap_checkbox = tk.Checkbutton(
+            heightmap_frame,
+            text="Visualize map",
+            variable=self.visualize_heightmap_var,
+            state=tk.DISABLED,
+            anchor="w"
+        )
+        self.visualize_heightmap_checkbox.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
 
         self.heightmap_button = tk.Button(
             heightmap_frame,
@@ -615,7 +627,7 @@ class App:
         self.heightmap_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
         self.heightmap_result_label = tk.Label(heightmap_frame, text="Heightmap not created.", anchor="w")
-        self.heightmap_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.heightmap_result_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Floor Detection Frame
         floor_detection_frame = tk.LabelFrame(left_column, text="Floor Boundary Detection")
@@ -623,7 +635,7 @@ class App:
         for i in range(3):
             floor_detection_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(floor_detection_frame, text="Alpha Value").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(floor_detection_frame, text="Alpha Value", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.alpha_value_entry = tk.Entry(
             floor_detection_frame,
             validate="key",
@@ -632,7 +644,7 @@ class App:
         )
         self.alpha_value_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(floor_detection_frame, text="Triangle Size").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(floor_detection_frame, text="Triangle Size", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.triangle_size_entry = tk.Entry(
             floor_detection_frame,
             validate="key",
@@ -863,6 +875,8 @@ class App:
         self.heightmap_button.config(state=tk.DISABLED, text="Create Heightmap")
         self.heightmap_result_label.config(text="Heightmap not created.")
         self.grid_size_entry.config(state=tk.DISABLED)
+        self.visualize_heightmap_checkbox.config(state=tk.DISABLED)
+        self.visualize_heightmap_var.set(False)  # Reset checkbox to unchecked
 
         self.floor_detection_button.config(state=tk.DISABLED, text="Detect Floor Boundary")
         self.floor_detection_result_label.config(text="Floor boundary not detected.")
@@ -911,6 +925,7 @@ class App:
     def enable_heightmap_section(self):
         self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
         self.grid_size_entry.config(state=tk.NORMAL)
+        self.visualize_heightmap_checkbox.config(state=tk.NORMAL)
 
     def enable_floor_detection_section(self):
         self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
