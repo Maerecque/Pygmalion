@@ -1,7 +1,7 @@
 import os
 import sys
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 import threading
 import configparser
 from random import randint as KernelMan
@@ -12,9 +12,10 @@ import open3d as o3d
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.fileHandler import get_file_path, readout_LAS_file, get_save_file_path  # noqa: F401
 from Source.pointCloudAltering import remove_noise_statistical as rns
+from Source.pointCloudAltering import merge_point_clouds as merge_pcds
+from Source.pointCloudAltering import grid_subsampling as g_ss
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.pointCloudEditor import open_point_cloud_editor as opce
-from Source.pointCloudAltering import merge_point_clouds as merge_pcds
 from Source.cityJsonModule import (
     find_lines_in_pointcloud, sort_points_in_hull, find_corners,
     create_correct_height_slice, keep_wall_points_from_x_height,
@@ -173,9 +174,9 @@ class App:
                 # Load the point cloud data
                 self.point_cloud_data = readout_LAS_file(file_path, False)
 
-                # Enable preprocessing section
+                # Enable voxel section
                 self.file_select_button.config(text="Change File")
-                self.enable_preprocessing_section()
+                self.enable_voxel_section()
 
                 # Enable view button
                 self.enable_view_pointcloud(self.point_cloud_data)
@@ -203,6 +204,13 @@ class App:
             self.enable_preprocessing_section()
 
     # Threading functions for each step
+    def start_voxel_resize_thread(self):
+        if not self.point_cloud_data:
+            self.show_message("Warning", "Please select a point cloud file first.", "warning")
+            return
+        self.disable_section(self.voxel_resize_button, "Resizing voxel...")
+        threading.Thread(target=self.resize_voxel).start()
+
     def start_preprocessing_thread(self):
         if not self.point_cloud_data:
             self.show_message("Warning", "Please select a point cloud file first.", "warning")
@@ -243,9 +251,9 @@ class App:
         threading.Thread(target=self.combine_results_step).start()
 
     # Processing steps
-    def preprocessing_step(self):
+    def resize_voxel(self):
         try:
-            pcd = self.point_cloud_data
+            resized_pcd = self.point_cloud_data
 
             # Check if user filled in voxel_size
             if not self.voxel_size_entry.get():
@@ -253,7 +261,25 @@ class App:
 
             # Downsample if specified
             if self.voxel_size_entry.get():
-                pcd = pcd.voxel_down_sample(voxel_size=float(self.voxel_size_entry.get()))
+                resized_pcd = g_ss(resized_pcd, voxel_size=float(self.voxel_size_entry.get()))
+
+            self.voxel_resize_result_label.config(
+                text=f"Voxel resized from {len(self.point_cloud_data.points)} → {len(resized_pcd.points)} points."
+            )
+
+            self.point_cloud_data = resized_pcd
+            self.voxel_resize_button.config(state=tk.NORMAL, text="Resize Voxel")
+            self.update_view_pointcloud(resized_pcd)
+            self.enable_preprocessing_section()
+
+        except Exception as e:
+            self.voxel_resize_result_label.config(text=f"Error: {str(e)}")
+            self.voxel_resize_button.config(state=tk.NORMAL, text="Resize Voxel")
+            return
+
+    def preprocessing_step(self):
+        try:
+            pcd = self.point_cloud_data
 
             # Check if user filled in nb_neighours and std_ratio
             if not self.neighbour_amount_entry.get():
@@ -442,16 +468,26 @@ class App:
 
         # Left column
         left_column = tk.Frame(columns_frame)
-        left_column.pack(side=tk.LEFT, fill="both", expand=True, padx=(0, 5))
+        left_column.pack(
+            side=tk.LEFT,
+            fill="both",
+            expand=True,
+            padx=(0, 5)
+        )
 
         # Right column
         right_column = tk.Frame(columns_frame)
-        right_column.pack(side=tk.RIGHT, fill="both", expand=True, padx=(5, 0))
+        right_column.pack(
+            side=tk.RIGHT,
+            fill="both",
+            expand=True,
+            padx=(5, 0)
+        )
 
         # === LEFT COLUMN CONTENT ===
 
         # File Selection Frame
-        file_frame = ttk.LabelFrame(left_column, text="File Selection", padding=10)
+        file_frame = tk.LabelFrame(left_column, text="File Selection")
         file_frame.pack(fill="x", pady=5, padx=10)
 
         # File selection layout
@@ -462,20 +498,27 @@ class App:
             file_content_frame,
             text="Select Point Cloud File",
             command=self.select_file,
-            width=self.button_width
+            # width=self.button_width,
+            justify="right"
         )
-        self.file_select_button.pack(side=tk.LEFT, padx=(0, 10))
+        self.file_select_button.pack(side=tk.RIGHT, padx=(5, 10))
 
         self.file_label = tk.Label(file_content_frame, text="No file selected \n", anchor="w")
-        self.file_label.pack(side=tk.LEFT, fill="x", expand=True)
+        self.file_label.pack(side=tk.LEFT, fill="x", expand=True, padx=5, pady=5)
 
         # Downsampling Frame
         downsampling_frame = tk.LabelFrame(left_column, text="Downsampling")
         downsampling_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            downsampling_frame.grid_columnconfigure(i, weight=1)
+            downsampling_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(downsampling_frame, text="Voxel Size").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(downsampling_frame, text="Voxel Size", anchor="w").grid(
+            row=0,
+            column=0,
+            padx=5,
+            pady=5,
+            sticky="ew"
+        )
         self.voxel_size_entry = tk.Entry(
             downsampling_frame,
             validate="key",
@@ -484,13 +527,31 @@ class App:
         )
         self.voxel_size_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
+        self.voxel_resize_button = tk.Button(
+            downsampling_frame,
+            text="Resize Voxel",
+            command=self.start_voxel_resize_thread,
+            state=tk.DISABLED
+        )
+        self.voxel_resize_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+
+        # Add result label for voxel resizing
+        self.voxel_resize_result_label = tk.Label(downsampling_frame, text="", anchor="w")
+        self.voxel_resize_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
         # Noise Removal Frame
         noise_removal_frame = tk.LabelFrame(left_column, text="Noise Removal")
         noise_removal_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            noise_removal_frame.grid_columnconfigure(i, weight=1)
+            noise_removal_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(noise_removal_frame, text="Neighbour Amount").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(noise_removal_frame, text="Neighbour Amount", anchor="w").grid(
+            row=0,
+            column=0,
+            padx=5,
+            pady=5,
+            sticky="ew"
+        )
         self.neighbour_amount_entry = tk.Entry(
             noise_removal_frame,
             validate="key",
@@ -511,7 +572,7 @@ class App:
         self.preprocessing_button = tk.Button(
             noise_removal_frame,
             text="Start Preprocessing",
-            width=self.button_width,
+            # width=self.button_width,
             command=self.start_preprocessing_thread,
             state=tk.DISABLED
         )
@@ -524,7 +585,7 @@ class App:
         heightmap_frame = tk.LabelFrame(left_column, text="Heightmap Creation")
         heightmap_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            heightmap_frame.grid_columnconfigure(i, weight=1)
+            heightmap_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         tk.Label(heightmap_frame, text="Grid Size").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.grid_size_entry = tk.Entry(
@@ -538,7 +599,7 @@ class App:
         self.heightmap_button = tk.Button(
             heightmap_frame,
             text="Create Heightmap",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_heightmap_thread
         )
@@ -551,7 +612,7 @@ class App:
         floor_detection_frame = tk.LabelFrame(left_column, text="Floor Boundary Detection")
         floor_detection_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            floor_detection_frame.grid_columnconfigure(i, weight=1)
+            floor_detection_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         tk.Label(floor_detection_frame, text="Alpha Value").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.alpha_value_entry = tk.Entry(
@@ -574,7 +635,7 @@ class App:
         self.floor_detection_button = tk.Button(
             floor_detection_frame,
             text="Detect Floor Boundary",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_floor_detection_thread
         )
@@ -589,7 +650,7 @@ class App:
         corner_detection_frame = tk.LabelFrame(right_column, text="Corner Detection")
         corner_detection_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            corner_detection_frame.grid_columnconfigure(i, weight=1)
+            corner_detection_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         tk.Label(corner_detection_frame, text="Distance Threshold").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.distance_threshold_entry = tk.Entry(
@@ -621,7 +682,7 @@ class App:
         self.corner_detection_button = tk.Button(
             corner_detection_frame,
             text="Detect Corners",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_corner_detection_thread
         )
@@ -634,7 +695,7 @@ class App:
         wall_slice_frame = tk.LabelFrame(right_column, text="Wall Slice Creation")
         wall_slice_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            wall_slice_frame.grid_columnconfigure(i, weight=1)
+            wall_slice_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         tk.Label(wall_slice_frame, text="Slice Height").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.slice_height_entry = tk.Entry(
@@ -657,7 +718,7 @@ class App:
         self.wall_slice_button = tk.Button(
             wall_slice_frame,
             text="Create Wall Slice",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_wall_slice_thread
         )
@@ -670,7 +731,7 @@ class App:
         roof_slice_frame = tk.LabelFrame(right_column, text="Roof Slicing")
         roof_slice_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            roof_slice_frame.grid_columnconfigure(i, weight=1)
+            roof_slice_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         tk.Label(roof_slice_frame, text="Roof Layers").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.roof_layers_entry = tk.Entry(
@@ -703,7 +764,7 @@ class App:
         self.roof_extraction_button = tk.Button(
             roof_slice_frame,
             text="Extract Roof Points",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_roof_extraction_thread
         )
@@ -712,7 +773,7 @@ class App:
         self.roof_slice_button = tk.Button(
             roof_slice_frame,
             text="Slice Roof",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_roof_slice_thread
         )
@@ -721,7 +782,7 @@ class App:
         self.roof_outline_button = tk.Button(
             roof_slice_frame,
             text="Find Roof Outline",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_roof_outline_thread
         )
@@ -746,12 +807,12 @@ class App:
         misc_frame = tk.LabelFrame(main_frame, text="Final Actions")
         misc_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            misc_frame.grid_columnconfigure(i, weight=1)
+            misc_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         self.combine_results_button = tk.Button(
             misc_frame,
             text="Combine Results",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.start_combine_results_thread
         )
@@ -760,7 +821,7 @@ class App:
         self.view_button = tk.Button(
             misc_frame,
             text="View Result",
-            width=self.button_width,
+            # width=self.button_width,
             state=tk.DISABLED,
             command=self.view_pointcloud
         )
@@ -776,7 +837,7 @@ class App:
         exit_button = tk.Button(main_frame, text="Back", width=self.button_width, command=self.on_close)
         exit_button.pack(pady=10, fill=tk.X)
 
-        self.root.bind("<Escape>", lambda event: exit_button.invoke())
+        self.root.bind("<Escape>", lambda event: self.on_close())  # Bind Escape key to close the window
 
     # Section enabling/disabling functions
     def disable_section(self, button, label_text):
@@ -785,6 +846,8 @@ class App:
     def disable_all_sections(self):
         "Disable all sections and reset their states."
         self.voxel_size_entry.config(state=tk.DISABLED)
+        self.voxel_resize_button.config(state=tk.DISABLED, text="Resize Voxel")
+        self.voxel_resize_result_label.config(text="")
         self.neighbour_amount_entry.config(state=tk.DISABLED)
         self.std_ratio_entry.config(state=tk.DISABLED)
 
@@ -829,8 +892,11 @@ class App:
 
         self.view_button.config(state=tk.DISABLED)
 
-    def enable_preprocessing_section(self):
+    def enable_voxel_section(self):
         self.voxel_size_entry.config(state=tk.NORMAL)
+        self.voxel_resize_button.config(state=tk.NORMAL)
+
+    def enable_preprocessing_section(self):
         self.neighbour_amount_entry.config(state=tk.NORMAL)
         self.std_ratio_entry.config(state=tk.NORMAL)
         self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
