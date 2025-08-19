@@ -165,6 +165,7 @@ def transform_pointcloud_to_height_map(
     pcd: o3d.geometry.PointCloud,
     grid_size: int = 200,
     visualize_map: bool = False,
+    visualize_map_np: bool = False,
     debugging_logs: bool = False
 ) -> tuple:
     """
@@ -174,6 +175,7 @@ def transform_pointcloud_to_height_map(
         pcd (o3d.geometry.PointCloud): The point cloud to be transformed into a height map.
         grid_size (int, optional): Number of grid points. Defaults to 200.
         visualize_map (bool, optional): Boolean to visualize the height map. Defaults to False.
+        visualize_map_np (bool, optional): Boolean to visualize the height map using numpy. Defaults to False.
         debugging_logs (bool, optional): Boolean to print debugging logs. Defaults to False.
 
     Returns:
@@ -198,7 +200,7 @@ def transform_pointcloud_to_height_map(
     # Generate a height map
     height_map = generate_height_map(x, y, z, x_grid, y_grid)
 
-    if visualize_map:
+    if visualize_map and visualize_map_np:
         # Visualize the height map
         plt.imshow(height_map, cmap="viridis", norm=Normalize(vmin=z.min(), vmax=z.max()))
         plt.colorbar()
