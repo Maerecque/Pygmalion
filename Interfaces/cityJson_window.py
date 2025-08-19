@@ -309,10 +309,14 @@ class App:
             self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
 
     def heightmap_step(self):
+        # Check if user filled in grid_size
+        if not self.grid_size_entry.get():
+            self.grid_size_entry.insert(0, "500")
+
         try:
             self.new_pcd_tuple = transform_pointcloud_to_height_map(
                 self.processed_pcd,
-                grid_size=int(self.grid_size_entry.get() or 500),
+                grid_size=int(self.grid_size_entry.get()),
                 visualize_map=self.visualize_heightmap_var.get(),
                 debugging_logs=False
             )
@@ -325,11 +329,17 @@ class App:
             self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
 
     def floor_detection_step(self):
+        # Check if user filled in alpha_value and triangle_size
+        if not self.alpha_value_entry.get():
+            self.alpha_value_entry.insert(0, "11")
+        if not self.triangle_size_entry.get():
+            self.triangle_size_entry.insert(0, "1e-10")
+
         try:
             self.floor_lines = find_lines_in_pointcloud(
                 self.new_pcd_tuple[0],
-                alpha=float(self.alpha_value_entry.get() or 11),
-                min_triangle_area=float(self.triangle_size_entry.get() or 1e-10)
+                alpha=float(self.alpha_value_entry.get()),
+                min_triangle_area=float(self.triangle_size_entry.get())
             )
             self.floor_detection_result_label.config(text=f"Floor boundary detected.\n{len(self.floor_lines)} boundary points.")
             self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
@@ -340,16 +350,24 @@ class App:
             self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
 
     def corner_detection_step(self):
+        # Check if user filled in distance_threshold, angle_threshold, and merge_radius
+        if not self.distance_threshold_entry.get():
+            self.distance_threshold_entry.insert(0, "0.05")
+        if not self.angle_threshold_entry.get():
+            self.angle_threshold_entry.insert(0, "45")
+        if not self.merge_radius_entry.get():
+            self.merge_radius_entry.insert(0, "1")
+
         try:
             self.floor_hull = sort_points_in_hull(
                 self.floor_lines,
-                threshold=float(self.distance_threshold_entry.get() or 0.05)
+                threshold=float(self.distance_threshold_entry.get())
             )
             self.floor_corners = find_corners(
                 self.floor_hull,
-                angle_threshold_deg=float(self.angle_threshold_entry.get() or 45),
-                window=2,
-                merge_radius=int(self.merge_radius_entry.get() or 1)
+                angle_threshold_deg=float(self.angle_threshold_entry.get()),
+                window=3,
+                merge_radius=int(self.merge_radius_entry.get())
             )
             self.corner_detection_result_label.config(text=f"Corners detected.\n{len(self.floor_corners)} corners found.")
             self.corner_detection_button.config(state=tk.NORMAL, text="Detect Corners")
@@ -360,12 +378,19 @@ class App:
             self.corner_detection_button.config(state=tk.NORMAL, text="Detect Corners")
 
     def wall_slice_step(self):
+        # Check if user filled in slice_height and search_radius
+        if not self.slice_height_entry.get():
+            self.slice_height_entry.insert(0, "1.5")
+            self.fixed_slice_height = self.slice_height_entry.get()
+        if not self.search_radius_entry.get():
+            self.search_radius_entry.insert(0, "0.025")
+
         try:
             self.wall_slice = create_correct_height_slice(
                 self.new_pcd_tuple[1],
                 create_point_cloud(self.floor_corners, color=[1, 0, 0]),
-                height=float(self.slice_height_entry.get() or 1.5),
-                search_radius=float(self.search_radius_entry.get() or 0.025)
+                height=float(self.slice_height_entry.get()),
+                search_radius=float(self.search_radius_entry.get())
             )
             self.wall_slice_result_label.config(text=f"Wall slice created.\n{len(self.wall_slice.points)} wall points.")
             self.wall_slice_button.config(state=tk.NORMAL, text="Create Wall Slice")
@@ -376,12 +401,16 @@ class App:
             self.wall_slice_button.config(state=tk.NORMAL, text="Create Wall Slice")
 
     def roof_extraction_step(self):
+        # Set a new fixed slice height if not already set
+        # This is purely for redundancy checking to make sure they match
+        if not self.fixed_slice_height:
+            self.fixed_slice_height = self.slice_height_entry.get()
         try:
             floor_corners_pcd = create_point_cloud(self.floor_corners, color=[1, 0, 0])
             self.new_roof_pcd = keep_wall_points_from_x_height(
                 self.new_pcd_tuple[1],
                 floor_corners_pcd,
-                height=float(self.slice_height_entry.get() or 1.5)
+                height=float(self.fixed_slice_height.get())
             )
             self.roof_extraction_result_label.config(text=f"Roof points extracted.\n{len(self.new_roof_pcd.points)} roof points.")
             self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
@@ -392,11 +421,17 @@ class App:
             self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
 
     def roof_slice_step(self):
+        # Check if user filled in roof_layers and layer_fatness
+        if not self.roof_layers_entry.get():
+            self.roof_layers_entry.insert(0, "5")
+        if not self.layer_fatness_entry.get():
+            self.layer_fatness_entry.insert(0, "0.0075")
+
         try:
             self.sliced_roof = slice_roof_up(
                 self.new_roof_pcd,
-                slices_amount=int(self.roof_layers_entry.get() or 5),
-                slab_fatness=float(self.layer_fatness_entry.get() or 0.0075)
+                slices_amount=int(self.roof_layers_entry.get()),
+                slab_fatness=float(self.layer_fatness_entry.get())
             )
             self.roof_slice_result_label.config(text=f"Roof sliced.\n{len(self.sliced_roof.points)} sliced points.")
             self.roof_slice_button.config(state=tk.NORMAL, text="Slice Roof")
@@ -407,12 +442,16 @@ class App:
             self.roof_slice_button.config(state=tk.NORMAL, text="Slice Roof")
 
     def roof_outline_step(self):
+        # Check if user filled in roof_search_radius
+        if not self.roof_search_radius_entry.get():
+            self.roof_search_radius_entry.insert(0, "0.01")
+
         try:
             floor_hull_pcd = create_point_cloud(self.floor_hull)
             self.filtered_sliced_roof = keep_highest_point_above_corner(
                 floor_hull_pcd,
                 self.sliced_roof,
-                search_radius=float(self.roof_search_radius_entry.get() or 0.025)
+                search_radius=float(self.roof_search_radius_entry.get())
             )
             self.roof_outline_result_label.config(
                 text=f"Roof outline found.\n{len(self.filtered_sliced_roof.points)} outline points."
