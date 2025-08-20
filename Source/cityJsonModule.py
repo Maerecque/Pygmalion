@@ -18,6 +18,7 @@ from Source.fileHandler import get_file_path, readout_LAS_file
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.pointCloudEditor import open_point_cloud_editor as opce
 from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds  # , grid_subsampling
+from Source.kaulo2 import extract_ridges_and_skeleton, visualize_result
 
 
 def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
@@ -729,33 +730,49 @@ def main():
     floor_hull = sort_points_in_hull(floor_lines, 0.05)
     floor_corners = find_corners(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
 
-    print(f"Detected {len(floor_hull)} points in the floor hull.")
-    print(f"Detected {len(floor_corners)} corners in the floor hull.")
+    # Make ndarray out of merge_pcds(new_pcd_tuple)
+    pts = np.asarray(merge_pcds(new_pcd_tuple).points)
 
-    # 6. Create a wall slice at a certain height above the floor
-    wall_slice = create_correct_height_slice(new_pcd_tuple[1], create_point_cloud(floor_corners, color=[1, 0, 0]), height=1.5)
-    floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
-    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])
-
-    # 7. Extract the roof points above a certain height (removes everything below)
-    new_roof_pcd = keep_wall_points_from_x_height(
-        new_pcd_tuple[1],
-        floor_corners_pcd,
-        height=1.5
+    result = extract_ridges_and_skeleton(
+        points=pts,
+        contour_points=floor_hull,
+        plane_distance_threshold=0.03,
+        plane_min_points=500,
+        line_point_tol=0.05,
+        apex_step=0.2,
+        max_planes=20,
+        alpha=0.5   # adjust alpha: smaller = tighter concave fit
     )
 
-    # 8. Slice the roof into horizontal slabs and flatten each slice
-    sliced_roof = slice_roof_up(new_roof_pcd, 5, slab_fatness=0.0075)
+    visualize_result(result, points=pts)
 
-    # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
-    filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.025)
+    # print(f"Detected {len(floor_hull)} points in the floor hull.")
+    # print(f"Detected {len(floor_corners)} corners in the floor hull.")
 
-    # 10. Merge the wall, floor, and roof outline for visualization
-    combine_till_here = merge_pcds([wall_floor_merge, filtered_sliced_roof])
-    opce(combine_till_here)
+    # # 6. Create a wall slice at a certain height above the floor
+    # wall_slice = create_correct_height_slice(new_pcd_tuple[1], create_point_cloud(floor_corners, color=[1, 0, 0]), height=1.5)
+    # floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
+    # wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])
 
-    # Print amount of points in combine_till_here
-    print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
+    # # 7. Extract the roof points above a certain height (removes everything below)
+    # new_roof_pcd = keep_wall_points_from_x_height(
+    #     new_pcd_tuple[1],
+    #     floor_corners_pcd,
+    #     height=1.5
+    # )
+
+    # # 8. Slice the roof into horizontal slabs and flatten each slice
+    # sliced_roof = slice_roof_up(new_roof_pcd, 5, slab_fatness=0.0075)
+
+    # # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
+    # filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.05)
+
+    # # 10. Merge the wall, floor, and roof outline for visualization
+    # combine_till_here = merge_pcds([wall_floor_merge, filtered_sliced_roof])
+    # opce(combine_till_here)
+
+    # # Print amount of points in combine_till_here
+    # print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
 
     # # NEW: Export to CityJSON
     # export_to_cityjson(
