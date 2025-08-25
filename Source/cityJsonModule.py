@@ -276,6 +276,67 @@ def create_point_pairs(points: np.ndarray) -> list:
     return pairs
 
 
+def get_keypoints(
+    pcd: o3d.cpu.pybind.geometry.PointCloud,
+    salient_radius: float = 0.0,
+    non_max_radius: float = 0.0,
+    gamma_21: float = 0.975,
+    gamma_32: float = 0.975,
+    min_neighbors: int = 5,
+    print_stats: bool = False
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """
+    NOTE: This function seems to be non-deterministic which may be due to the nature of the ISS algorithm.
+
+    Detects distinctive keypoints in a point cloud using the ISS (Intrinsic Shape Signatures) algorithm.
+
+    This function finds "interest points" in a 3D point cloud—these are points that stand out due to their local geometry,
+    such as corners, edges, or other unique features. These keypoints are useful for tasks like matching, registration,
+    or simplifying complex point clouds.
+
+    Args:
+        pcd (o3d.cpu.pybind.geometry.PointCloud): The input point cloud to analyze.
+        salient_radius (float): The size of the neighborhood around each point to consider for keypoint detection.
+            If set to 0.0, an appropriate value is estimated automatically.
+        non_max_radius (float): The radius used to suppress non-maximum responses, ensuring keypoints are well separated.
+            If set to 0.0, an appropriate value is estimated automatically.
+        gamma_21 (float): Threshold for distinguishing keypoints based on the shape of their local neighborhood.
+            Lower values make the detector more selective.
+        gamma_32 (float): Similar to gamma_21, controls selectivity based on local geometry.
+        min_neighbors (int): Minimum number of neighboring points required for a point to be considered as a keypoint.
+        print_stats (bool, optional): If True, prints the number of detected keypoints and other statistics.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: A new point cloud containing only the detected keypoints.
+
+    Raises:
+        TypeError: If the input is not an Open3D PointCloud.
+
+    Example:
+        >>> keypoints = get_keypoints(pcd, salient_radius=0.1, non_max_radius=0.05)
+        >>> print(f"Found {len(keypoints.points)} keypoints")
+    """
+    if not isinstance(pcd, o3d.cpu.pybind.geometry.PointCloud):
+        raise TypeError("Input must be an Open3D PointCloud.")
+
+    print("Testing keypoint detection...")
+
+    keypoints = o3d.geometry.keypoint.compute_iss_keypoints(
+        pcd,
+        salient_radius=salient_radius,
+        non_max_radius=non_max_radius,
+        gamma_21=gamma_21,
+        gamma_32=gamma_32,
+        min_neighbors=min_neighbors
+    )
+
+    if print_stats:
+        print(f"Detected {len(keypoints.points)} keypoints from {len(pcd.points)} input points.")
+        print(f"Removed {len(pcd.points) - len(keypoints.points)} points.")
+
+    return keypoints
+
+
 def find_corners(points, angle_threshold_deg=45, window=3, merge_radius=3) -> np.ndarray:
     """
     Detects corner points in a noisy 3D contour by analyzing direction changes and merging nearby detections.
