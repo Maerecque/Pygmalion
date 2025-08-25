@@ -19,14 +19,14 @@ def open_point_cloud_editor(pcd: o3d.cpu.pybind.geometry.PointCloud, show_help: 
         raise ValueError("The point cloud is empty")
 
     if show_help:
-        print("\n")  # noqa: E303
-        print("1) Press 'Y' twice to align geometry with negative direction of y-axis")
-        print("2) Press 'K' to lock screen and to switch to selection mode")
-        print("3) Drag for rectangle selection,")
-        print("   or use ctrl + left click for polygon selection")
-        print("4) Press 'C' to get a selected geometry")
-        print("5) Press 'S' to save the selected geometry")
-        print("6) Press 'F' to switch to freeview mode")
+        print("\nOpen3D Geometry Editor Controls:")
+        print("  1) Press 'Y' twice to align geometry with negative y-axis")
+        print("  2) Press 'K' to lock screen and switch to selection mode")
+        print("  3) Drag for rectangle selection, or use Ctrl+Left Click for polygon selection")
+        print("  4) Press 'C' to crop selected geometry")
+        print("  5) Press 'S' to save the selected geometry (as PLY)")
+        print("  6) Press 'F' to switch to freeview mode")
+        print("Note: Exported PLY colors may be rounded and appear distorted when converting back to LAS.")
 
     if not isinstance(pcd, list):
         o3d.visualization.draw_geometries_with_editing([pcd], left=0, top=45)
