@@ -19,19 +19,20 @@ def project_vertices_to_plane(vertices: np.ndarray) -> tuple:
     return x, y, z
 
 
-def create_grid(x_range: tuple, y_range: tuple, grid_size: int) -> tuple:
+def create_grid(x_range: tuple, y_range: tuple, nx: int, ny: int) -> tuple:
     """Create a grid for contour mapping.
 
     Args:
         x_range (tuple): Minimum and maximum x values.
         y_range (tuple): Minimum and maximum y values.
-        grid_size (int): Number of grid points.
+        nx (int): Number of grid points in x-direction.
+        ny (int): Number of grid points in y-direction.
 
     Returns:
         tuple: Meshgrid of x and y coordinates, and arrays of x_grid and y_grid.
     """
-    x_grid = np.linspace(x_range[0], x_range[1], grid_size)
-    y_grid = np.linspace(y_range[0], y_range[1], grid_size)
+    x_grid = np.linspace(x_range[0], x_range[1], nx)
+    y_grid = np.linspace(y_range[0], y_range[1], ny)
     return np.meshgrid(x_grid, y_grid), x_grid, y_grid
 
 
@@ -119,7 +120,7 @@ def generate_wall_points(
     x_grid: np.ndarray,
     y_grid: np.ndarray,
     z_min: float,
-    point_density: float
+    grid_spacing_m: float
 ):
     """Generate points between floor and ceiling edges to create walls.
 
@@ -130,7 +131,7 @@ def generate_wall_points(
         x_grid (numpy.ndarray): Grid of x-coordinates.
         y_grid (numpy.ndarray): Grid of y-coordinates.
         z_min (float): Minimum z-value.
-        point_density (float): Density of points.
+        grid_spacing_m (float): Desired spacing (in meters) between wall points.
 
     Returns:
         numpy.ndarray: Array of wall points.
@@ -148,8 +149,8 @@ def generate_wall_points(
             height_diff = ceiling_z - z_min
 
             if np.isfinite(height_diff) and height_diff > 0:
-                num_points = int(height_diff / point_density) + 1
-                z_values = z_min + np.linspace(0, height_diff, num_points + 1)
+                num_points = int(height_diff / grid_spacing_m) + 1
+                z_values = np.linspace(z_min, ceiling_z, num_points)
                 x_val = x_grid[int(fr)]
                 y_val = y_grid[int(fc)]
                 wall_points.extend(np.column_stack((
@@ -163,7 +164,7 @@ def generate_wall_points(
 
 def transform_pointcloud_to_height_map(
     pcd: o3d.geometry.PointCloud,
-    grid_size: int = 200,
+    grid_spacing_cm: float = 200,
     visualize_map: bool = False,
     visualize_map_np: bool = False,
     debugging_logs: bool = False
@@ -173,7 +174,7 @@ def transform_pointcloud_to_height_map(
 
     Args:
         pcd (o3d.geometry.PointCloud): The point cloud to be transformed into a height map.
-        grid_size (int, optional): Number of grid points. Defaults to 200.
+        grid_spacing_cm (float, optional): Grid spacing in centimeters. Defaults to 200.
         visualize_map (bool, optional): Boolean to visualize the height map. Defaults to False.
         visualize_map_np (bool, optional): Boolean to visualize the height map using numpy. Defaults to False.
         debugging_logs (bool, optional): Boolean to print debugging logs. Defaults to False.
@@ -191,11 +192,20 @@ def transform_pointcloud_to_height_map(
     points = np.asarray(pcd.points)
     x, y, z = project_vertices_to_plane(points)
 
+    # Note to self: in EPSG28992 is 1 heel getal 1 meter
+
     if debugging_logs:
         print(f"x range: {x.min()} to {x.max()}, y range: {y.min()} to {y.max()}, z range: {z.min()} to {z.max()}")
 
+    # Convert cm spacing to meters
+    grid_spacing_m = grid_spacing_cm / 100.0
+
+    # Determine number of grid points from spacing
+    nx = int(np.ceil((x.max() - x.min()) / grid_spacing_m)) + 1
+    ny = int(np.ceil((y.max() - y.min()) / grid_spacing_m)) + 1
+
     # Create a grid for contour mapping
-    (X, Y), x_grid, y_grid = create_grid((x.min(), x.max()), (y.min(), y.max()), grid_size)
+    (X, Y), x_grid, y_grid = create_grid((x.min(), x.max()), (y.min(), y.max()), nx, ny)
 
     # Generate a height map
     height_map = generate_height_map(x, y, z, x_grid, y_grid)
@@ -226,18 +236,12 @@ def transform_pointcloud_to_height_map(
     # Create ceiling point cloud
     ceiling_point_cloud = create_point_cloud(ceiling_coords)
 
-    # Calculate point density
-    point_density = len(floor_plan_coords) / (grid_size * grid_size)
-
-    if debugging_logs:
-        print(f"Point density: {point_density:.2f} points per grid cell")
-
     # Find edges of the height map
     floor_edges = find_edges(height_map)
     ceiling_edges = find_edges(height_map)
 
     # Generate wall points
-    wall_points = generate_wall_points(floor_edges, ceiling_edges, height_map, x_grid, y_grid, z.min(), point_density)
+    wall_points = generate_wall_points(floor_edges, ceiling_edges, height_map, x_grid, y_grid, z.min(), grid_spacing_m)
 
     # Create wall point cloud
     wall_point_cloud = create_point_cloud(wall_points) if wall_points.size > 0 else o3d.geometry.PointCloud()
