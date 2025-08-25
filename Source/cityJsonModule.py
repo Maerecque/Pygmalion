@@ -811,8 +811,9 @@ def main():
     # 3. Transform the point cloud into a height map (returns tuple: [floor, wall, ...])
     new_pcd_tuple = transform_pointcloud_to_height_map(
         pcd,
-        grid_size=500,
-        visualize_map=False,
+        grid_spacing_cm=8,
+        visualize_map=True,
+        visualize_map_np=True,
         debugging_logs=False
     )
 
