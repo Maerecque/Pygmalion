@@ -17,8 +17,8 @@ sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.fileHandler import get_file_path, readout_LAS_file
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.pointCloudEditor import open_point_cloud_editor as opce
-from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds  # , grid_subsampling
-from Source.kaulo2 import extract_ridges_and_skeleton, visualize_result
+from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds, grid_subsampling
+# from Source.kaulo4 import extract_ridges_and_skeleton, visualize_result
 
 
 def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
@@ -256,6 +256,24 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
     ordered_pnts = np.roll(ordered_pnts, -max_x_index, axis=0)
 
     return np.array(ordered_pnts)
+
+
+def create_point_pairs(points: np.ndarray) -> list:
+    """
+    Creates pairs of points from the input array by connecting each point with the next one.
+
+    Args:
+        points (np.ndarray): A NumPy array of shape (N, 3) containing 3D points.
+
+    Returns:
+        list: A list of tuples, where each tuple contains two points (start, end).
+    """
+    pairs = []
+    for i in range(len(points) - 1):
+        start = points[i]
+        end = points[i + 1]
+        pairs.append((start, end))
+    return pairs
 
 
 def find_corners(points, angle_threshold_deg=45, window=3, merge_radius=3) -> np.ndarray:
@@ -542,7 +560,19 @@ def slice_roof_up(
         # Flatten all points in this slice to z_center
         slice_points[:, 2] = z_center
 
-        all_flattened_points.append(slice_points)
+        # Make a temporary point cloud for the subsampling of the roof slice
+        temp_pcd = o3d.cpu.pybind.geometry.PointCloud()
+        temp_pcd.points = o3d.utility.Vector3dVector(slice_points)
+        temp_pcd = grid_subsampling(temp_pcd, voxel_size=0.5)
+
+        temp_corners_array = find_corners(np.asarray(temp_pcd.points), angle_threshold_deg=45, window=3, merge_radius=0.1)
+
+        temp_corners_pcd = o3d.cpu.pybind.geometry.PointCloud()
+        temp_corners_pcd.points = o3d.utility.Vector3dVector(temp_corners_array)
+
+        opce(temp_corners_pcd, show_help=False)
+
+        all_flattened_points.append(temp_corners_array)
 
     if len(all_flattened_points) == 0:
         # No points found in any slice, return empty PointCloud
@@ -730,46 +760,54 @@ def main():
     floor_hull = sort_points_in_hull(floor_lines, 0.05)
     floor_corners = find_corners(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
 
-    # Make ndarray out of merge_pcds(new_pcd_tuple)
-    pts = np.asarray(merge_pcds(new_pcd_tuple).points)
+    # # Make ndarray out of merge_pcds(new_pcd_tuple)
+    # pts = np.asarray(merge_pcds(new_pcd_tuple).points)
 
-    result = extract_ridges_and_skeleton(
-        points=pts,
-        contour_points=floor_hull,
-        plane_distance_threshold=0.03,
-        plane_min_points=500,
-        line_point_tol=0.05,
-        apex_step=0.2,
-        max_planes=20,
-        alpha=0.5   # adjust alpha: smaller = tighter concave fit
-    )
-
-    visualize_result(result, points=pts)
-
-    # print(f"Detected {len(floor_hull)} points in the floor hull.")
-    # print(f"Detected {len(floor_corners)} corners in the floor hull.")
-
-    # # 6. Create a wall slice at a certain height above the floor
-    # wall_slice = create_correct_height_slice(new_pcd_tuple[1], create_point_cloud(floor_corners, color=[1, 0, 0]), height=1.5)
-    # floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
-    # wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])
-
-    # # 7. Extract the roof points above a certain height (removes everything below)
-    # new_roof_pcd = keep_wall_points_from_x_height(
-    #     new_pcd_tuple[1],
-    #     floor_corners_pcd,
-    #     height=1.5
+    # # result = extract_ridges_and_skeleton(
+    #     points=pts,
+    #     contour_points=floor_hull,
+    #     plane_distance_threshold=0.03,
+    #     plane_min_points=500,
+    #     line_point_tol=0.05,
+    #     apex_step=0.2,
+    #     max_planes=3,
+    #     alpha=0.5,   # adjust alpha: smaller = tighter concave fit
+    #     max_contour_points=15000,
+    #     contour_grid=0.05
     # )
 
-    # # 8. Slice the roof into horizontal slabs and flatten each slice
-    # sliced_roof = slice_roof_up(new_roof_pcd, 5, slab_fatness=0.0075)
+    # visualize_result(result)
+
+    print(f"Detected {len(floor_hull)} points in the floor hull.")
+    print(f"Detected {len(floor_corners)} corners in the floor hull.")
+
+    # 6. Create a wall slice at a certain height above the floor
+    wall_slice = create_correct_height_slice(
+        new_pcd_tuple[1],
+        create_point_cloud(floor_corners, color=[1, 0, 0]),
+        height=1.5, search_radius=0.08
+    )
+    floor_corners_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])  # Red color for corners
+    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])
+
+    # 7. Extract the roof points above a certain height (removes everything below)
+    new_roof_pcd = keep_wall_points_from_x_height(
+        new_pcd_tuple[1],
+        floor_corners_pcd,
+        height=1.5
+    )
+
+    # 8. Slice the roof into horizontal slabs and flatten each slice
+    sliced_roof = slice_roof_up(new_roof_pcd, 5, slab_fatness=0.0075)
+
+    opce(sliced_roof)
 
     # # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
     # filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.05)
 
     # # 10. Merge the wall, floor, and roof outline for visualization
-    # combine_till_here = merge_pcds([wall_floor_merge, filtered_sliced_roof])
-    # opce(combine_till_here)
+    combine_till_here = merge_pcds([wall_floor_merge, sliced_roof])
+    opce(combine_till_here)
 
     # # Print amount of points in combine_till_here
     # print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
