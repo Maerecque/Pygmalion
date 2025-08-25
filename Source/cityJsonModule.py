@@ -53,7 +53,7 @@ def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
     return pcd
 
 
-def find_lines_in_pointcloud(pcd: o3d.geometry.PointCloud, alpha: float = 10, min_triangle_area: float = 1e-10) -> np.ndarray:
+def find_boundary_from_floor(pcd: o3d.geometry.PointCloud, alpha: float = 10, min_triangle_area: float = 1e-10) -> np.ndarray:
     """
     Find boundary/contour lines in a 3D point cloud by projecting to 2D and detecting alpha shape boundaries.
 
@@ -817,11 +817,11 @@ def main():
     )
 
     # 4. Find the boundary lines (hull) of the floor points
-    floor_lines = find_lines_in_pointcloud(new_pcd_tuple[0], 11)
-    print(f"Detected {len(floor_lines)} lines in the floor point cloud.")  # Lies
+    floor_contour = find_boundary_from_floor(new_pcd_tuple[0], 11)
+    print(f"Detected {len(floor_contour)} points in the contour floor point cloud.")
 
     # 5. Sort the hull points and find corners in the floor boundary
-    floor_hull = sort_points_in_hull(floor_lines, 0.05)
+    floor_hull = sort_points_in_hull(floor_contour, 0.05)
     floor_corners = find_corners(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
 
     # # Make ndarray out of merge_pcds(new_pcd_tuple)

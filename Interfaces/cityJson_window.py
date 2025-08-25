@@ -17,7 +17,7 @@ from Source.pointCloudAltering import grid_subsampling as g_ss
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.pointCloudEditor import open_point_cloud_editor as opce
 from Source.cityJsonModule import (
-    find_lines_in_pointcloud, sort_points_in_hull, find_corners,
+    find_boundary_from_floor, sort_points_in_hull, find_corners,
     create_correct_height_slice, keep_wall_points_from_x_height,
     slice_roof_up, keep_highest_point_above_corner
 )
@@ -336,7 +336,7 @@ class App:
             self.triangle_size_entry.insert(0, "1e-10")
 
         try:
-            self.floor_lines = find_lines_in_pointcloud(
+            self.floor_lines = find_boundary_from_floor(
                 self.new_pcd_tuple[0],
                 alpha=float(self.alpha_value_entry.get()),
                 min_triangle_area=float(self.triangle_size_entry.get())
