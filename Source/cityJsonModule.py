@@ -55,7 +55,7 @@ def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
 
 def find_boundary_from_floor(pcd: o3d.geometry.PointCloud, alpha: float = 10, min_triangle_area: float = 1e-10) -> np.ndarray:
     """
-    Find boundary/contour lines in a 3D point cloud by projecting to 2D and detecting alpha shape boundaries.
+    Find boundary/contour points in a 3D point cloud by projecting to 2D and detecting alpha shape boundaries.
 
     Projects a 3D point cloud onto the XY plane, computes an alpha shape (concave hull)
     to detect boundaries, and returns the 3D coordinates of points on the detected boundary.
@@ -811,19 +811,40 @@ def main():
     # 3. Transform the point cloud into a height map (returns tuple: [floor, wall, ...])
     new_pcd_tuple = transform_pointcloud_to_height_map(
         pcd,
-        grid_spacing_cm=8,
+        grid_spacing_cm=15,
         visualize_map=True,
         visualize_map_np=True,
         debugging_logs=False
     )
 
+    # Print coordinates of first point from pcd and new_pcd_tuple[0]
+    print(f"First point in original PCD: {np.asarray(pcd.points)[0]}")
+    print(f"First point in transformed PCD: {new_pcd_tuple[0].points[0]}")
+
     # 4. Find the boundary lines (hull) of the floor points
-    floor_contour = find_boundary_from_floor(new_pcd_tuple[0], 11)
+    floor_contour = find_boundary_from_floor(new_pcd_tuple[0], 5)
     print(f"Detected {len(floor_contour)} points in the contour floor point cloud.")
 
     # 5. Sort the hull points and find corners in the floor boundary
     floor_hull = sort_points_in_hull(floor_contour, 0.05)
+
+    print(f"Detected {len(floor_hull)} points in the floor hull.")
+
     floor_corners = find_corners(floor_hull, angle_threshold_deg=45, window=2, merge_radius=1)
+
+    opce(create_point_cloud(floor_corners, color=[1, 0, 0]), show_help=False)
+
+    # IDEA ADD THESE TWO TOGETHER!!!
+    temp_merge = merge_pcds(
+        [
+            get_keypoints(create_point_cloud(floor_contour), gamma_21=2, gamma_32=2, min_neighbors=3, print_stats=True),
+            create_point_cloud(floor_corners, color=[1, 0, 0]),
+        ]
+    )
+
+    opce([temp_merge], show_help=False)
+
+    exit()
 
     # # Make ndarray out of merge_pcds(new_pcd_tuple)
     # pts = np.asarray(merge_pcds(new_pcd_tuple).points)

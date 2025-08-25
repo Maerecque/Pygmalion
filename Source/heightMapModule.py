@@ -120,9 +120,10 @@ def generate_wall_points(
     x_grid: np.ndarray,
     y_grid: np.ndarray,
     z_min: float,
-    grid_spacing_m: float
+    grid_spacing: float
 ):
-    """Generate points between floor and ceiling edges to create walls.
+    """
+    Generate points between floor and ceiling edges to create walls.
 
     Args:
         floor_edges (numpy.ndarray): Array of floor edge coordinates.
@@ -131,7 +132,7 @@ def generate_wall_points(
         x_grid (numpy.ndarray): Grid of x-coordinates.
         y_grid (numpy.ndarray): Grid of y-coordinates.
         z_min (float): Minimum z-value.
-        grid_spacing_m (float): Desired spacing (in meters) between wall points.
+        grid_spacing (float): Desired spacing between wall points (in m or cm, must match units of z_min and ceiling_z).
 
     Returns:
         numpy.ndarray: Array of wall points.
@@ -149,7 +150,7 @@ def generate_wall_points(
             height_diff = ceiling_z - z_min
 
             if np.isfinite(height_diff) and height_diff > 0:
-                num_points = int(height_diff / grid_spacing_m) + 1
+                num_points = int(height_diff / grid_spacing) + 1
                 z_values = np.linspace(z_min, ceiling_z, num_points)
                 x_val = x_grid[int(fr)]
                 y_val = y_grid[int(fc)]
