@@ -498,7 +498,8 @@ def keep_wall_points_from_x_height(
 def slice_roof_up(
     roof_pcd: o3d.cpu.pybind.geometry.PointCloud,
     slices_amount: int = 2,
-    slab_fatness: float = 0.01
+    slab_fatness: float = 0.01,
+    visualize: bool = False
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     Slice a point cloud along Z into horizontal slices and flatten each slice to its center height.
@@ -512,6 +513,7 @@ def slice_roof_up(
         slices_amount (int, optional): Number of horizontal slices to create. Must be at least 1. Defaults to 2.
         slab_fatness (float, optional): Half-fatness around slice center to include points.
             Points within ±slab_fatness of slice center are included. Defaults to 0.01.
+        visualize (bool, optional): Whether to visualize the slicing process. Defaults to False.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: New point cloud containing all flattened slice points.
@@ -570,7 +572,8 @@ def slice_roof_up(
         temp_corners_pcd = o3d.cpu.pybind.geometry.PointCloud()
         temp_corners_pcd.points = o3d.utility.Vector3dVector(temp_corners_array)
 
-        opce(temp_corners_pcd, show_help=False)
+        if visualize:
+            opce(temp_corners_pcd, show_help=False)
 
         all_flattened_points.append(temp_corners_array)
 
