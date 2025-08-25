@@ -410,7 +410,7 @@ class App:
             self.new_roof_pcd = keep_wall_points_from_x_height(
                 self.new_pcd_tuple[1],
                 floor_corners_pcd,
-                height=float(self.fixed_slice_height.get())
+                height=float(self.fixed_slice_height)
             )
             self.roof_extraction_result_label.config(text=f"Roof points extracted.\n{len(self.new_roof_pcd.points)} roof points.")
             self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
