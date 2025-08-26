@@ -146,6 +146,9 @@ def merge_point_clouds(pcd_list: list[o3d.cpu.pybind.geometry.PointCloud]) -> o3
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: Merged point cloud containing all points and colors from the input list.
     """
+    # Check if all point clouds are actually point clouds and not ndarrays, if they are convert them to point clouds
+    pcd_list = [o3d.geometry.PointCloud(points=o3d.utility.Vector3dVector(pcd)) if isinstance(pcd, np.ndarray) else pcd for pcd in pcd_list]  # noqa: E501
+
     # Check that all point clouds have points if one misses points, drop it from the list
     pcd_list = [pcd for pcd in pcd_list if len(pcd.points) > 0]
     if not pcd_list:
