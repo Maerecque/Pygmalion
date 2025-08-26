@@ -557,7 +557,11 @@ def slice_roof_up(
     roof_pcd: o3d.cpu.pybind.geometry.PointCloud,
     slices_amount: int = 2,
     slab_fatness: float = 0.01,
-    visualize: bool = False
+    visualize: bool = False,
+    voxel_size: float = 0.5,
+    angle_threshold_deg: float = 45,
+    window: int = 3,
+    merge_radius: float = 0.1
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     Slice a point cloud along Z into horizontal slices and flatten each slice to its center height.
@@ -572,6 +576,10 @@ def slice_roof_up(
         slab_fatness (float, optional): Half-fatness around slice center to include points.
             Points within ±slab_fatness of slice center are included. Defaults to 0.01.
         visualize (bool, optional): Whether to visualize the slicing process. Defaults to False.
+        voxel_size (float, optional): Voxel size for downsampling. Defaults to 0.5.
+        angle_threshold_deg (float, optional): Angle threshold for corner detection. Defaults to 45.
+        window (int, optional): Window size for corner detection. Defaults to 3.
+        merge_radius (float, optional): Merge radius for corner detection. Defaults to 0.1.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: New point cloud containing all flattened slice points.
@@ -623,9 +631,17 @@ def slice_roof_up(
         # Make a temporary point cloud for the subsampling of the roof slice
         temp_pcd = o3d.cpu.pybind.geometry.PointCloud()
         temp_pcd.points = o3d.utility.Vector3dVector(slice_points)
-        temp_pcd = grid_subsampling(temp_pcd, voxel_size=0.5)
+        temp_pcd = grid_subsampling(
+            temp_pcd,
+            voxel_size=voxel_size,
+            print_result=False  # FOR TESTING
+        )
 
-        temp_corners_array = find_corners(np.asarray(temp_pcd.points), angle_threshold_deg=45, window=3, merge_radius=0.1)
+        temp_corners_array = find_corners(
+            np.asarray(temp_pcd.points),
+            angle_threshold_deg=angle_threshold_deg,
+            window=window,
+            merge_radius=merge_radius)
 
         temp_corners_pcd = o3d.cpu.pybind.geometry.PointCloud()
         temp_corners_pcd.points = o3d.utility.Vector3dVector(temp_corners_array)
