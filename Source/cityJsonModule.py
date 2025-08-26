@@ -390,7 +390,8 @@ def create_correct_height_slice(
     tbp_pcd: o3d.cpu.pybind.geometry.PointCloud,
     floor_contour_pcd: o3d.cpu.pybind.geometry.PointCloud,
     height: float = 1.5,
-    search_radius: float = 0.025
+    search_radius: float = 0.025,
+    print_bool: bool = False
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     Create a slice of the point cloud at a specified height above the floor.
@@ -405,6 +406,7 @@ def create_correct_height_slice(
         height (float, optional): The height at which to slice the point cloud in meters. Defaults to 1.5.
         search_radius (float, optional): The radius within which to search for points in the tbp_pcd.
             Must be a positive float. Defaults to 0.025.
+        print_bool (bool, optional): Whether to print progress information. Defaults to False.
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: A new point cloud containing the sliced points at the target height.
@@ -444,9 +446,10 @@ def create_correct_height_slice(
     floor_points = np.asarray(floor_contour_pcd.points)
     tbp_all_points = np.asarray(tbp_pcd.points)
 
-    # Show amount of floor points
-    print(f"Number of floor points: {floor_points.shape[0]}")
-    print(f"Number of TBP points: {tbp_all_points.shape[0]}")
+    if print_bool:
+        # Show amount of floor points
+        print(f"Number of floor points: {floor_points.shape[0]}")
+        print(f"Number of TBP points: {tbp_all_points.shape[0]}")
 
     for floor_pt in floor_points:
         mask = (
@@ -455,11 +458,13 @@ def create_correct_height_slice(
         )
         candidates = tbp_all_points[mask]
         if candidates.size > 0:
-            print(f"Found {len(candidates)} candidates for floor point {floor_pt}.")
+            if print_bool:
+                print(f"Found {len(candidates)} candidates for floor point {floor_pt}.")
             # Pick the closest point that is not above the slice height but as close as possible
             below_slice = candidates[candidates[:, 2] <= slice_height]
             if below_slice.size > 0:
-                print(f"Found {len(below_slice)} candidates below the slice height for floor point {floor_pt}.")
+                if print_bool:
+                    print(f"Found {len(below_slice)} candidates below the slice height for floor point {floor_pt}.")
 
                 idx = np.argmin(np.abs(below_slice[:, 2] - slice_height))
 
