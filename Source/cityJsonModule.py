@@ -895,6 +895,8 @@ def main():
 
     full_floor_corners = sort_points_in_hull(temp_merge.points, 0.00005)
 
+    full_floor_corners = floor_hull  # FOR TESTING
+
     # # Make ndarray out of merge_pcds(new_pcd_tuple)
     # pts = np.asarray(merge_pcds(new_pcd_tuple).points)
 
@@ -913,8 +915,8 @@ def main():
 
     # visualize_result(result)
 
-    print(f"Detected {len(floor_hull)} points in the floor hull.")
-    print(f"Detected {len(floor_corners)} corners in the floor hull.")
+    # print(f"Detected {len(floor_hull)} points in the floor hull.")
+    # print(f"Detected {len(floor_corners)} corners in the floor hull.")
 
     # 6. Create a wall slice at a certain height above the floor
     floor_corners_pcd = create_point_cloud(full_floor_corners, color=[1, 0, 0])  # Red color for corners
@@ -922,9 +924,9 @@ def main():
         new_pcd_tuple[1],
         floor_corners_pcd,
         height=1.5,
-        search_radius=0.02
+        search_radius=0.01
     )
-    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])
+    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])  # noqa: F841
 
     # 7. Extract the roof points above a certain height (removes everything below)
     new_roof_pcd = keep_wall_points_from_x_height(
@@ -934,20 +936,21 @@ def main():
     )
 
     # 8. Slice the roof into horizontal slabs and flatten each slice
-    sliced_roof = slice_roof_up(new_roof_pcd, 5, slab_fatness=0.0075)
+    sliced_roof = slice_roof_up(new_roof_pcd, 9, slab_fatness=0.01)
 
-    # opce(sliced_roof)
+    opce(sliced_roof)
 
     # # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
     # filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.05)
 
     # # 10. Merge the wall, floor, and roof outline for visualization
-    combine_till_here = merge_pcds([wall_floor_merge, sliced_roof])  # noqa: F841
-    # opce(combine_till_here)
+    combine_till_here = merge_pcds([full_floor_corners, wall_slice, sliced_roof])  # noqa: F841
+    opce(combine_till_here)
 
     floor_lineset = contour_to_lineset(full_floor_corners)
     wall_slice_lineset = contour_to_lineset(sort_points_in_hull(wall_slice.points, 0.00005))
-    o3d.visualization.draw([floor_lineset, wall_slice_lineset])
+    vertical_lineset = connect_vertically_aligned_points(floor_lineset.points, wall_slice_lineset.points)
+    o3d.visualization.draw([floor_lineset, wall_slice_lineset, vertical_lineset])
 
     # # Print amount of points in combine_till_here
     # print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
