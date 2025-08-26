@@ -211,52 +211,43 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
           but this is chosen regardless, because of its simplicity and efficiency.
         - Points are reordered starting from leftmost point (maximum x-coordinate)
     """
-    # If there are fewer than 2 points, no order can be found
+    # Ensure input is a numpy array
+    lines = np.asarray(lines)
+    if lines.ndim != 2 or lines.shape[1] < 2:
+        raise ValueError("Input to sort_points_in_hull must be a 2D array with at least 2 columns (x, y[, z])")
+
     if len(lines) < 2:
         return np.array([])
 
-    if threshold <= 0:
-        raise ValueError("Threshold must be greater than 0.")
+    # Project to 2D (XY)
+    points_2d = lines[:, :2]
+    n = len(points_2d)
+    visited = np.zeros(n, dtype=bool)
+    ordered_indices = []
 
-    pnts = []
-    # Iterate through the line points and check the distance between consecutive points
-    for i in range(1, len(lines)):
-        dist = np.linalg.norm(lines[i] - lines[i - 1])
-        # If the distance exceeds the threshold, consider it a corner
-        if dist > threshold:
-            pnts.append(lines[i])
-
-    # If no points were found, return an empty array
-    if not pnts:
-        return np.array([])
-
-    pnts = np.array(pnts)
-    # Build a KD-tree for efficient nearest neighbor search
-    tree = cKDTree(pnts)
-
-    ordered_pnts = []
-    visited = np.zeros(len(pnts), dtype=bool)
-    current_index = 0
-    # Start ordering from the first point
-    ordered_pnts.append(pnts[current_index])
+    # Start from the leftmost (min x) point
+    current_index = np.argmin(points_2d[:, 0])
+    ordered_indices.append(current_index)
     visited[current_index] = True
 
-    # Greedily order points by always picking the nearest unvisited neighbor
-    for _ in range(1, len(pnts)):
-        distances, indices = tree.query(pnts[current_index], k=len(pnts))
-        for idx in indices:
-            if not visited[idx]:
-                ordered_pnts.append(pnts[idx])
-                visited[idx] = True
-                current_index = idx
-                break
+    for _ in range(1, n):
+        current_point = points_2d[current_index]
+        # Find the nearest unvisited neighbor in 2D
+        dists = np.linalg.norm(points_2d - current_point, axis=1)
+        dists[visited] = np.inf
+        next_index = np.argmin(dists)
+        if dists[next_index] == np.inf:
+            break  # No more unvisited points
+        ordered_indices.append(next_index)
+        visited[next_index] = True
+        current_index = next_index
 
-    # Ensure the points are ordered in a consistent manner, by sorting by x-coordinate.
-    # This assumes the first point is the leftmost point. Works well for most cases.
-    max_x_index = np.argmax([pnt[0] for pnt in ordered_pnts])
-    ordered_pnts = np.roll(ordered_pnts, -max_x_index, axis=0)
+    # Optionally, close the loop if the last point is close to the first
+    ordered_points = lines[ordered_indices]
+    if np.linalg.norm(ordered_points[0, :2] - ordered_points[-1, :2]) < threshold:
+        ordered_points = np.vstack([ordered_points, ordered_points[0]])
 
-    return np.array(ordered_pnts)
+    return ordered_points
 
 
 def create_point_pairs(points: np.ndarray) -> list:
