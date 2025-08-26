@@ -472,10 +472,9 @@ def create_correct_height_slice(
 
                 idx = np.argmin(np.abs(below_slice[:, 2] - slice_height))
 
-                # If there are more than one point near the floor point, pick the one closest to the floor point
+                # If there are more than one point near the floor point, pick the one with the highest Z value
                 if below_slice.shape[0] > 1:
-                    distances = np.linalg.norm(below_slice[:, :2] - floor_pt[:2], axis=1)
-                    idx = np.argmin(distances)
+                    idx = np.argmax(below_slice[:, 2])
 
                 tbp_countour_points.append(below_slice[idx])
             else:
