@@ -159,23 +159,24 @@ def alpha_shape(points, alpha, min_triangle_area=1e-10) -> MultiPoint:
     tri = Delaunay(points)
     edges = set()
 
-    for ia, ib, ic in tri.simplices:
-        pa, pb, pc = points[ia], points[ib], points[ic]
-        a = np.linalg.norm(pb - pc)
-        b = np.linalg.norm(pa - pc)
-        c = np.linalg.norm(pa - pb)
-        s = (a + b + c) / 2.0
-        try:
-            area = np.sqrt(s * (s - a) * (s - b) * (s - c))
-            if area < min_triangle_area or area <= 0:
-                raise ValueError("Triangle area is too small or zero, skipping this triangle.")
-        except Exception:
-            # print(f"Error computing area: {e}")
-            continue
-        circum_r = a * b * c / (4.0 * area)
-        if circum_r < 1.0 / alpha:
-            # Store edges with sorted indices for uniqueness
-            edges.update([tuple(sorted(edge)) for edge in [(ia, ib), (ib, ic), (ic, ia)]])
+    with np.errstate(all='ignore'):
+        for ia, ib, ic in tri.simplices:
+            pa, pb, pc = points[ia], points[ib], points[ic]
+            a = np.linalg.norm(pb - pc)
+            b = np.linalg.norm(pa - pc)
+            c = np.linalg.norm(pa - pb)
+            s = (a + b + c) / 2.0
+            try:
+                area = np.sqrt(s * (s - a) * (s - b) * (s - c))
+                if area < min_triangle_area or area <= 0:
+                    raise ValueError("Triangle area is too small or zero, skipping this triangle.")
+            except Exception:
+                # print(f"Error computing area: {e}")
+                continue
+            circum_r = a * b * c / (4.0 * area)
+            if circum_r < 1.0 / alpha:
+                # Store edges with sorted indices for uniqueness
+                edges.update([tuple(sorted(edge)) for edge in [(ia, ib), (ib, ic), (ic, ia)]])
 
     edge_lines = [LineString([points[i], points[j]]) for i, j in edges]
     concave = unary_union(polygonize(edge_lines)).buffer(0)
