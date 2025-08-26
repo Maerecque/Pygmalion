@@ -18,7 +18,6 @@ from Source.fileHandler import get_file_path, readout_LAS_file
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.pointCloudEditor import open_point_cloud_editor as opce
 from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds, grid_subsampling
-# from Source.kaulo4 import extract_ridges_and_skeleton, visualize_result
 
 
 def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
