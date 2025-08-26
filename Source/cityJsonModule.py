@@ -395,6 +395,9 @@ def create_correct_height_slice(
     floor_contour_pcd: o3d.cpu.pybind.geometry.PointCloud,
     height: float = 1.5,
     search_radius: float = 0.025,
+    height_tol: float = 0.75,
+    neighbor_window: int = 4,
+    min_low_neighbors: int = 3,
     print_bool: bool = False
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
@@ -410,6 +413,10 @@ def create_correct_height_slice(
         height (float, optional): The height at which to slice the point cloud in meters. Defaults to 1.5.
         search_radius (float, optional): The radius within which to search for points in the tbp_pcd.
             Must be a positive float. Defaults to 0.025.
+        # meters below slice_height to consider 'significantly lower'
+        height_tol (float, optional): The height tolerance in meters. Defaults to 0.75.
+        neighbor_window (int, optional): The number of neighbors on each side to check. Defaults to 4.
+        min_low_neighbors (int, optional): If at least this many neighbors are also low, keep the point. Defaults to 3.
         print_bool (bool, optional): Whether to print progress information. Defaults to False.
 
     Returns:
@@ -484,6 +491,19 @@ def create_correct_height_slice(
                 tbp_countour_points.append(new_point)
 
     tbp_countour_points = np.array(tbp_countour_points)
+
+    if len(tbp_countour_points) > 2 * neighbor_window:
+        keep_mask = np.ones(len(tbp_countour_points), dtype=bool)
+        for i, pt in enumerate(tbp_countour_points):
+            if pt[2] < slice_height - height_tol:
+                # Check neighbors
+                start = max(0, i - neighbor_window)
+                end = min(len(tbp_countour_points), i + neighbor_window + 1)
+                neighbors = np.delete(tbp_countour_points[start:end], i - start, axis=0)
+                low_neighbors = np.sum(neighbors[:, 2] < slice_height - height_tol)
+                if low_neighbors < min_low_neighbors:
+                    keep_mask[i] = False  # Outlier, remove
+        tbp_countour_points = tbp_countour_points[keep_mask]
 
     auspuf = create_point_cloud(tbp_countour_points, [0, 0, 1])
 
