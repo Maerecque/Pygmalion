@@ -322,6 +322,10 @@ def get_keypoints(
         min_neighbors=min_neighbors
     )
 
+    if not keypoints:
+        print("No keypoints found. kys")
+        return pcd
+
     if print_stats:
         print(f"Detected {len(keypoints.points)} keypoints from {len(pcd.points)} input points.")
         print(f"Removed {len(pcd.points) - len(keypoints.points)} points.")
