@@ -412,7 +412,6 @@ def create_correct_height_slice(
         height (float, optional): The height at which to slice the point cloud in meters. Defaults to 1.5.
         search_radius (float, optional): The radius within which to search for points in the tbp_pcd.
             Must be a positive float. Defaults to 0.025.
-        # meters below slice_height to consider 'significantly lower'
         height_tol (float, optional): The height tolerance in meters. Defaults to 0.75.
         neighbor_window (int, optional): The number of neighbors on each side to check. Defaults to 4.
         min_low_neighbors (int, optional): If at least this many neighbors are also low, keep the point. Defaults to 3.
@@ -584,7 +583,7 @@ def slice_roof_up(
     angle_threshold_deg: float = 45,
     window: int = 3,
     merge_radius: float = 0.1
-) -> o3d.cpu.pybind.geometry.PointCloud:
+) -> list[np.ndarray]:
     """
     Slice a point cloud along Z into horizontal slices and flatten each slice to its center height.
 
@@ -604,8 +603,8 @@ def slice_roof_up(
         merge_radius (float, optional): Merge radius for corner detection. Defaults to 0.1.
 
     Returns:
-        o3d.cpu.pybind.geometry.PointCloud: New point cloud containing all flattened slice points.
-                                           Returns empty point cloud if no points found in any slice.
+        list of np.ndarray: List of arrays, each containing the flattened points for a slice (ordered from low to high).
+        Each array is shape (N_i, 3) for the i-th slice. Returns empty list if no points found in any slice.
 
     Raises:
         TypeError: If roof_pcd is not an Open3D PointCloud.
@@ -648,6 +647,7 @@ def slice_roof_up(
             continue
 
         # Flatten all points in this slice to z_center
+        slice_points = slice_points.copy()  # avoid modifying original array
         slice_points[:, 2] = z_center
 
         # Make a temporary point cloud for the subsampling of the roof slice
@@ -673,16 +673,8 @@ def slice_roof_up(
 
         all_flattened_points.append(temp_corners_array)
 
-    if len(all_flattened_points) == 0:
-        # No points found in any slice, return empty PointCloud
-        return o3d.geometry.PointCloud()
-
-    combined_points = np.vstack(all_flattened_points)
-
-    new_pcd = o3d.geometry.PointCloud()
-    new_pcd.points = o3d.utility.Vector3dVector(combined_points)
-
-    return new_pcd
+    # Return the list of arrays, one per slice (low to high)
+    return all_flattened_points
 
 
 def keep_highest_point_above_corner(
@@ -802,7 +794,7 @@ def connect_vertically_aligned_points(
     Args:
         floor_points (np.ndarray): Nx3 array of floor (lower) points.
         wall_points (np.ndarray): Mx3 array of wall (upper) points.
-        xy_tol (float, optional): Tolerance for matching XY coordinates. Defaults to 1e-4.
+        xy_tol (float, optional): Tolerance for matching XY coordinates. Defaults to 1e-2.
 
     Returns:
         o3d.geometry.LineSet: LineSet connecting vertically aligned points.
@@ -907,10 +899,6 @@ def main():
         debugging_logs=False
     )
 
-    # Print coordinates of first point from pcd and new_pcd_tuple[0]
-    print(f"First point in original PCD: {np.asarray(pcd.points)[0]}")
-    print(f"First point in transformed PCD: {new_pcd_tuple[0].points[0]}")
-
     # 4. Find the boundary lines (hull) of the floor points
     floor_contour = find_boundary_from_floor(new_pcd_tuple[0], 8)
     print(f"Detected {len(floor_contour)} points in the contour floor point cloud.")
@@ -963,7 +951,10 @@ def main():
         new_pcd_tuple[1],
         floor_corners_pcd,
         height=1.5,
-        search_radius=0.01
+        search_radius=0.01,
+        height_tol=0.75,
+        neighbor_window=4,
+        min_low_neighbors=6
     )
     wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])  # noqa: F841
 
@@ -975,21 +966,28 @@ def main():
     )
 
     # 8. Slice the roof into horizontal slabs and flatten each slice
-    sliced_roof = slice_roof_up(new_roof_pcd, 9, slab_fatness=0.01)
+    sliced_roof_list = slice_roof_up(new_roof_pcd, 30, slab_fatness=0.01, voxel_size=0.05)
 
-    opce(sliced_roof)
+    # Take the first and second list in sliced_roof_list
+    sliced_roof_edge = np.vstack([sliced_roof_list[0], sliced_roof_list[1]])
+    roof_wall_lineset = connect_vertically_aligned_points(sliced_roof_edge, wall_slice.points, 0.1)
+
+    # Connect the rest of the roof layers with each other from top to the bottom and per layer create a contour
+    for i in range(len(sliced_roof_list) - 1, 0, -1):
+        roof_wall_lineset += connect_vertically_aligned_points(sliced_roof_list[i - 1], sliced_roof_list[i], 0.1)
+        roof_wall_lineset += contour_to_lineset(sort_points_in_hull(sliced_roof_list[i]))
 
     # # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
     # filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.05)
 
     # # 10. Merge the wall, floor, and roof outline for visualization
-    combine_till_here = merge_pcds([full_floor_corners, wall_slice, sliced_roof])  # noqa: F841
-    opce(combine_till_here)
+    # combine_till_here = merge_pcds([full_floor_corners, wall_slice, sliced_roof])  # noqa: F841
+    # opce(combine_till_here)
 
     floor_lineset = contour_to_lineset(full_floor_corners)
     wall_slice_lineset = contour_to_lineset(sort_points_in_hull(wall_slice.points, 0.00005))
     vertical_lineset = connect_vertically_aligned_points(floor_lineset.points, wall_slice_lineset.points)
-    o3d.visualization.draw([floor_lineset, wall_slice_lineset, vertical_lineset])
+    o3d.visualization.draw([floor_lineset, wall_slice_lineset, vertical_lineset, roof_wall_lineset])
 
     # # Print amount of points in combine_till_here
     # print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
