@@ -775,6 +775,7 @@ def keep_highest_point_above_corner(
 
     return highest_pcd
 
+
 def contour_to_lineset(points):
     """
     Create a closed LineSet from ordered contour points.
@@ -787,6 +788,45 @@ def contour_to_lineset(points):
     lines = [[i, (i + 1) % n] for i in range(n)]  # closed loop
     lineset = o3d.geometry.LineSet()
     lineset.points = o3d.utility.Vector3dVector(points)
+    lineset.lines = o3d.utility.Vector2iVector(lines)
+    return lineset
+
+
+def connect_vertically_aligned_points(
+    floor_points: np.ndarray,
+    wall_points: np.ndarray,
+    xy_tol: float = 1e-2
+) -> o3d.geometry.LineSet:
+    """
+    Connects points from floor_points to wall_points if their XY coordinates match within a given tolerance.
+
+    Args:
+        floor_points (np.ndarray): Nx3 array of floor (lower) points.
+        wall_points (np.ndarray): Mx3 array of wall (upper) points.
+        xy_tol (float, optional): Tolerance for matching XY coordinates. Defaults to 1e-4.
+
+    Returns:
+        o3d.geometry.LineSet: LineSet connecting vertically aligned points.
+    """
+    # Always convert to numpy array for slicing
+    floor_points = np.asarray(floor_points)
+    wall_points = np.asarray(wall_points)
+    floor_xy = floor_points[:, :2]
+    wall_xy = wall_points[:, :2]
+    lines = []
+    all_points = np.vstack([floor_points, wall_points])
+    wall_offset = len(floor_points)
+
+    # Build KDTree for fast lookup
+    from scipy.spatial import cKDTree
+    wall_tree = cKDTree(wall_xy, leafsize=2)
+    for i, xy in enumerate(floor_xy):
+        dist, idx = wall_tree.query(xy, k=1)
+        if dist <= xy_tol:
+            lines.append([i, wall_offset + idx])
+
+    lineset = o3d.geometry.LineSet()
+    lineset.points = o3d.utility.Vector3dVector(all_points)
     lineset.lines = o3d.utility.Vector2iVector(lines)
     return lineset
 
