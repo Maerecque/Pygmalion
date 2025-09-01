@@ -821,6 +821,74 @@ def connect_vertically_aligned_points(
     lineset.lines = o3d.utility.Vector2iVector(lines)
     return lineset
 
+
+def connect_vertically_aligned_points2(
+    base_level_points: np.ndarray,
+    upper_level_points: Union[np.ndarray, List[np.ndarray]],
+    xy_tol: float = 1e-2
+) -> o3d.geometry.LineSet:
+    """
+    Connects points from base_level_points to one or more sets of upper_level_points
+    if their XY coordinates match within a given tolerance.
+
+    Args:
+        base_level_points (np.ndarray): Nx3 array of base (lower) points.
+        upper_level_points (Union[np.ndarray, List[np.ndarray]]): Either a single Mx3 array
+            or a list of arrays, each representing an upper level.
+        xy_tol (float, optional): Tolerance for matching XY coordinates. Defaults to 1e-2.
+
+    Returns:
+        o3d.geometry.LineSet: LineSet connecting vertically aligned points.
+    """
+    base_level_points = np.asarray(base_level_points)
+
+    # Normalize: always work with a list of ndarrays
+    if isinstance(upper_level_points, np.ndarray):
+        upper_level_points = [upper_level_points]
+
+    # Keep track of all points and line connections
+    all_points = [base_level_points]
+    lines = []
+    point_offset = len(base_level_points)  # noqa: F841
+
+    # Flatten list of all upper points for Open3D
+    for lvl in upper_level_points:
+        all_points.append(np.asarray(lvl))
+
+    all_points = np.vstack(all_points)
+
+    # For each base point, check levels in order until match is found
+    for i, xy in enumerate(base_level_points[:, :2]):
+        matched = False
+        offset = len(base_level_points)  # start after base points
+        for lvl in upper_level_points:
+            lvl = np.asarray(lvl)
+            if lvl.shape[0] == 0:
+                offset += 0
+                continue
+
+            lvl_xy = lvl[:, :2]
+            tree = cKDTree(lvl_xy, leafsize=2)
+
+            dist, idx = tree.query(xy, k=1)
+            if dist <= xy_tol:
+                # Connect base point i with the found point in this level
+                lines.append([i, offset + idx])
+                matched = True  # noqa: F841
+                break  # stop checking this base point once matched
+
+            offset += len(lvl)
+
+        # if not matched, do nothing → base point stays unconnected
+
+    # Build LineSet
+    lineset = o3d.geometry.LineSet()
+    lineset.points = o3d.utility.Vector3dVector(all_points)
+    lineset.lines = o3d.utility.Vector2iVector(lines)
+
+    return lineset
+
+
 def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
     """
     contour_points: Nx3 numpy array that represents the 2D contour in the XY plane.
@@ -1006,7 +1074,7 @@ def main():
 
     # Take the first and second list in sliced_roof_list
     # sliced_roof_edge = np.vstack([sliced_roof_list[0], sliced_roof_list[1]])
-    roof_wall_lineset = connect_vertically_aligned_points(sliced_roof_list, wall_slice.points, 0.1)
+    roof_wall_lineset = connect_vertically_aligned_points2(wall_slice.points, sliced_roof_list, 0.1)
 
     # Connect the rest of the roof layers with each other from top to the bottom and per layer create a contour
     for i in range(len(sliced_roof_list) - 1, 0, -1):
