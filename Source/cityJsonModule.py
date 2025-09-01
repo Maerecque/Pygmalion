@@ -5,7 +5,7 @@ import sys
 import os
 
 # Use alpha shape to find concave boundary (captures inner/underlying edges)
-from shapely.geometry import MultiPoint, LineString
+from shapely.geometry import MultiPoint, LineString, Polygon
 from shapely.ops import unary_union, polygonize
 from scipy.spatial import Delaunay
 from scipy.spatial import cKDTree
@@ -821,6 +821,42 @@ def connect_vertically_aligned_points(
     lineset.lines = o3d.utility.Vector2iVector(lines)
     return lineset
 
+def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
+    """
+    contour_points: Nx3 numpy array that represents the 2D contour in the XY plane.
+    lineset: o3d.geometry.LineSet with lines.
+
+    Return: filtered o3d.geometry.LineSet without lines that fall outside the contour.
+    """
+    # Ensure contour is closed (first point == last point)
+    if not np.allclose(contour_points[0], contour_points[-1]):
+        contour_points = np.vstack([contour_points, contour_points[0]])
+
+    polygon = Polygon(contour_points[:, :2])
+
+    # Copy points and lines from lineset
+    line_points = np.asarray(lineset.points)
+    line_indices = np.asarray(lineset.lines)
+
+    new_lines = []
+    for (p1_idx, p2_idx) in line_indices:
+        p1 = line_points[p1_idx]
+        p2 = line_points[p2_idx]
+
+        line = LineString([(p1[0], p1[1]), (p2[0], p2[1])])
+
+        # Check if line is completely within (or on) the polygon
+        if polygon.contains(line) or polygon.covers(line):
+            new_lines.append([p1_idx, p2_idx])
+
+    # Create new LineSet
+    filtered = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(line_points),
+        lines=o3d.utility.Vector2iVector(new_lines)
+    )
+
+    return filtered
+
 
 # def export_to_cityjson(
 #     point_cloud: o3d.geometry.PointCloud,
@@ -969,13 +1005,15 @@ def main():
     sliced_roof_list = slice_roof_up(new_roof_pcd, 30, slab_fatness=0.01, voxel_size=0.05)
 
     # Take the first and second list in sliced_roof_list
-    sliced_roof_edge = np.vstack([sliced_roof_list[0], sliced_roof_list[1]])
-    roof_wall_lineset = connect_vertically_aligned_points(sliced_roof_edge, wall_slice.points, 0.1)
+    # sliced_roof_edge = np.vstack([sliced_roof_list[0], sliced_roof_list[1]])
+    roof_wall_lineset = connect_vertically_aligned_points(sliced_roof_list, wall_slice.points, 0.1)
 
     # Connect the rest of the roof layers with each other from top to the bottom and per layer create a contour
     for i in range(len(sliced_roof_list) - 1, 0, -1):
         roof_wall_lineset += connect_vertically_aligned_points(sliced_roof_list[i - 1], sliced_roof_list[i], 0.1)
         roof_wall_lineset += contour_to_lineset(sort_points_in_hull(sliced_roof_list[i]))
+
+    roof_wall_lineset = filter_lines_within_contour(full_floor_corners, roof_wall_lineset)
 
     # # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
     # filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.05)
