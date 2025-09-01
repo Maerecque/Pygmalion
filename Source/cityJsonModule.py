@@ -3,6 +3,12 @@ import numpy as np
 from tqdm import tqdm
 import sys
 import os
+from typing import List, Union
+
+import json
+import tkinter as tk
+from tkinter import filedialog
+
 
 # Use alpha shape to find concave boundary (captures inner/underlying edges)
 from shapely.geometry import MultiPoint, LineString, Polygon
@@ -926,58 +932,191 @@ def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometr
     return filtered
 
 
-# def export_to_cityjson(
-#     point_cloud: o3d.geometry.PointCloud,
-#     floor_points: np.ndarray,
-#     roof_points: np.ndarray,
-#     output_path: str = "building.json",
-#     xy_tol: float = 0.05,
-#     edge_dist_tol: float = 0.15,
-#     samples_per_edge: int = 12
-# ) -> None:
-#     """
-#     Export a point cloud to CityJSON format with floor, walls, and roof surfaces.
-#
-#     Creates a LOD2 building model by generating walls from floor boundary points
-#     and triangulating roof points within the building footprint.
-#
-#     Args:
-#         point_cloud (o3d.geometry.PointCloud): Combined point cloud containing building data.
-#         floor_points (np.ndarray): Array of floor corner points for footprint generation.
-#         roof_points (np.ndarray): Array of roof/ceiling points for roof surface creation.
-#         output_path (str, optional): Path to save the CityJSON file. Defaults to "building.json".
-#         xy_tol (float, optional): XY tolerance for matching roof points to floor vertices. Defaults to 0.05.
-#         edge_dist_tol (float, optional): Distance tolerance for point-to-edge matching. Defaults to 0.15.
-#         samples_per_edge (int, optional): Number of samples per wall edge. Defaults to 12.
-#
-#     Example:
-#         >>> floor_corners = np.array([[0, 0, 0], [10, 0, 0], [10, 5, 0], [0, 5, 0]])
-#         >>> roof_pts = np.array([[0, 0, 3], [10, 0, 3], [10, 5, 3], [0, 5, 3]])
-#         >>> export_to_cityjson(combined_pcd, floor_corners, roof_pts, "my_building.json")
-#     """
-#     from temp import build_lod2_from_floor_and_pointcloud
-#
-#     # Convert Open3D point cloud to numpy array if needed
-#     if hasattr(point_cloud, 'points'):
-#         all_points = np.asarray(point_cloud.points)
-#     else:
-#         all_points = point_cloud
-#
-#     # Determine floor height from floor points
-#     floor_z = float(np.min(floor_points[:, 2]))
-#
-#     # Export to CityJSON using the temp.py function
-#     build_lod2_from_floor_and_pointcloud(
-#         boundary_points_xyz=floor_points,
-#         pointcloud_xyz=roof_points,
-#         floor_z=floor_z,
-#         xy_tol=xy_tol,
-#         edge_dist_tol=edge_dist_tol,
-#         samples_along_edge=samples_per_edge,
-#         outpath=output_path
-#     )
-#
-#     print(f"Building exported to CityJSON: {output_path}")
+def merge_lineset(ls1: o3d.geometry.LineSet, ls2: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
+    """
+    Merge two LineSets into one.
+    """
+    pts1 = np.asarray(ls1.points)
+    pts2 = np.asarray(ls2.points)
+    lines1 = np.asarray(ls1.lines)
+    lines2 = np.asarray(ls2.lines)
+
+    # Offset the indices of ls2 by len(pts1)
+    offset = len(pts1)
+    lines2_offset = lines2 + offset
+
+    # Merge points and lines
+    all_points = np.vstack([pts1, pts2])
+    all_lines = np.vstack([lines1, lines2_offset])
+
+    combined = o3d.geometry.LineSet()
+    combined.points = o3d.utility.Vector3dVector(all_points)
+    combined.lines = o3d.utility.Vector2iVector(all_lines)
+
+    # Optionally merge colors if they exist
+    if ls1.has_colors() and ls2.has_colors():
+        colors1 = np.asarray(ls1.colors)
+        colors2 = np.asarray(ls2.colors)
+        all_colors = np.vstack([colors1, colors2])
+        combined.colors = o3d.utility.Vector3dVector(all_colors)
+
+    return combined
+
+
+def get_ordered_polygon(lineset):
+    """Convert a LineSet representing a contour into an ordered list of vertex indices forming a closed polygon."""
+    edges = np.asarray(lineset.lines)
+    points = np.asarray(lineset.points)
+    n = len(points)
+
+    # Build adjacency dict
+    adj = {i: [] for i in range(n)}
+    for e in edges:
+        adj[e[0]].append(e[1])
+        adj[e[1]].append(e[0])
+
+    polygon = [0]
+    visited = set(polygon)
+    while len(polygon) < n:
+        current = polygon[-1]
+        for nei in adj[current]:
+            if nei not in visited:
+                polygon.append(nei)
+                visited.add(nei)
+                break
+        else:
+            break
+    return polygon
+
+
+def group_lineset_polygons(lineset, vertex_offset=0):
+    """Automatically group LineSet edges into polygons for CityJSON."""
+    points = np.asarray(lineset.points)
+    edges = np.asarray(lineset.lines)
+    n = len(points)
+
+    adj = {i: [] for i in range(n)}
+    for e in edges:
+        adj[e[0]].append(e[1])
+        adj[e[1]].append(e[0])
+
+    polygons = []
+    visited = set()
+
+    for start in range(n):
+        if start in visited:
+            continue
+        polygon = [start]
+        visited.add(start)
+        current = start
+        while True:
+            found = False
+            for nei in adj[current]:
+                if nei not in visited:
+                    polygon.append(nei)
+                    visited.add(nei)
+                    current = nei
+                    found = True
+                    break
+            if not found:
+                break
+        if len(polygon) >= 3:
+            polygons.append([v + vertex_offset for v in polygon])
+
+    return polygons
+
+
+def build_cityjson_with_polygons(floor_ls, roof_ls, wall_ls=None):
+    # Convert points to float for JSON
+    floor_pts = np.asarray(floor_ls.points, dtype=float)
+    roof_pts = np.asarray(roof_ls.points, dtype=float)
+    vertices = np.vstack((floor_pts, roof_pts))
+    vertices_list = vertices.tolist()
+    n_floor = len(floor_pts)
+
+    # Floor and roof polygons (indices as ints)
+    floor_poly = [int(v) for v in get_ordered_polygon(floor_ls)]
+    roof_poly = [int(v + n_floor) for v in get_ordered_polygon(roof_ls)]
+
+    # Walls
+    walls = []
+    if wall_ls is not None:
+        # Add wall vertices
+        wall_pts = np.asarray(wall_ls.points, dtype=float)
+        v_offset = len(vertices)
+        vertices = np.vstack((vertices, wall_pts))
+        vertices_list = vertices.tolist()
+        walls = group_lineset_polygons(wall_ls, vertex_offset=v_offset)
+        # Convert indices to int
+        walls = [[int(v) for v in poly] for poly in walls]
+    else:
+        # Auto-generate vertical quads from floor → roof
+        for i in range(len(floor_poly)):
+            v0 = floor_poly[i]
+            v1 = floor_poly[(i + 1) % len(floor_poly)]
+            v2 = roof_poly[(i + 1) % len(roof_poly)]
+            v3 = roof_poly[i]
+            walls.append([v0, v1, v2, v3])
+
+    # Build CityJSON object
+    cityjson = {
+        "type": "CityJSON",
+        "version": "1.1",
+        "CityObjects": {
+            "building_1": {
+                "type": "Building",
+                "geometry": [{
+                    "type": "Solid",
+                    "lod": 2,
+                    "boundaries": [[
+                        [floor_poly],  # floor
+                        walls,         # walls
+                        [roof_poly]    # roof
+                    ]]
+                }]
+            }
+        },
+        "vertices": vertices_list
+    }
+
+    return cityjson
+
+
+def save_cityjson_tk(cityjson):
+    root = tk.Tk()
+    root.withdraw()
+    filepath = filedialog.asksaveasfilename(
+        defaultextension=".json",
+        filetypes=[("CityJSON files", "*.json"), ("All files", "*.*")]
+    )
+    if filepath:
+        with open(filepath, "w") as f:
+            json.dump(cityjson, f, indent=2)
+        print(f"CityJSON saved to: {filepath}")
+    else:
+        print("Save cancelled.")
+
+
+def visualize_cityjson(cityjson):
+    vertices = np.array(cityjson["vertices"])
+    boundaries = cityjson["CityObjects"]["building_1"]["geometry"][0]["boundaries"][0]
+
+    lines = []
+
+    # Iterate over floor, walls, roof
+    for surface in boundaries:  # surface = floor, walls, roof
+        for poly in surface:
+            if len(poly) < 2:
+                continue
+            for i in range(len(poly)):
+                lines.append([poly[i], poly[(i + 1) % len(poly)]])  # close the loop
+
+    line_set = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(vertices),
+        lines=o3d.utility.Vector2iVector(np.array(lines))
+    )
+
+    o3d.visualization.draw_geometries([line_set], window_name="CityJSON Preview")
 
 
 def main():
@@ -1093,7 +1232,19 @@ def main():
     floor_lineset = contour_to_lineset(full_floor_corners)
     wall_slice_lineset = contour_to_lineset(sort_points_in_hull(wall_slice.points, 0.00005))
     vertical_lineset = connect_vertically_aligned_points(floor_lineset.points, wall_slice_lineset.points)
-    o3d.visualization.draw([floor_lineset, wall_slice_lineset, vertical_lineset, roof_wall_lineset])
+
+    # Combine vertical and wall slice lineset
+    combined_lineset = merge_lineset(vertical_lineset, wall_slice_lineset)
+
+    # o3d.visualization.draw([
+    #     floor_lineset,
+    #     combined_lineset,
+    #     roof_wall_lineset
+    # ])
+
+    cityjson = build_cityjson_with_polygons(floor_lineset, roof_wall_lineset, combined_lineset)
+    # visualize_cityjson(cityjson)
+    save_cityjson_tk(cityjson)
 
     # # Print amount of points in combine_till_here
     # print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
