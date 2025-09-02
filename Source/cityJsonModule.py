@@ -284,6 +284,7 @@ def get_keypoints(
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
     NOTE: This function seems to be non-deterministic which may be due to the nature of the ISS algorithm.
+    NOTE: This function has the habbit to crash the entire script from time to time without any message.
 
     Detects distinctive keypoints in a point cloud using the ISS (Intrinsic Shape Signatures) algorithm.
 
