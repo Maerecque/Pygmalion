@@ -932,131 +932,34 @@ def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometr
     return filtered
 
 
-def merge_lineset(ls1: o3d.geometry.LineSet, ls2: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
+def merge_lineset(*linesets: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
     """
-    Merge two LineSets into one.
+    Merge multiple LineSets into one.
+    Args:
+        *linesets: Variable number of o3d.geometry.LineSet objects.
+    Returns:
+        o3d.geometry.LineSet: Combined LineSet.
     """
-    pts1 = np.asarray(ls1.points)
-    pts2 = np.asarray(ls2.points)
-    lines1 = np.asarray(ls1.lines)
-    lines2 = np.asarray(ls2.lines)
+    all_points = []
+    all_lines = []
+    all_colors = []
+    offset = 0
 
-    # Offset the indices of ls2 by len(pts1)
-    offset = len(pts1)
-    lines2_offset = lines2 + offset
+    for ls in linesets:
+        pts = np.asarray(ls.points)
+        lines = np.asarray(ls.lines)
+        all_points.append(pts)
+        all_lines.append(lines + offset)
+        if ls.has_colors():
+            all_colors.append(np.asarray(ls.colors))
+        offset += len(pts)
 
-    # Merge points and lines
-    all_points = np.vstack([pts1, pts2])
-    all_lines = np.vstack([lines1, lines2_offset])
-
-    combined = o3d.geometry.LineSet()
-    combined.points = o3d.utility.Vector3dVector(all_points)
-    combined.lines = o3d.utility.Vector2iVector(all_lines)
-
-    # Optionally merge colors if they exist
-    if ls1.has_colors() and ls2.has_colors():
-        colors1 = np.asarray(ls1.colors)
-        colors2 = np.asarray(ls2.colors)
-        all_colors = np.vstack([colors1, colors2])
-        combined.colors = o3d.utility.Vector3dVector(all_colors)
-
-    return combined
-
-
-def get_ordered_polygon(lineset):
-    """Convert a LineSet representing a contour into an ordered list of vertex indices forming a closed polygon."""
-    edges = np.asarray(lineset.lines)
-    points = np.asarray(lineset.points)
-    n = len(points)
-
-    # Build adjacency dict
-    adj = {i: [] for i in range(n)}
-    for e in edges:
-        adj[e[0]].append(e[1])
-        adj[e[1]].append(e[0])
-
-    polygon = [0]
-    visited = set(polygon)
-    while len(polygon) < n:
-        current = polygon[-1]
-        for nei in adj[current]:
-            if nei not in visited:
-                polygon.append(nei)
-                visited.add(nei)
-                break
-        else:
-            break
-    return polygon
-
-
-def group_lineset_polygons(lineset, vertex_offset=0):
-    """Automatically group LineSet edges into polygons for CityJSON."""
-    points = np.asarray(lineset.points)
-    edges = np.asarray(lineset.lines)
-    n = len(points)
-
-    adj = {i: [] for i in range(n)}
-    for e in edges:
-        adj[e[0]].append(e[1])
-        adj[e[1]].append(e[0])
-
-    polygons = []
-    visited = set()
-
-    for start in range(n):
-        if start in visited:
-            continue
-        polygon = [start]
-        visited.add(start)
-        current = start
-        while True:
-            found = False
-            for nei in adj[current]:
-                if nei not in visited:
-                    polygon.append(nei)
-                    visited.add(nei)
-                    current = nei
-                    found = True
-                    break
-            if not found:
-                break
-        if len(polygon) >= 3:
-            polygons.append([v + vertex_offset for v in polygon])
-
-    return polygons
-
-
-def build_cityjson_with_polygons(floor_ls, roof_ls, wall_ls=None):
-    # Convert points to float for JSON
-    floor_pts = np.asarray(floor_ls.points, dtype=float)
-    roof_pts = np.asarray(roof_ls.points, dtype=float)
-    vertices = np.vstack((floor_pts, roof_pts))
-    vertices_list = vertices.tolist()
-    n_floor = len(floor_pts)
-
-    # Floor and roof polygons (indices as ints)
-    floor_poly = [int(v) for v in get_ordered_polygon(floor_ls)]
-    roof_poly = [int(v + n_floor) for v in get_ordered_polygon(roof_ls)]
-
-    # Walls
-    walls = []
-    if wall_ls is not None:
-        # Add wall vertices
-        wall_pts = np.asarray(wall_ls.points, dtype=float)
-        v_offset = len(vertices)
-        vertices = np.vstack((vertices, wall_pts))
-        vertices_list = vertices.tolist()
-        walls = group_lineset_polygons(wall_ls, vertex_offset=v_offset)
-        # Convert indices to int
-        walls = [[int(v) for v in poly] for poly in walls]
-    else:
-        # Auto-generate vertical quads from floor → roof
-        for i in range(len(floor_poly)):
-            v0 = floor_poly[i]
-            v1 = floor_poly[(i + 1) % len(floor_poly)]
-            v2 = roof_poly[(i + 1) % len(roof_poly)]
-            v3 = roof_poly[i]
-            walls.append([v0, v1, v2, v3])
+    merged = o3d.geometry.LineSet()
+    merged.points = o3d.utility.Vector3dVector(np.vstack(all_points))
+    merged.lines = o3d.utility.Vector2iVector(np.vstack(all_lines))
+    if all_colors and all(len(c) == len(p) for c, p in zip(all_colors, all_points)):
+        merged.colors = o3d.utility.Vector3dVector(np.vstack(all_colors))
+    return merged
 
     # Build CityJSON object
     cityjson = {
