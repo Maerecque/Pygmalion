@@ -962,65 +962,147 @@ def merge_lineset(*linesets: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
         merged.colors = o3d.utility.Vector3dVector(np.vstack(all_colors))
     return merged
 
-    # Build CityJSON object
+
+def export_3d_building_to_cityjson_with_dialog(
+    floor_lineset,
+    roof_lineset,
+    cityjson_properties=None
+):
+    """Export a 3D building (floor, walls, roof) to CityJSON via a save dialog.
+
+    The floor and roof are exported as polygons. Walls are vertical polygons
+    connecting corresponding points on the floor and roof boundaries. The user
+    selects the output file via a Tkinter dialog.
+
+    Args:
+        floor_lineset (o3d.geometry.LineSet): Open3D LineSet for the floor.
+        roof_lineset (o3d.geometry.LineSet): Open3D LineSet for the roof.
+        cityjson_properties (dict, optional): Additional CityJSON properties
+            (e.g., metadata, attributes). Defaults to None.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If any lineset is empty or not a valid Open3D LineSet.
+    """
+    def lineset_to_ring(lineset):
+        """Convert a LineSet to an ordered closed ring of points."""
+        points = np.asarray(lineset.points)
+        lines = np.asarray(lineset.lines)
+        if len(points) == 0 or len(lines) == 0:
+            raise ValueError("LineSet is empty.")
+        # Build ordered list of indices from lines
+        idx_order = [lines[0][0], lines[0][1]]
+        used = set(idx_order)
+        for _ in range(len(lines) - 1):
+            last = idx_order[-1]
+            found = False
+            for line in lines:
+                if line[0] == last and line[1] not in used:
+                    idx_order.append(line[1])
+                    used.add(line[1])
+                    found = True
+                    break
+                elif line[1] == last and line[0] not in used:
+                    idx_order.append(line[0])
+                    used.add(line[0])
+                    found = True
+                    break
+            if not found:
+                break
+        # Close the ring if not already closed
+        if idx_order[0] != idx_order[-1]:
+            idx_order.append(idx_order[0])
+        return points, idx_order
+
+    # Get ordered rings for floor and roof
+    floor_points, floor_ring = lineset_to_ring(floor_lineset)
+    roof_points, roof_ring = lineset_to_ring(roof_lineset)
+
+    # Stack all points and deduplicate globally
+    all_points_concat = np.vstack([floor_points, roof_points])
+    unique_points, inverse = np.unique(
+        np.round(all_points_concat, 8), axis=0, return_inverse=True
+    )
+
+    # Map local indices to global indices
+    floor_offset = 0
+    roof_offset = len(floor_points)
+    floor_global = [int(inverse[floor_offset + i]) for i in floor_ring]
+    roof_global = [int(inverse[roof_offset + i]) for i in roof_ring]
+
+    # Floor and roof polygons (closed rings)
+    floor_surface = [floor_global]
+    roof_surface = [roof_global]
+
+    # Wall polygons: vertical faces between floor and roof
+    wall_surfaces = []
+    n = min(len(floor_global), len(roof_global)) - 1  # -1 because last is duplicate (closed ring)
+    for i in range(n):
+        wall = [
+            floor_global[i],
+            floor_global[i + 1],
+            roof_global[i + 1],
+            roof_global[i],
+            floor_global[i]
+        ]
+        wall_surfaces.append([wall])
+
+    # Build CityJSON structure
     cityjson = {
-        "type": "CityJSON",
-        "version": "1.1",
-        "CityObjects": {
-            "building_1": {
-                "type": "Building",
-                "geometry": [{
-                    "type": "Solid",
-                    "lod": 2,
-                    "boundaries": [[
-                        [floor_poly],  # floor
-                        walls,         # walls
-                        [roof_poly]    # roof
-                    ]]
-                }]
+        'type': 'CityJSON',
+        'version': '1.1',
+        'CityObjects': {
+            'building_1': {
+                'type': 'Building',
+                'geometry': [{
+                    'type': 'MultiSurface',
+                    'lod': 2,
+                    'boundaries': [
+                        floor_surface,         # FloorSurface
+                        roof_surface,          # RoofSurface
+                        *wall_surfaces         # WallSurfaces
+                    ],
+                    'semantics': {
+                        'surfaces': (
+                            [{'type': 'FloorSurface'}] +
+                            [{'type': 'RoofSurface'}] +
+                            [{'type': 'WallSurface'} for _ in wall_surfaces]
+                        ),
+                        'values': (
+                            [[0]] + [[1]] + [[2 + i] for i in range(len(wall_surfaces))]
+                        )
+                    }
+                }],
+                'attributes': {
+                    'name': 'Example Building'
+                }
             }
         },
-        "vertices": vertices_list
+        'vertices': unique_points.tolist(),
+        'metadata': {
+            'referenceSystem': 'urn:ogc:def:crs:EPSG::28992'
+        }
     }
+    if cityjson_properties:
+        cityjson.update(cityjson_properties)
 
-    return cityjson
-
-
-def save_cityjson_tk(cityjson):
+    # Tkinter save file dialog
     root = tk.Tk()
     root.withdraw()
-    filepath = filedialog.asksaveasfilename(
-        defaultextension=".json",
-        filetypes=[("CityJSON files", "*.json"), ("All files", "*.*")]
+    file_path = filedialog.asksaveasfilename(
+        defaultextension='.json',
+        filetypes=[('CityJSON files', '*.json')],
+        title='Save CityJSON file'
     )
-    if filepath:
-        with open(filepath, "w") as f:
-            json.dump(cityjson, f, indent=2)
-        print(f"CityJSON saved to: {filepath}")
-    else:
+    if not file_path:
         print("Save cancelled.")
+        return
 
-
-def visualize_cityjson(cityjson):
-    vertices = np.array(cityjson["vertices"])
-    boundaries = cityjson["CityObjects"]["building_1"]["geometry"][0]["boundaries"][0]
-
-    lines = []
-
-    # Iterate over floor, walls, roof
-    for surface in boundaries:  # surface = floor, walls, roof
-        for poly in surface:
-            if len(poly) < 2:
-                continue
-            for i in range(len(poly)):
-                lines.append([poly[i], poly[(i + 1) % len(poly)]])  # close the loop
-
-    line_set = o3d.geometry.LineSet(
-        points=o3d.utility.Vector3dVector(vertices),
-        lines=o3d.utility.Vector2iVector(np.array(lines))
-    )
-
-    o3d.visualization.draw_geometries([line_set], window_name="CityJSON Preview")
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(cityjson, f, indent=2)
+    print(f"CityJSON file saved to {file_path}")
 
 
 def main():
@@ -1059,7 +1141,6 @@ def main():
 
     # opce(create_point_cloud(floor_corners, color=[1, 0, 0]), show_help=False)
 
-    # IDEA ADD THESE TWO TOGETHER!!!
     temp_merge = merge_pcds(
         [
             get_keypoints(create_point_cloud(floor_contour), gamma_21=0.975, gamma_32=0.975, min_neighbors=3, print_stats=False),
@@ -1070,27 +1151,6 @@ def main():
     full_floor_corners = sort_points_in_hull(temp_merge.points, 0.00005)
 
     full_floor_corners = floor_hull  # FOR TESTING
-
-    # # Make ndarray out of merge_pcds(new_pcd_tuple)
-    # pts = np.asarray(merge_pcds(new_pcd_tuple).points)
-
-    # # result = extract_ridges_and_skeleton(
-    #     points=pts,
-    #     contour_points=floor_hull,
-    #     plane_distance_threshold=0.03,
-    #     plane_min_points=500,
-    #     line_point_tol=0.05,
-    #     apex_step=0.2,
-    #     max_planes=3,
-    #     alpha=0.5,   # adjust alpha: smaller = tighter concave fit
-    #     max_contour_points=15000,
-    #     contour_grid=0.05
-    # )
-
-    # visualize_result(result)
-
-    # print(f"Detected {len(floor_hull)} points in the floor hull.")
-    # print(f"Detected {len(floor_corners)} corners in the floor hull.")
 
     # 6. Create a wall slice at a certain height above the floor
     floor_corners_pcd = create_point_cloud(full_floor_corners, color=[1, 0, 0])  # Red color for corners
@@ -1116,7 +1176,6 @@ def main():
     sliced_roof_list = slice_roof_up(new_roof_pcd, 30, slab_fatness=0.01, voxel_size=0.05)
 
     # Take the first and second list in sliced_roof_list
-    # sliced_roof_edge = np.vstack([sliced_roof_list[0], sliced_roof_list[1]])
     roof_wall_lineset = connect_vertically_aligned_points2(wall_slice.points, sliced_roof_list, 0.1)
 
     # Connect the rest of the roof layers with each other from top to the bottom and per layer create a contour
@@ -1126,19 +1185,12 @@ def main():
 
     roof_wall_lineset = filter_lines_within_contour(full_floor_corners, roof_wall_lineset)
 
-    # # 9. For each hull point, keep the highest point in the sliced roof (find roof outline)
-    # filtered_sliced_roof = keep_highest_point_above_corner(create_point_cloud(floor_hull), sliced_roof, 0.05)
-
-    # # 10. Merge the wall, floor, and roof outline for visualization
-    # combine_till_here = merge_pcds([full_floor_corners, wall_slice, sliced_roof])  # noqa: F841
-    # opce(combine_till_here)
-
     floor_lineset = contour_to_lineset(full_floor_corners)
     wall_slice_lineset = contour_to_lineset(sort_points_in_hull(wall_slice.points, 0.00005))
     vertical_lineset = connect_vertically_aligned_points(floor_lineset.points, wall_slice_lineset.points)
 
     # Combine vertical and wall slice lineset
-    combined_lineset = merge_lineset(vertical_lineset, wall_slice_lineset)
+    combined_lineset = merge_lineset(vertical_lineset, wall_slice_lineset)  # noqa: F841
 
     # o3d.visualization.draw([
     #     floor_lineset,
@@ -1146,25 +1198,7 @@ def main():
     #     roof_wall_lineset
     # ])
 
-    cityjson = build_cityjson_with_polygons(floor_lineset, roof_wall_lineset, combined_lineset)
-    # visualize_cityjson(cityjson)
-    save_cityjson_tk(cityjson)
-
-    # # Print amount of points in combine_till_here
-    # print(f"Total points in combined point cloud: {len(combine_till_here.points)}")
-
-    # # NEW: Export to CityJSON
-    # export_to_cityjson(
-    #     point_cloud=combine_till_here,
-    #     floor_points=floor_corners,
-    #     roof_points=np.asarray(filtered_sliced_roof.points),
-    #     output_path="wharf_cellar.json",
-    #     xy_tol=0.05,
-    #     edge_dist_tol=0.15,
-    #     samples_per_edge=12
-    # )
-
-    exit()
+    export_3d_building_to_cityjson_with_dialog(floor_lineset, combined_lineset, roof_wall_lineset)
 
 
 if __name__ == "__main__":
