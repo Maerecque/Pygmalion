@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import sys
 import os
-from typing import List, Union
+from typing import List, Union, Optional
 
 import json
 import tkinter as tk
@@ -12,7 +12,9 @@ from tkinter import filedialog
 
 # Use alpha shape to find concave boundary (captures inner/underlying edges)
 from shapely.geometry import MultiPoint, LineString, Polygon
+from shapely.geometry import Point as ShapelyPoint
 from shapely.ops import unary_union, polygonize
+from shapely.ops import triangulate as shapely_triangulate
 from scipy.spatial import Delaunay
 from scipy.spatial import cKDTree
 
@@ -1520,7 +1522,7 @@ def main():
         return
 
     # 2. Remove noise from the point cloud
-    pcd = rns(pcd)
+    pcd = rns(pcd, False)
 
     # 3. Transform the point cloud into a height map (returns tuple: [floor, wall, ...])
     new_pcd_tuple = transform_pointcloud_to_height_map(
@@ -1578,6 +1580,11 @@ def main():
     # 8. Slice the roof into horizontal slabs and flatten each slice
     sliced_roof_list = slice_roof_up(new_roof_pcd, 30, slab_fatness=0.01, voxel_size=0.05)
 
+    # # This is not used right now but not sure if to delete it
+    # floor_mesh_ball_pivoting = reconstruct_mesh_ball_pivoting(floor_corners_pcd, k=30, visualize=True)
+    # wall_mesh_ball_pivoting = reconstruct_mesh_ball_pivoting(new_pcd_tuple[2], visualize=True)
+    # roof_mesh_ball_pivoting = reconstruct_mesh_ball_pivoting(new_roof_pcd, visualize=True)
+
     # Take the first and second list in sliced_roof_list
     roof_wall_lineset = connect_vertically_aligned_points2(wall_slice.points, sliced_roof_list, 0.1)
 
@@ -1595,13 +1602,22 @@ def main():
     # Combine vertical and wall slice lineset
     combined_lineset = merge_lineset(vertical_lineset, wall_slice_lineset)  # noqa: F841
 
-    # o3d.visualization.draw([
-    #     floor_lineset,
-    #     combined_lineset,
-    #     roof_wall_lineset
-    # ])
+    total_lineset = merge_lineset(combined_lineset, roof_wall_lineset)
 
-    export_3d_building_to_cityjson_with_dialog(floor_lineset, combined_lineset, roof_wall_lineset)
+    o3d.visualization.draw([
+        floor_lineset,
+        combined_lineset,
+        roof_wall_lineset
+    ])
+
+    part12 = lineset_to_trianglemesh(total_lineset, full_floor_corners)
+    part12r = repair_mesh_with_contour(part12, create_point_cloud(full_floor_corners))
+    # o3d.visualization.draw(part12r)
+    part3 = lineset_to_trianglemesh(floor_lineset, full_floor_corners)
+
+    o3d.visualization.draw([part12r, part3])
+
+    # export_3d_building_to_cityjson_with_dialog(floor_lineset, combined_lineset, roof_wall_lineset)
 
 
 if __name__ == "__main__":
