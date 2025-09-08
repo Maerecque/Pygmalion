@@ -965,91 +965,117 @@ def merge_lineset(*linesets: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
 
 def export_3d_building_to_cityjson_with_dialog(
     floor_lineset,
+    wall_lineset,
     roof_lineset,
     cityjson_properties=None
 ):
     """Export a 3D building (floor, walls, roof) to CityJSON via a save dialog.
 
-    The floor and roof are exported as polygons. Walls are vertical polygons
-    connecting corresponding points on the floor and roof boundaries. The user
-    selects the output file via a Tkinter dialog.
+    Repairs invalid polygons (removes duplicates, closes ring, ensures 3 unique vertices).
 
     Args:
-        floor_lineset (o3d.geometry.LineSet): Open3D LineSet for the floor.
-        roof_lineset (o3d.geometry.LineSet): Open3D LineSet for the roof.
-        cityjson_properties (dict, optional): Additional CityJSON properties
-            (e.g., metadata, attributes). Defaults to None.
+        floor_lineset (o3d.geometry.LineSet): Floor boundary as LineSet.
+        wall_lineset (o3d.geometry.LineSet): Wall boundary as LineSet.
+        roof_lineset (o3d.geometry.LineSet): Roof boundary as LineSet.
+        cityjson_properties (dict, optional): Extra CityJSON properties.
 
     Returns:
         None
 
     Raises:
-        ValueError: If any lineset is empty or not a valid Open3D LineSet.
+        ValueError: If all surfaces are invalid or empty.
     """
-    def lineset_to_ring(lineset):
-        """Convert a LineSet to an ordered closed ring of points."""
+    def lineset_to_closed_ring(lineset):
+        """Convert a LineSet to a closed ring of vertex indices."""
         points = np.asarray(lineset.points)
         lines = np.asarray(lineset.lines)
         if len(points) == 0 or len(lines) == 0:
             raise ValueError("LineSet is empty.")
-        # Build ordered list of indices from lines
-        idx_order = [lines[0][0], lines[0][1]]
+        idx_order = [int(lines[0][0]), int(lines[0][1])]
         used = set(idx_order)
         for _ in range(len(lines) - 1):
             last = idx_order[-1]
             found = False
             for line in lines:
-                if line[0] == last and line[1] not in used:
-                    idx_order.append(line[1])
-                    used.add(line[1])
+                a, b = int(line[0]), int(line[1])
+                if a == last and b not in used:
+                    idx_order.append(b)
+                    used.add(b)
                     found = True
                     break
-                elif line[1] == last and line[0] not in used:
-                    idx_order.append(line[0])
-                    used.add(line[0])
+                elif b == last and a not in used:
+                    idx_order.append(a)
+                    used.add(a)
                     found = True
                     break
             if not found:
                 break
-        # Close the ring if not already closed
-        if idx_order[0] != idx_order[-1]:
-            idx_order.append(idx_order[0])
         return points, idx_order
 
-    # Get ordered rings for floor and roof
-    floor_points, floor_ring = lineset_to_ring(floor_lineset)
-    roof_points, roof_ring = lineset_to_ring(roof_lineset)
+    def repair_polygon(idx_ring, pts):
+        """Repair a ring: remove consecutive duplicates, close, ensure 3 unique vertices."""
+        # Remove consecutive duplicates
+        idx_ring = [idx_ring[0]] + [idx for i, idx in enumerate(idx_ring[1:]) if idx != idx_ring[i]]
+        # Close the ring if not closed
+        if idx_ring[0] != idx_ring[-1]:
+            idx_ring.append(idx_ring[0])
+        # Ensure at least 3 unique vertices
+        unique = []
+        for idx in idx_ring:
+            if idx not in unique:
+                unique.append(idx)
+        if len(unique) < 3:
+            # Try to add more unique points from the lineset
+            all_indices = set(range(len(pts)))
+            missing = list(all_indices - set(unique))
+            while len(unique) < 3 and missing:
+                unique.append(missing.pop())
+            # If still not enough, duplicate last unique
+            while len(unique) < 3:
+                unique.append(unique[-1])
+            # Rebuild closed ring
+            idx_ring = unique + [unique[0]]
+        return idx_ring
 
-    # Stack all points and deduplicate globally
-    all_points_concat = np.vstack([floor_points, roof_points])
+    # 1. Extract closed rings for floor, wall, and roof
+    surface_names = ['FloorSurface', 'WallSurface', 'RoofSurface']
+    linesets = [floor_lineset, wall_lineset, roof_lineset]
+    all_points = []
+    rings = []
+    for ls in linesets:
+        try:
+            pts, ring = lineset_to_closed_ring(ls)
+            all_points.append(pts)
+            rings.append(ring)
+        except Exception as e:
+            all_points.append(np.zeros((0, 3)))
+            rings.append([])
+            print(f"Warning: Could not extract ring: {e}")
+
+    # 2. Stack all points and deduplicate globally
+    all_points_concat = np.vstack([p for p in all_points if len(p) > 0])
     unique_points, inverse = np.unique(
         np.round(all_points_concat, 8), axis=0, return_inverse=True
     )
 
-    # Map local indices to global indices
-    floor_offset = 0
-    roof_offset = len(floor_points)
-    floor_global = [int(inverse[floor_offset + i]) for i in floor_ring]
-    roof_global = [int(inverse[roof_offset + i]) for i in roof_ring]
+    # 3. Remap and repair rings to global indices
+    offsets = np.cumsum([0] + [len(p) for p in all_points[:-1]])
+    boundaries = []
+    semantics = []
+    for i, (ring, pts, name) in enumerate(zip(rings, all_points, surface_names)):
+        if len(ring) == 0 or len(pts) == 0:
+            print(f"Warning: {name} is empty and will be skipped.")
+            continue
+        offset = offsets[i]
+        idx_ring = [int(inverse[offset + idx]) for idx in ring]
+        idx_ring = repair_polygon(idx_ring, unique_points)
+        boundaries.append([idx_ring])
+        semantics.append({'type': name})
 
-    # Floor and roof polygons (closed rings)
-    floor_surface = [floor_global]
-    roof_surface = [roof_global]
+    if not boundaries:
+        raise ValueError("No valid surfaces to export.")
 
-    # Wall polygons: vertical faces between floor and roof
-    wall_surfaces = []
-    n = min(len(floor_global), len(roof_global)) - 1  # -1 because last is duplicate (closed ring)
-    for i in range(n):
-        wall = [
-            floor_global[i],
-            floor_global[i + 1],
-            roof_global[i + 1],
-            roof_global[i],
-            floor_global[i]
-        ]
-        wall_surfaces.append([wall])
-
-    # Build CityJSON structure
+    # 4. Build CityJSON object
     cityjson = {
         'type': 'CityJSON',
         'version': '1.1',
@@ -1059,20 +1085,10 @@ def export_3d_building_to_cityjson_with_dialog(
                 'geometry': [{
                     'type': 'MultiSurface',
                     'lod': 2,
-                    'boundaries': [
-                        floor_surface,         # FloorSurface
-                        roof_surface,          # RoofSurface
-                        *wall_surfaces         # WallSurfaces
-                    ],
+                    'boundaries': boundaries,
                     'semantics': {
-                        'surfaces': (
-                            [{'type': 'FloorSurface'}] +
-                            [{'type': 'RoofSurface'}] +
-                            [{'type': 'WallSurface'} for _ in wall_surfaces]
-                        ),
-                        'values': (
-                            [[0]] + [[1]] + [[2 + i] for i in range(len(wall_surfaces))]
-                        )
+                        'surfaces': semantics,
+                        'values': [[i] for i in range(len(boundaries))]
                     }
                 }],
                 'attributes': {
@@ -1080,7 +1096,7 @@ def export_3d_building_to_cityjson_with_dialog(
                 }
             }
         },
-        'vertices': unique_points.tolist(),
+        'vertices': [list(map(float, pt)) for pt in unique_points.tolist()],
         'metadata': {
             'referenceSystem': 'urn:ogc:def:crs:EPSG::28992'
         }
@@ -1088,7 +1104,7 @@ def export_3d_building_to_cityjson_with_dialog(
     if cityjson_properties:
         cityjson.update(cityjson_properties)
 
-    # Tkinter save file dialog
+    # 5. Tkinter save file dialog
     root = tk.Tk()
     root.withdraw()
     file_path = filedialog.asksaveasfilename(
