@@ -276,3 +276,35 @@ def save_pcd_as_las(input_pcd: o3d.cpu.pybind.geometry.PointCloud):
     except Exception as e:
         print("Something went wrong during the saving process.")
         print(e)
+
+
+def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
+    """
+    Load a point cloud file selected by the user through a file dialog.
+
+    Prompts the user to select a LAS or LAZ point cloud file using a file dialog,
+    then loads the file using the custom file handler. No preprocessing is applied.
+
+    Returns:
+        o3d.geometry.PointCloud: The loaded point cloud from the selected file.
+                                Returns None if no file is selected or if loading fails.
+
+    Raises:
+        FileNotFoundError: If the selected file does not exist or cannot be accessed.
+        ValueError: If the selected file is not a valid LAS/LAZ format.
+        IOError: If there are issues reading the file (corrupted data, permissions, etc.).
+
+    Example:
+        >>> pcd = load_and_preprocess_pointcloud()
+        Point cloud loaded and preprocessed. Now starting surface reconstruction...
+        >>> print(f"Loaded point cloud with {len(pcd.points)} points")
+        Loaded point cloud with 125000 points
+
+    Note:
+        - Only LAS and LAZ file formats are supported
+        - Despite the function name suggesting preprocessing, no actual preprocessing is performed
+        - The user can cancel the file dialog, in which case None may be returned
+    """
+    pcd = readout_LAS_file(get_file_path("Select a point cloud file to process", "LAS files (*.las *.laz)"))
+    print("Point cloud loaded and preprocessed. Now starting surface reconstruction...")
+    return pcd
