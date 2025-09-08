@@ -1,3 +1,39 @@
+"""
+floorplanFinder.py
+
+Boundary and keypoint detection utilities for 3D floorplan point clouds using Open3D, Shapely, and SciPy.
+
+Modules:
+    - numpy
+    - open3d
+    - scipy.spatial
+    - shapely.geometry
+    - shapely.ops
+
+Imports:
+    - Delaunay, cKDTree: Used for triangulation and nearest neighbor search in boundary detection.
+    - unary_union, polygonize: Used for constructing alpha shapes (concave hulls) from edge sets.
+    - MultiPoint, LineString: Used for geometric operations and hull construction.
+
+Functions:
+    - find_boundary_from_floor: Projects a 3D point cloud to 2D, detects boundary points using alpha shapes, and returns 3D
+      boundary coordinates.
+    - alpha_shape: Computes the alpha shape (concave hull) of a set of 2D points using Delaunay triangulation and circumradius
+      filtering.
+    - sort_points_in_hull: Sorts boundary points in spatial order using a greedy nearest-neighbor approach, optionally closing
+      the loop.
+    - get_keypoints: Detects distinctive keypoints in a point cloud using the ISS (Intrinsic Shape Signatures) algorithm.
+    - find_corners: Detects corner points in an ordered 3D contour by analyzing direction changes and merging nearby detections.
+
+Typical Usage:
+    1. Use find_boundary_from_floor to extract boundary points from a 3D floorplan point cloud.
+    2. Use sort_points_in_hull to spatially order boundary points for further processing.
+    3. Use get_keypoints to detect salient keypoints in the point cloud for matching or registration.
+    4. Use find_corners to identify corner points in noisy contours for geometric analysis or simplification.
+
+See individual function docstrings for details.
+"""
+
 import numpy as np
 import open3d as o3d
 from scipy.spatial import Delaunay, cKDTree

@@ -1,3 +1,39 @@
+"""
+linesetTools.py
+
+Utility functions for processing 3D geometry, including LineSet and mesh operations for building modeling.
+
+Modules:
+    - numpy
+    - open3d
+    - scipy.spatial
+    - shapely.geometry
+    - tkinter
+    - json
+
+Imports:
+    - Delaunay: Performs 2D triangulation for mesh generation.
+    - Polygon, Point, LineString: Used for geometric containment and filtering.
+    - filedialog: Provides file save dialog for exporting CityJSON.
+
+Functions:
+    - contour_to_lineset: Creates a closed LineSet from ordered contour points.
+    - filter_lines_within_contour: Filters lines in a LineSet, keeping only those completely within a given 2D contour.
+    - merge_lineset: Merges multiple LineSets into a single LineSet.
+    - lineset_to_trianglemesh: Converts a LineSet to a TriangleMesh, keeping only triangles within a supplied 2D contour.
+    - generate_city_json_from_building: Exports a 3D building (floor, walls, roof) to CityJSON using a save dialog, repairing
+      invalid polygons.
+
+Typical Usage:
+    1. Use contour_to_lineset to create a closed loop from contour points.
+    2. Use filter_lines_within_contour to retain only lines inside a boundary.
+    3. Use merge_lineset to combine multiple LineSets for unified processing.
+    4. Use lineset_to_trianglemesh to generate a mesh from a LineSet within a contour.
+    5. Use generate_city_json_from_building to export building geometry to CityJSON format.
+
+See individual function docstrings for details.
+"""
+
 import numpy as np
 import open3d as o3d
 from typing import Optional
@@ -11,11 +47,24 @@ from shapely.geometry import Point as ShapelyPoint, Polygon, LineString
 
 def contour_to_lineset(points):
     """
-    Create a closed LineSet from ordered contour points.
-    Args:
-        points (np.ndarray): Nx3 array of ordered 3D points.
+    Creates a closed LineSet from ordered 3D contour points.
+
+    Connects each point in `points` to the next, forming a closed loop.
+
+    Parameters:
+        points (np.ndarray): Array of shape (N, 3) containing ordered 3D coordinates of the contour.
+
     Returns:
-        o3d.geometry.LineSet
+        o3d.geometry.LineSet: Open3D LineSet object representing the closed contour.
+
+    Example:
+        >>> contour = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
+        >>> lineset = contour_to_lineset(contour)
+        >>> print(len(lineset.lines))  # Should print 4
+
+    Note:
+        - The contour is closed by connecting the last point back to the first.
+        - All input points are included in the output LineSet.
     """
     n = len(points)
     lines = [[i, (i + 1) % n] for i in range(n)]  # closed loop
@@ -27,10 +76,28 @@ def contour_to_lineset(points):
 
 def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
     """
-    contour_points: Nx3 numpy array that represents the 2D contour in the XY plane.
-    lineset: o3d.geometry.LineSet with lines.
+    Filters lines in a LineSet, keeping only those that are completely within a given 2D contour.
 
-    Return: filtered o3d.geometry.LineSet without lines that fall outside the contour.
+    For each line in `lineset`, checks if the line segment (projected to XY) is fully contained within or on the boundary of the
+    polygon defined by `contour_points`. Only such lines are retained in the output.
+
+    Parameters:
+        contour_points (np.ndarray): Array of shape (N, 3) representing ordered 3D coordinates of the 2D contour (XY plane).
+        lineset (o3d.geometry.LineSet): Open3D LineSet containing lines to be filtered.
+
+    Returns:
+        o3d.geometry.LineSet: Filtered LineSet containing only lines within the contour.
+
+    Example:
+        >>> contour = np.array([[0, 0, 0], [2, 0, 0], [2, 2, 0], [0, 2, 0]])
+        >>> lineset = contour_to_lineset(np.array([[0.5, 0.5, 0], [1.5, 0.5, 0], [1.5, 1.5, 0], [0.5, 1.5, 0]]))
+        >>> filtered = filter_lines_within_contour(contour, lineset)
+        >>> print(len(filtered.lines))  # Should print 4
+
+    Note:
+        - The contour is treated as a closed polygon in the XY plane.
+        - Lines are retained only if fully inside or on the boundary of the polygon.
+        - All original points are preserved in the output LineSet.
     """
     # Ensure contour is closed (first point == last point)
     if not np.allclose(contour_points[0], contour_points[-1]):
@@ -64,11 +131,28 @@ def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometr
 
 def merge_lineset(*linesets: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
     """
-    Merge multiple LineSets into one.
-    Args:
-        *linesets: Variable number of o3d.geometry.LineSet objects.
+    Merges multiple LineSets into a single LineSet.
+
+    Connects pairs of 3D points from two sets (floor and wall) if their XY coordinates are aligned within a specified tolerance.
+    For each point in `floor_points`, finds the closest point in `wall_points` (in XY plane) within `xy_tol` distance,
+    and creates a line connecting them. Useful for visualizing vertical connections between lower and upper surfaces.
+
+    Parameters:
+        *linesets: Variable number of o3d.geometry.LineSet objects to merge.
+
     Returns:
-        o3d.geometry.LineSet: Combined LineSet.
+        o3d.geometry.LineSet: Combined LineSet containing all points and lines.
+
+    Example:
+        >>> floor = np.array([[0, 0, 0], [1, 1, 0]])
+        >>> wall = np.array([[0, 0, 3], [1, 1, 3]])
+        >>> lineset = connect_vertically_aligned_points(floor, wall, xy_tol=0.05)
+        >>> print(len(lineset.lines))  # Should print 2
+
+    Note:
+        - Uses KDTree for efficient nearest neighbor search in the XY plane.
+        - Only connects each floor point to its closest wall point if within tolerance.
+        - All points (floor and wall) are included in the output LineSet.
     """
     all_points = []
     all_lines = []
@@ -94,12 +178,25 @@ def merge_lineset(*linesets: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
 
 def lineset_to_trianglemesh(lineset, contour_points):
     """
-    Convert a LineSet to a TriangleMesh, only keeping triangles within a supplied 2D contour.
-    Args:
-        lineset (o3d.geometry.LineSet): The input LineSet (assumed to be a closed loop).
-        contour_points (np.ndarray): Nx3 array representing the 2D contour in the XY plane.
+    Converts a LineSet to a TriangleMesh, keeping only triangles within a supplied 2D contour.
+
+    Parameters:
+        lineset (o3d.geometry.LineSet): The input LineSet containing 3D points and lines.
+        contour_points (np.ndarray): Array of shape (N, 3) representing the 2D contour in the XY plane.
+
     Returns:
-        o3d.geometry.TriangleMesh: Mesh with triangles inside the contour.
+        o3d.geometry.TriangleMesh: Open3D TriangleMesh object containing triangles whose centroids are inside the contour.
+
+    Example:
+        >>> contour = np.array([[0, 0, 0], [2, 0, 0], [2, 2, 0], [0, 2, 0]])
+        >>> lineset = contour_to_lineset(np.array([[0.5, 0.5, 0], [1.5, 0.5, 0], [1.5, 1.5, 0], [0.5, 1.5, 0]]))
+        >>> mesh = lineset_to_trianglemesh(lineset, contour)
+        >>> print(len(mesh.triangles))  # Should print number of triangles inside contour
+
+    Note:
+        - Projects all points to the XY plane for triangulation.
+        - Only triangles whose centroid is inside or on the boundary of the contour are kept.
+        - Raises ValueError if there are fewer than 3 points to form a mesh.
     """
     points = np.asarray(lineset.points)
     if len(points) < 3:
@@ -130,21 +227,23 @@ def lineset_to_trianglemesh(lineset, contour_points):
     return mesh
 
 
-def export_3d_building_to_cityjson_with_dialog(
+# This function is not even in use anymore, but I want to keep it for now
+def generate_city_json_from_building(
     floor_lineset: o3d.geometry.LineSet,
     wall_lineset: o3d.geometry.LineSet,
     roof_lineset: o3d.geometry.LineSet,
     cityjson_properties: Optional[dict] = None
 ):
-    """Export a 3D building (floor, walls, roof) to CityJSON via a save dialog.
+    """
+    Export a 3D building (floor, walls, roof) to CityJSON using a save dialog.
 
-    Repairs invalid polygons (removes duplicates, closes ring, ensures 3 unique vertices).
+    Repairs invalid polygons by removing duplicates, closing rings, and ensuring at least 3 unique vertices.
 
-    Args:
+    Parameters:
         floor_lineset (o3d.geometry.LineSet): Floor boundary as LineSet.
         wall_lineset (o3d.geometry.LineSet): Wall boundary as LineSet.
         roof_lineset (o3d.geometry.LineSet): Roof boundary as LineSet.
-        cityjson_properties (dict, optional): Extra CityJSON properties.
+        cityjson_properties (dict, optional): Additional CityJSON properties.
 
     Returns:
         None
@@ -153,7 +252,15 @@ def export_3d_building_to_cityjson_with_dialog(
         ValueError: If all surfaces are invalid or empty.
     """
     def lineset_to_closed_ring(lineset):
-        """Convert a LineSet to a closed ring of vertex indices."""
+        """
+        Convert a LineSet to a closed ring of vertex indices.
+
+        Parameters:
+            lineset (o3d.geometry.LineSet): Input LineSet.
+
+        Returns:
+            tuple: (points, idx_order) where points is the array of points and idx_order is the ordered list of indices.
+        """
         points = np.asarray(lineset.points)
         lines = np.asarray(lineset.lines)
         if len(points) == 0 or len(lines) == 0:
@@ -180,7 +287,16 @@ def export_3d_building_to_cityjson_with_dialog(
         return points, idx_order
 
     def repair_polygon(idx_ring, pts):
-        """Repair a ring: remove consecutive duplicates, close, ensure 3 unique vertices."""
+        """
+        Repair a ring by removing consecutive duplicates, closing the ring, and ensuring at least 3 unique vertices.
+
+        Parameters:
+            idx_ring (list): List of vertex indices forming the ring.
+            pts (np.ndarray): Array of points.
+
+        Returns:
+            list: Repaired ring of vertex indices.
+        """
         # Remove consecutive duplicates
         idx_ring = [idx_ring[0]] + [idx for i, idx in enumerate(idx_ring[1:]) if idx != idx_ring[i]]
         # Close the ring if not closed
@@ -229,7 +345,7 @@ def export_3d_building_to_cityjson_with_dialog(
     offsets = np.cumsum([0] + [len(p) for p in all_points[:-1]])
     boundaries = []
     semantics = []
-    for i, (ring, pts, name) in enumerate(zip(rings, all_points, surface_names)):
+    for i, (ring, pts, name) in zip(rings, all_points, surface_names):
         if len(ring) == 0 or len(pts) == 0:
             print(f"Warning: {name} is empty and will be skipped.")
             continue

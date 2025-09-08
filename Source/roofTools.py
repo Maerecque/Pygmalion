@@ -1,3 +1,30 @@
+"""
+roofTools.py
+
+Utility functions for processing roof point clouds, including slicing roofs into horizontal sections
+and finding the highest roof points above building corners.
+
+Modules:
+    - numpy
+    - open3d
+    - tqdm
+
+Imports:
+    - find_corners: Detects corners in a set of points.
+    - grid_subsampling: Downsamples a point cloud using a grid/voxel approach.
+    - merge_point_clouds: Merges multiple point clouds into one.
+    - open_point_cloud_editor: Visualizes point clouds interactively.
+
+Functions:
+    - slice_roof_up: Slices a roof point cloud into horizontal slabs, flattens each slab, and detects corners.
+    - keep_highest_point_above_corner: For each corner, finds the highest roof point directly above it.
+
+Typical Usage:
+    1. Use slice_roof_up to extract and flatten horizontal roof slices for further analysis.
+    2. Use keep_highest_point_above_corner to find roof peaks above building corners.
+
+See individual function docstrings for details.
+"""
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm

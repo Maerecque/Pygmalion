@@ -1,5 +1,39 @@
-import numpy as np
+"""
+wallTools.py
+
+Wall and height-based point cloud slicing utilities for architectural 3D geometry using Open3D and NumPy.
+
+Modules:
+    - numpy
+    - open3d
+    - scipy.spatial
+    - typing
+
+Imports:
+    - create_point_cloud: Utility for creating colored Open3D point clouds.
+    - cKDTree: Fast spatial search for point matching.
+
+Functions:
+    - create_correct_height_slice: Generates a horizontal slice of a point cloud at a specified height above a reference floor
+      contour, with outlier filtering and neighbor checks.
+    - keep_wall_points_from_x_height: Filters wall point cloud to retain only points above a given height relative to the minimum
+      floor level.
+    - connect_vertically_aligned_points: Connects pairs of floor and wall points whose XY coordinates match within a tolerance,
+      returning an Open3D LineSet.
+    - connect_vertically_aligned_points2: Connects base-level points to one or more sets of upper-level points by XY proximity,
+      supporting multi-level connections and returning a LineSet.
+
+Typical Usage:
+    1. Use create_correct_height_slice to extract a wall slice at a desired height above the floor.
+    2. Use keep_wall_points_from_x_height to remove points below a threshold, e.g., to exclude furniture.
+    3. Use connect_vertically_aligned_points or connect_vertically_aligned_points2 to visualize vertical relationships between
+       floor and wall slices or between multiple levels.
+
+See individual function docstrings for details.
+"""
+
 import open3d as o3d
+import numpy as np
 from typing import Union, List
 from scipy.spatial import cKDTree
 
@@ -197,15 +231,29 @@ def connect_vertically_aligned_points(
     xy_tol: float = 1e-2
 ) -> o3d.geometry.LineSet:
     """
-    Connects points from floor_points to wall_points if their XY coordinates match within a given tolerance.
+    Connects pairs of 3D points from two sets (floor and wall) if their XY coordinates are aligned within a specified tolerance.
+    For each point in `floor_points`, finds the closest point in `wall_points` (in XY plane) within `xy_tol` distance,
+    and creates a line connecting them. Useful for visualizing vertical connections between lower and upper surfaces.
 
     Args:
-        floor_points (np.ndarray): Nx3 array of floor (lower) points.
-        wall_points (np.ndarray): Mx3 array of wall (upper) points.
-        xy_tol (float, optional): Tolerance for matching XY coordinates. Defaults to 1e-2.
+        floor_points (np.ndarray): Array of shape (N, 3) containing 3D coordinates of floor (lower) points.
+        wall_points (np.ndarray): Array of shape (M, 3) containing 3D coordinates of wall (upper) points.
+        xy_tol (float, optional): Maximum allowed distance in XY plane for points to be considered vertically aligned.
+            Defaults to 1e-2.
 
     Returns:
-        o3d.geometry.LineSet: LineSet connecting vertically aligned points.
+        o3d.geometry.LineSet: Open3D LineSet object containing all points and lines connecting vertically aligned pairs.
+
+    Example:
+        >>> floor = np.array([[0, 0, 0], [1, 1, 0]])
+        >>> wall = np.array([[0, 0, 3], [1, 1, 3]])
+        >>> lineset = connect_vertically_aligned_points(floor, wall, xy_tol=0.05)
+        >>> print(len(lineset.lines))  # Should print 2
+
+    Note:
+        - Uses KDTree for efficient nearest neighbor search in the XY plane.
+        - Only connects each floor point to its closest wall point if within tolerance.
+        - All points (floor and wall) are included in the output LineSet.
     """
     # Always convert to numpy array for slicing
     floor_points = np.asarray(floor_points)
@@ -236,17 +284,32 @@ def connect_vertically_aligned_points2(
     xy_tol: float = 1e-2
 ) -> o3d.geometry.LineSet:
     """
-    Connects points from base_level_points to one or more sets of upper_level_points
-    if their XY coordinates match within a given tolerance.
+    Connects pairs of 3D points from two sets (base and upper levels) if their XY coordinates are aligned within a specified
+    tolerance. For each point in `base_level_points`, finds the closest point in each set of `upper_level_points` (in XY plane)
+    within `xy_tol` distance, and creates a line connecting them. Useful for visualizing vertical connections between lower and
+    upper surfaces.
 
     Args:
-        base_level_points (np.ndarray): Nx3 array of base (lower) points.
-        upper_level_points (Union[np.ndarray, List[np.ndarray]]): Either a single Mx3 array
-            or a list of arrays, each representing an upper level.
-        xy_tol (float, optional): Tolerance for matching XY coordinates. Defaults to 1e-2.
+        base_level_points (np.ndarray): Array of shape (N, 3) containing 3D coordinates of base (lower) points.
+        upper_level_points (Union[np.ndarray, List[np.ndarray]]): Either a single Mx3 array or a list of arrays, each
+        representing an upper level.
+        xy_tol (float, optional): Maximum allowed distance in XY plane for points to be considered vertically aligned.
+        Defaults to 1e-2.
 
     Returns:
-        o3d.geometry.LineSet: LineSet connecting vertically aligned points.
+        o3d.geometry.LineSet: Open3D LineSet object containing all points and lines connecting vertically aligned pairs.
+
+    Example:
+        >>> base = np.array([[0, 0, 0], [1, 1, 0]])
+        >>> upper1 = np.array([[0, 0, 3], [1, 1, 3]])
+        >>> upper2 = np.array([[0, 0, 6], [1, 1, 6]])
+        >>> lineset = connect_vertically_aligned_points2(base, [upper1, upper2], xy_tol=0.05)
+        >>> print(len(lineset.lines))  # Should print 2
+
+    Note:
+        - Uses KDTree for efficient nearest neighbor search in the XY plane.
+        - Only connects each base point to its closest upper point if within tolerance.
+        - All points (base and upper levels) are included in the output LineSet.
     """
     base_level_points = np.asarray(base_level_points)
 

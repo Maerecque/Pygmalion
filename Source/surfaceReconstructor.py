@@ -1,9 +1,73 @@
+"""
+surfaceReconstructor.py
+
+Mesh reconstruction and hole repair utilities for 3D geometry using Open3D and Shapely.
+
+Modules:
+    - numpy
+    - open3d
+    - shapely.geometry
+    - shapely.ops
+    - typing
+
+Imports:
+    - Polygon, Point: Used for geometric containment and triangulation.
+    - triangulate: Performs 2D triangulation for hole filling.
+    - KDTreeSearchParamHybrid: Used for normal estimation in point clouds.
+    - TriangleMesh, PointCloud: Open3D geometry types for mesh and point cloud operations.
+
+Functions:
+    - reconstruct_mesh_ball_pivoting: Reconstructs a mesh from a point cloud using Ball Pivoting, with optional visualization.
+    - _find_boundary_loops: Finds ordered boundary loops in a mesh as lists of vertex indices.
+    - _fill_hole_by_triangulation: Fills a boundary loop by triangulating its projection onto a best-fit plane, optionally clipped
+      by a contour.
+    - fill_mesh_holes: Finds and fills all boundary loops in a mesh, with optional contour clipping and edge length constraints.
+    - stitch_loop_pair: Bridges two boundary loops by connecting closest vertex pairs, useful for repairing adjacent holes.
+    - repair_mesh_with_contour: Repairs mesh holes using an optional contour point cloud as a clipping guide, with optional loop
+      stitching.
+
+Typical Usage:
+    1. Use reconstruct_mesh_ball_pivoting to generate a mesh from a point cloud.
+    2. Use _find_boundary_loops to detect mesh boundaries (holes).
+    3. Use fill_hole_by_triangulation or fill_mesh_holes to fill detected holes, optionally using a contour for clipping.
+    4. Use stitch_loop_pair to connect nearby boundary loops before filling.
+    5. Use repair_mesh_with_contour for automated mesh repair with contour guidance.
+
+See individual function docstrings for details.
+"""
+
 import numpy as np
 import open3d as o3d
 from shapely.geometry import Polygon
 from shapely.geometry import Point as ShapelyPoint
 from shapely.ops import triangulate as shapely_triangulate
 from typing import Optional
+# ---------------- Mesh Reconstruction ----------------
+# Functions for reconstructing meshes from point clouds
+
+# reconstruct_mesh_ball_pivoting
+
+# ---------------- Boundary Detection ----------------
+# Functions for finding boundary loops (holes) in meshes
+
+# find_boundary_loops
+
+# ---------------- Plane Fitting Utilities ----------------
+# Internal helper for best-fit plane computation
+
+# _best_fit_plane_basis
+# _fill_hole_by_triangulation
+# fill_mesh_holes
+
+# ---------------- Loop Stitching ----------------
+# Functions for connecting/stitching adjacent boundary loops
+
+# stitch_loop_pair
+
+# ---------------- Mesh Repair Workflow ----------------
+# Functions for automated mesh repair using contours and stitching
+
+# repair_mesh_with_contour
 
 
 def reconstruct_mesh_ball_pivoting(
@@ -13,18 +77,34 @@ def reconstruct_mesh_ball_pivoting(
     k: int = 100,
     radii: list = [0.05, 0.1, 0.2],
     visualize: bool = True
-):
+) -> o3d.geometry.TriangleMesh:
     """
     Reconstructs a mesh from a point cloud using Ball Pivoting.
+
+    For a given Open3D PointCloud, estimates normals if not present, orients normals consistently,
+    and applies Ball Pivoting surface reconstruction with specified ball radii. Optionally visualizes
+    the resulting mesh.
+
     Args:
-        pcd (o3d.geometry.PointCloud): Input point cloud.
-        kdtreeRadius (float): Radius for KDTree search. Defaults to 0.1.
-        kdtreeMaxNN (int): Maximum number of nearest neighbors for KDTree search. Defaults to 30.
-        k (int): Number of nearest neighbors to use for constructing the Riemannian graph. Defaults to 100.
-        radii (list): List of ball radii to use. Defaults to [0.05, 0.1, 0.2].
-        visualize (bool): If True, visualize the mesh. Defaults to True.
+        pcd (o3d.geometry.PointCloud): Input point cloud for mesh reconstruction.
+        kdtreeRadius (float, optional): Radius for KDTree normal estimation. Defaults to 0.1.
+        kdtreeMaxNN (int, optional): Max nearest neighbors for KDTree normal estimation. Defaults to 30.
+        k (int, optional): Number of neighbors for orienting normals. Defaults to 100.
+        radii (list, optional): List of ball radii for Ball Pivoting. Defaults to [0.05, 0.1, 0.2].
+        visualize (bool, optional): If True, visualize the resulting mesh. Defaults to True.
+
     Returns:
         o3d.geometry.TriangleMesh: The reconstructed mesh.
+
+    Example:
+        >>> pcd = o3d.io.read_point_cloud("cloud.ply")
+        >>> mesh = reconstruct_mesh_ball_pivoting(pcd, radii=[0.05, 0.1])
+        >>> o3d.visualization.draw_geometries([mesh])
+
+    Note:
+        - Normals are estimated and oriented if not present in the input point cloud.
+        - Ball Pivoting may fail if the point cloud is sparse or noisy.
+        - Visualization is optional and uses Open3D's draw_geometries.
     """
     # Estimate normals if not present
     try:
@@ -44,10 +124,18 @@ def reconstruct_mesh_ball_pivoting(
         return None
 
 
-def find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
+def _find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
     """
     Return ordered boundary loops as lists of vertex indices.
     Finds edges used by exactly one triangle and stitches them into loops.
+
+    Args:
+        mesh: Open3D TriangleMesh to modify.
+        loopA: First boundary loop (list of vertex indices).
+        loopB: Second boundary loop (list of vertex indices).
+
+    Returns:
+        Number of triangles added.
     """
     # collect edges -> count
     triangles = np.asarray(mesh.triangles, dtype=int)
@@ -103,8 +191,13 @@ def find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
 
 def _best_fit_plane_basis(points: np.ndarray):
     """
-    Compute centroid and 2 orthonormal basis vectors (u, v) spanning the best-fit plane.
-    Returns centroid, u, v, normal.
+    Compute centroid and two orthonormal basis vectors (u, v) spanning the best-fit plane.
+
+    Args:
+        points: Nx3 array of 3D points.
+
+    Returns:
+        centroid, u, v, normal: Centroid and basis vectors for the plane.
     """
     centroid = points.mean(axis=0)
     # PCA
@@ -120,16 +213,23 @@ def _best_fit_plane_basis(points: np.ndarray):
     return centroid, u, v, normal
 
 
-def fill_hole_by_triangulation(
+def _fill_hole_by_triangulation(
     mesh: o3d.geometry.TriangleMesh,
     loop: list,
     contour: np.ndarray = None,
     max_edge_len: float = None
 ) -> int:
     """
-    Fill one boundary loop by projecting to best-fit plane and using Shapely triangulate.
-    If `contour` (Nx3) is provided, triangles whose centroids fall outside that contour are discarded.
-    Returns number of triangles added.
+    Fill a boundary loop by projecting to a best-fit plane and triangulating using Shapely.
+
+    Args:
+        mesh: Open3D TriangleMesh to modify.
+        loop: List of vertex indices forming the boundary loop.
+        contour: Optional Nx3 array of 3D points for clipping triangles.
+        max_edge_len: Maximum allowed edge length in the loop.
+
+    Returns:
+        Number of triangles added.
     """
     verts = np.asarray(mesh.vertices)
     loop_pts = verts[np.asarray(loop)]
@@ -214,17 +314,37 @@ def fill_mesh_holes(
     max_edge_len: float = None
 ) -> int:
     """
-    Find all boundary loops and fill them using triangulation.
-    contour: optional Nx3 polygon to clip the fill (projected into the hole plane).
-    Returns number of triangles added across all holes.
+    Finds all boundary loops in a mesh and fills them using triangulation.
+
+    For each detected boundary loop, projects its vertices to a best-fit plane,
+    triangulates the resulting 2D polygon, and adds triangles to fill the hole.
+    Optionally clips filled triangles using a provided contour.
+
+    Args:
+        mesh (o3d.geometry.TriangleMesh): Open3D TriangleMesh to modify in-place.
+        contour (np.ndarray, optional): Nx3 array of 3D points for clipping triangles. Defaults to None.
+        max_hole_vertices (int, optional): Maximum allowed vertices in a hole. Defaults to 500.
+        max_edge_len (float, optional): Maximum allowed edge length in a hole. Defaults to None.
+
+    Returns:
+        int: Total number of triangles added across all holes.
+
+    Example:
+        >>> mesh = o3d.geometry.TriangleMesh()
+        >>> added = fill_mesh_holes(mesh, contour=contour_points)
+        >>> print(f"Triangles added: {added}")
+
+    Note:
+        - Skips holes with edge lengths exceeding max_edge_len or vertex count exceeding max_hole_vertices.
+        - Uses Shapely for 2D triangulation and Open3D for mesh updates.
     """
-    loops = find_boundary_loops(mesh)
+    loops = _find_boundary_loops(mesh)
     added = 0
     for loop in loops:
         if len(loop) > max_hole_vertices:
             # skip extremely large holes unless explicitly desired
             continue
-        added += fill_hole_by_triangulation(mesh, loop, contour=contour, max_edge_len=max_edge_len)
+        added += _fill_hole_by_triangulation(mesh, loop, contour=contour, max_edge_len=max_edge_len)
     return added
 
 
@@ -233,6 +353,28 @@ def stitch_loop_pair(mesh: o3d.geometry.TriangleMesh, loopA: list, loopB: list) 
     Naive stitching that connects closest vertex pairs between two loops to form a fan of triangles.
     Useful when a hole is actually two concentric loops that must be bridged.
     Returns number of triangles added.
+
+    Connects two boundary loops by bridging closest vertex pairs to form triangles.
+    For each vertex in `loopA`, finds the nearest vertex in `loopB` and creates a triangle
+    connecting the current vertex, its nearest neighbor in `loopB`, and the next vertex in `loopA`.
+    Useful for repairing adjacent holes or stitching mesh boundaries.
+
+    Args:
+        mesh (o3d.geometry.TriangleMesh): Open3D TriangleMesh to modify in-place.
+        loopA (list): List of vertex indices forming the first boundary loop.
+        loopB (list): List of vertex indices forming the second boundary loop.
+
+    Returns:
+        int: Number of triangles added to the mesh.
+
+    Example:
+        >>> added = stitch_loop_pair(mesh, loopA, loopB)
+        >>> print(f"Triangles added: {added}")
+
+    Note:
+        - Uses KDTree for efficient nearest neighbor search between loops.
+        - Only bridges each vertex in loopA to its closest vertex in loopB.
+        - Triangles are added directly to the mesh and normals are recomputed.
     """
     verts = np.asarray(mesh.vertices)
     A = verts[np.asarray(loopA)]
@@ -270,26 +412,42 @@ def repair_mesh_with_contour(
     max_edge_len: Optional[float] = None
 ) -> o3d.geometry.TriangleMesh:
     """
-    Repair holes in `mesh` using optional contour point cloud as clipping guide.
+    Repair holes in a mesh using an optional contour point cloud as a clipping guide.
 
     Steps:
-    - Optionally stitch pairs of nearby boundary loops (useful when a hole is represented
-      by two concentric or close loops).
-    - Fill remaining boundary loops by projecting each loop to a best-fit plane,
-      triangulating the loop polygon and discarding triangles outside the supplied contour.
+        1. Optionally stitch pairs of nearby boundary loops.
+        2. Fill remaining boundary loops by triangulating their projection onto a best-fit plane,
+           discarding triangles outside the supplied contour.
 
     Args:
         mesh: Open3D TriangleMesh to repair (modified in-place and returned).
-        contour_pcd: optional Open3D PointCloud containing contour points (Nx3). If provided,
-            the filling will be clipped to this contour projected into each hole plane.
-        stitch_pairs: whether to attempt stitching of nearby loop pairs before filling.
-        stitch_dist: maximum distance between loop centroids to consider stitching. If None,
-            a heuristic based on mesh edge lengths is used.
-        max_hole_vertices: skip extremely large holes with more than this many boundary verts.
-        max_edge_len: maximum allowed edge length within a hole; if exceeded the hole is skipped.
+        contour_pcd: Optional Open3D PointCloud containing contour points (Nx3).
+        stitch_pairs: Whether to attempt stitching of nearby loop pairs before filling.
+        stitch_dist: Maximum distance between loop centroids to consider stitching.
+        max_hole_vertices: Maximum allowed vertices in a hole.
+        max_edge_len: Maximum allowed edge length in a hole.
 
     Returns:
-        The repaired Open3D TriangleMesh (same object instance, also returned for convenience).
+        The repaired Open3D TriangleMesh.
+
+    Example:
+        >>> repaired_mesh = repair_mesh_with_contour(mesh, contour_pcd=contour_points, stitch_pairs=True)
+        >>> o3d.visualization.draw_geometries([repaired_mesh])
+
+    Note:
+        - If stitch_dist is None, a sensible default is computed from average mesh edge length.
+        - Uses _find_boundary_loops, stitch_loop_pair, and fill_mesh_holes internally.
+        - Mesh normals are recomputed after modifications.
+
+    Raises:
+        TypeError: If mesh is not an Open3D TriangleMesh.
+        TypeError: If contour_pcd is provided but not an Open3D PointCloud.
+        ValueError: If mesh has no triangles.
+        ValueError: If contour_pcd is provided but empty.
+        ValueError: If stitch_dist is provided but not positive.
+        ValueError: If max_hole_vertices is not positive.
+        ValueError: If max_edge_len is provided but not positive.
+        RuntimeError: If mesh repair fails due to unexpected errors.
     """
     if not isinstance(mesh, o3d.geometry.TriangleMesh):
         raise TypeError("mesh must be an Open3D TriangleMesh")
@@ -321,7 +479,7 @@ def repair_mesh_with_contour(
 
     # 1) Optionally stitch nearby loop pairs
     if stitch_pairs:
-        loops = find_boundary_loops(mesh)
+        loops = _find_boundary_loops(mesh)
         if len(loops) > 1:
             # compute centroids
             verts = np.asarray(mesh.vertices)
