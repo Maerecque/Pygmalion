@@ -13,6 +13,7 @@ from Source.pointCloudAltering import remove_noise_statistical as rns, merge_poi
 from Source.roofTools import slice_roof_up
 from Source.wallTools import create_correct_height_slice, keep_wall_points_from_x_height, connect_vertically_aligned_points, connect_vertically_aligned_points2  # noqa: E501
 from Source.surfaceReconstructor import repair_mesh_with_contour
+from Source.pointCloudEditor import open_point_cloud_editor as opce
 
 
 def main():
@@ -43,6 +44,8 @@ def main():
     floor_contour = find_boundary_from_floor(new_pcd_tuple[0], 8)
     print(f"Detected {len(floor_contour)} points in the contour floor point cloud.")
 
+    opce(create_point_cloud(floor_contour, color=[0, 1, 0]), show_help=False)
+
     # 5. Sort the hull points and find corners in the floor boundary
     floor_hull = sort_points_in_hull(floor_contour, 0.045)
     print(f"Detected {len(floor_hull)} points in the floor hull.")
@@ -62,6 +65,8 @@ def main():
     full_floor_corners = sort_points_in_hull(temp_merge.points, 0.00005)
 
     full_floor_corners = floor_hull  # FOR TESTING
+
+    opce(new_pcd_tuple[2], show_help=False)  # Wall points
 
     # 6. Create a wall slice at a certain height above the floor
     floor_corners_pcd = create_point_cloud(full_floor_corners, color=[1, 0, 0])  # Red color for corners
@@ -110,16 +115,15 @@ def main():
 
     total_lineset = merge_lineset(combined_lineset, roof_wall_lineset)
 
+    part12 = lineset_to_trianglemesh(total_lineset, full_floor_corners)
+    part12r = repair_mesh_with_contour(part12, create_point_cloud(full_floor_corners))
+    part3 = lineset_to_trianglemesh(floor_lineset, full_floor_corners)
+
     o3d.visualization.draw([
         floor_lineset,
         combined_lineset,
         roof_wall_lineset
     ])
-
-    part12 = lineset_to_trianglemesh(total_lineset, full_floor_corners)
-    part12r = repair_mesh_with_contour(part12, create_point_cloud(full_floor_corners))
-    # o3d.visualization.draw(part12r)
-    part3 = lineset_to_trianglemesh(floor_lineset, full_floor_corners)
 
     o3d.visualization.draw([part12r, part3])
 
