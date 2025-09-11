@@ -23,7 +23,7 @@ def get_file_path(description: str, fileformat: any, print_output: bool = True) 
         description (str): Description of the to be selected file format.
 
         fileformat (any): Either a string of one specified file format or a list of file formats. e.g.
-            "*.txt" or ["*.txt", "*.docx"].
+            "\*.txt" or ["\*.txt", "\*.docx"].
 
         print_output (bool): Whether to print the selected file path to the console.
 
@@ -305,6 +305,6 @@ def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
         - Despite the function name suggesting preprocessing, no actual preprocessing is performed
         - The user can cancel the file dialog, in which case None may be returned
     """
-    pcd = readout_LAS_file(get_file_path("Select a point cloud file to process", "LAS files (*.las *.laz)"))
+    pcd = readout_LAS_file(get_file_path("Select a point cloud file to process", ["*.las", "*.laz"]))
     print("Point cloud loaded and preprocessed. Now starting surface reconstruction...")
     return pcd
