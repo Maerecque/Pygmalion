@@ -40,6 +40,7 @@ from typing import Optional
 import json
 import tkinter as tk
 from tkinter import filedialog
+from tqdm import tqdm
 
 from scipy.spatial import Delaunay
 from shapely.geometry import Point as ShapelyPoint, Polygon, LineString
@@ -214,7 +215,7 @@ def lineset_to_trianglemesh(lineset, contour_points):
 
     # Filter triangles: keep only those whose centroid is inside the polygon
     filtered_triangles = []
-    for simplex in triangles:
+    for simplex in tqdm(triangles, desc="Filtering triangles"):
         tri_pts = points_2d[simplex]
         centroid = np.mean(tri_pts, axis=0)
         if polygon.contains(ShapelyPoint(centroid)) or polygon.covers(ShapelyPoint(centroid)):
