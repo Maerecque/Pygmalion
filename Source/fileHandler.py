@@ -311,5 +311,4 @@ def load_and_preprocess_pointcloud() -> o3d.geometry.PointCloud:
         - The user can cancel the file dialog, in which case None may be returned
     """
     pcd = readout_LAS_file(get_file_path("Select a point cloud file to process", ["*.las", "*.laz"]))
-    print("Point cloud loaded and preprocessed. Now starting surface reconstruction...")
     return pcd
