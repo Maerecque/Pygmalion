@@ -165,7 +165,6 @@ def generate_wall_points(
 
 def transform_pointcloud_to_height_map(
     pcd: o3d.geometry.PointCloud,
-    grid_spacing_cm: float = 200,
     visualize_map: bool = False,
     visualize_map_np: bool = False,
     debugging_logs: bool = False
@@ -175,7 +174,6 @@ def transform_pointcloud_to_height_map(
 
     Args:
         pcd (o3d.geometry.PointCloud): The point cloud to be transformed into a height map.
-        grid_spacing_cm (float, optional): Grid spacing in centimeters. Defaults to 200.
         visualize_map (bool, optional): Boolean to visualize the height map. Defaults to False.
         visualize_map_np (bool, optional): Boolean to visualize the height map using numpy. Defaults to False.
         debugging_logs (bool, optional): Boolean to print debugging logs. Defaults to False.
@@ -193,20 +191,34 @@ def transform_pointcloud_to_height_map(
     points = np.asarray(pcd.points)
     x, y, z = project_vertices_to_plane(points)
 
-    # Note to self: in EPSG28992 is 1 heel getal 1 meter
-
     if debugging_logs:
         print(f"x range: {x.min()} to {x.max()}, y range: {y.min()} to {y.max()}, z range: {z.min()} to {z.max()}")
 
-    # Convert cm spacing to meters
-    grid_spacing_m = grid_spacing_cm / 100.0
+    # Automatically determine grid dimensions based on point density
+    x_range = x.max() - x.min()
+    y_range = y.max() - y.min()
+    num_points = len(points)
 
-    # Determine number of grid points from spacing
-    nx = int(np.ceil((x.max() - x.min()) / grid_spacing_m)) + 1
-    ny = int(np.ceil((y.max() - y.min()) / grid_spacing_m)) + 1
+    # Calculate a base resolution based on the square root of the number of points
+    base_resolution = int(np.sqrt(num_points) / 2)
+
+    # Adjust resolution to the aspect ratio of the point cloud
+    if x_range > y_range:
+        nx = base_resolution
+        ny = int(base_resolution * (y_range / x_range))
+    else:
+        ny = base_resolution
+        nx = int(base_resolution * (x_range / y_range))
+
+    # Ensure a minimum resolution to avoid errors with small point clouds
+    nx = max(10, nx)
+    ny = max(10, ny)
 
     # Create a grid for contour mapping
     (X, Y), x_grid, y_grid = create_grid((x.min(), x.max()), (y.min(), y.max()), nx, ny)
+
+    # Calculate grid spacing for wall generation
+    grid_spacing_m = min((x.max() - x.min()) / (nx - 1) if nx > 1 else 1, (y.max() - y.min()) / (ny - 1) if ny > 1 else 1)
 
     # Generate a height map
     height_map = generate_height_map(x, y, z, x_grid, y_grid)
