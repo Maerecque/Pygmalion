@@ -109,6 +109,11 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
             if len(las.points) < 10000000:
                 raise FileFormatError
 
+        # If the file has a very large amount of points (>25 million), it will be loaded anyway, but might take a while.
+        if len(las.points) > 25000000:
+            print("The selected LAS/LAZ file contains a very large amount of points (>25 million).")
+            print("Loading this file might take a while, depending on your system specifications.")
+
         geom = o3d.geometry.PointCloud()
 
         scales = las.header.scales
