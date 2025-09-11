@@ -9,7 +9,7 @@ from Source.fileHandler import load_and_preprocess_pointcloud
 from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull, get_keypoints, find_corners
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.linesetTools import contour_to_lineset, filter_lines_within_contour, merge_lineset, lineset_to_trianglemesh
-from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds
+from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds, alter_point_density as apd  # noqa: E501
 from Source.roofTools import slice_roof_up
 from Source.wallTools import create_correct_height_slice, keep_wall_points_from_x_height, connect_vertically_aligned_points, connect_vertically_aligned_points2  # noqa: E501
 from Source.surfaceReconstructor import repair_mesh_with_contour
@@ -22,6 +22,8 @@ def main():
     # 1. Load and preprocess the point cloud (user selects file)
     pcd = load_and_preprocess_pointcloud()
 
+    pcd = apd(pcd, points_per_cm=2, print_result=True)
+
     if pcd is None:
         print("No point cloud loaded. Exiting.")
         return
@@ -32,9 +34,8 @@ def main():
     # 3. Transform the point cloud into a height map (returns tuple: [floor, wall, ...])
     new_pcd_tuple = transform_pointcloud_to_height_map(
         pcd,
-        grid_spacing_cm=2,
-        visualize_map=False,
-        visualize_map_np=False,
+        visualize_map=True,
+        visualize_map_np=True,
         debugging_logs=False
     )
 

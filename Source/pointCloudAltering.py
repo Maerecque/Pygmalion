@@ -38,6 +38,80 @@ def grid_subsampling(
     return downsampled_pcd
 
 
+def alter_point_density(
+    pcd: o3d.cpu.pybind.geometry.PointCloud,
+    points_per_cm: float = 1.0,
+    print_result: bool = True
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """A function to alter the density of points in a point cloud.
+    This function assumes that the point cloud is in EPSG: 28992 (Amersfoort / RD New)
+
+    Args:
+        pcd (o3d.cpu.pybind.geometry.PointCloud): The input point cloud.
+        points_per_cm (float, optional): The desired number of points per centimeter. Defaults to 1.0.
+        print_result (bool, optional): Whether to print the result. Defaults to True.
+
+    Raises:
+        ValueError: If the input point cloud is empty.
+        ValueError: If the desired density is not a positive number.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: The altered point cloud with the desired density.
+    """
+
+    # Check if the input point cloud is empty
+    if not pcd.has_points():
+        raise ValueError("The input point cloud is empty.")
+
+    # Check if the desired density is a positive number
+    if points_per_cm <= 0:
+        raise ValueError("The desired density must be a positive number.")
+
+    # Calculate initial density
+    initial_points = len(pcd.points)
+
+    # Calculate the bounding box and its volume
+    bbox = pcd.get_axis_aligned_bounding_box()
+    volume_m3 = bbox.volume()
+
+    # Convert volume to cubic centimeters (cm³) for density calculation
+    volume_cm3 = volume_m3 * 100**3
+
+    # Avoid division by zero if the volume is zero
+    if volume_cm3 > 0:
+        initial_density_per_cm3 = initial_points / volume_cm3
+    else:
+        initial_density_per_cm3 = 0
+
+    # Calculate the voxel size in meters
+    voxel_size_m = (1 / points_per_cm) * 0.01
+
+    # Perform voxel downsampling
+    downsampled_pcd = pcd.voxel_down_sample(voxel_size=voxel_size_m)
+
+    final_points = len(downsampled_pcd.points)
+
+    # Calculate the reduction factor
+    if initial_points > 0:
+        reduction_factor = initial_points / final_points
+    else:
+        reduction_factor = 0
+
+    if print_result:
+        print(f"Initial number of points: {initial_points}")
+        if volume_cm3 > 0:
+            print(f"Initial point density: {initial_density_per_cm3:.2f} points per cubic centimeter.")
+        else:
+            print("Cannot calculate initial density: The point cloud has no volume.")
+        print("-" * 30)
+        print(f"Final number of points: {final_points}")
+        print(f"Point density altered to approximately {points_per_cm} points per centimeter.")
+        if reduction_factor > 0:
+            print(f"The point cloud was reduced by a factor of {reduction_factor:.2f}.")
+
+    return downsampled_pcd
+
+
 def remove_noise_statistical(
     input_pcd: o3d.cpu.pybind.geometry.PointCloud,
     show_removed_points: bool = False,
