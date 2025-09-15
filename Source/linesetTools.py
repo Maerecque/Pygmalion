@@ -46,7 +46,7 @@ from scipy.spatial import Delaunay
 from shapely.geometry import Point as ShapelyPoint, Polygon, LineString
 
 
-def contour_to_lineset(points):
+def contour_to_lineset(points: np.ndarray, max_line_length: float = 0) -> o3d.geometry.LineSet:
     """
     Creates a closed LineSet from ordered 3D contour points.
 
@@ -54,6 +54,8 @@ def contour_to_lineset(points):
 
     Parameters:
         points (np.ndarray): Array of shape (N, 3) containing ordered 3D coordinates of the contour.
+        max_line_length (float): Maximum allowed length for each line segment. Lines longer than this will be removed.
+        The length is expressed in the same units as the coordinates in `points`. If set to None or 0, no filtering is applied.
 
     Returns:
         o3d.geometry.LineSet: Open3D LineSet object representing the closed contour.
@@ -72,6 +74,14 @@ def contour_to_lineset(points):
     lineset = o3d.geometry.LineSet()
     lineset.points = o3d.utility.Vector3dVector(points)
     lineset.lines = o3d.utility.Vector2iVector(lines)
+
+    if max_line_length is not None and max_line_length > 0:
+        # Compute lengths of all line segments
+        line_lengths = np.linalg.norm(np.diff(points, axis=0, append=[points[0]]), axis=1)
+        # Filter out lines that are too long
+        valid_lines = line_lengths <= max_line_length
+        lineset.lines = o3d.utility.Vector2iVector(np.asarray(lineset.lines)[valid_lines])
+
     return lineset
 
 

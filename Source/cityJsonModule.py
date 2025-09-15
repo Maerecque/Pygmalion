@@ -102,7 +102,7 @@ def main():
     # Connect the rest of the roof layers with each other from top to the bottom and per layer create a contour
     for i in range(len(sliced_roof_list) - 1, 0, -1):
         roof_wall_lineset += connect_vertically_aligned_points(sliced_roof_list[i - 1], sliced_roof_list[i], 0.1)
-        roof_wall_lineset += contour_to_lineset(sort_points_in_hull(sliced_roof_list[i]))
+        roof_wall_lineset += contour_to_lineset(sort_points_in_hull(sliced_roof_list[i]), max_line_length=0.5)
 
     roof_wall_lineset = filter_lines_within_contour(full_floor_corners, roof_wall_lineset)
 
