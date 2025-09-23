@@ -171,35 +171,20 @@ def alpha_shape(points, alpha, min_triangle_area=1e-10) -> MultiPoint:
     return concave
 
 
-def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray:
+def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1, method: str = "nearest") -> np.ndarray:
     """
-    Sort points in a point cloud hull based on proximity using nearest neighbor approach.
-
-    Identifies corner points by analyzing distance jumps between consecutive points,
-    then reorders them by connecting nearest neighbors to create a coherent spatial sequence.
+    Sort points in a point cloud hull using either nearest neighbor or angle-based approach.
 
     Args:
         lines (np.ndarray): Array of shape (N, 3) containing 3D hull/boundary points.
-        threshold (float, optional): Distance threshold to consider as a corner. Defaults to 0.1.
+        threshold (float, optional): Distance threshold to consider as a corner (used for nearest neighbor method).
+            Defaults to 0.1.
+        method (str, optional): Sorting method, "nearest" for greedy nearest neighbor, "angle" for angle-based sorting.
+            Defaults to "nearest".
 
     Returns:
-        np.ndarray: Array of shape (M, 3) containing sorted corner points,
-                   with M <= N. Returns empty array if fewer than 2 input points.
-
-    Raises:
-        ValueError: If threshold is less than or equal to 0.
-
-    Example:
-        >>> hull_points = np.array([[0.0, 0.0, 0.0], [0.05, 0.02, 0.0], [1.0, 0.0, 0.0]])
-        >>> sorted_corners = sort_points_in_hull(hull_points, threshold=0.1)
-        >>> print(f"Detected {len(sorted_corners)} corners")
-
-    Note:
-        - Uses greedy nearest-neighbor approach which may not be optimal for complex hulls,
-          but this is chosen regardless, because of its simplicity and efficiency.
-        - Points are reordered starting from leftmost point (maximum x-coordinate)
+        np.ndarray: Array of shape (M, 3) containing sorted points (loop closed if appropriate).
     """
-    # Ensure input is a numpy array
     lines = np.asarray(lines)
     if lines.ndim != 2 or lines.shape[1] < 2:
         raise ValueError("Input to sort_points_in_hull must be a 2D array with at least 2 columns (x, y[, z])")
@@ -207,30 +192,35 @@ def sort_points_in_hull(lines: np.ndarray, threshold: float = 0.1) -> np.ndarray
     if len(lines) < 2:
         return np.array([])
 
-    # Project to 2D (XY)
+    if method == "angle":
+        centroid = np.mean(lines[:, :2], axis=0)
+        angles = np.arctan2(lines[:, 1] - centroid[1], lines[:, 0] - centroid[0])
+        order = np.argsort(angles)
+        ordered_points = lines[order]
+        ordered_points = np.vstack([ordered_points, ordered_points[0]])
+        return ordered_points
+
+    # Default: nearest neighbor approach
     points_2d = lines[:, :2]
     n = len(points_2d)
     visited = np.zeros(n, dtype=bool)
     ordered_indices = []
 
-    # Start from the leftmost (min x) point
     current_index = np.argmin(points_2d[:, 0])
     ordered_indices.append(current_index)
     visited[current_index] = True
 
     for _ in range(1, n):
         current_point = points_2d[current_index]
-        # Find the nearest unvisited neighbor in 2D
         dists = np.linalg.norm(points_2d - current_point, axis=1)
         dists[visited] = np.inf
         next_index = np.argmin(dists)
         if dists[next_index] == np.inf:
-            break  # No more unvisited points
+            break
         ordered_indices.append(next_index)
         visited[next_index] = True
         current_index = next_index
 
-    # Optionally, close the loop if the last point is close to the first
     ordered_points = lines[ordered_indices]
     if np.linalg.norm(ordered_points[0, :2] - ordered_points[-1, :2]) < threshold:
         ordered_points = np.vstack([ordered_points, ordered_points[0]])
