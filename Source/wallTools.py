@@ -119,12 +119,10 @@ def keep_wall_points_from_x_height(
     wall_pcd: o3d.cpu.pybind.geometry.PointCloud,
     floor_pcd: o3d.cpu.pybind.geometry.PointCloud,
     height: float = 1.5
-) -> o3d.cpu.pybind.geometry.PointCloud:
+) -> tuple[o3d.cpu.pybind.geometry.PointCloud, o3d.cpu.pybind.geometry.PointCloud]:
     """
-    Keep wall points above a certain height relative to the floor.
-
-    Filters the wall point cloud to retain only points that are above a specified
-    height threshold relative to the minimum floor height.
+    Keep wall points above a certain height relative to the floor and
+    return removed points as a separate red-colored point cloud.
 
     Args:
         wall_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing wall points.
@@ -132,53 +130,51 @@ def keep_wall_points_from_x_height(
         height (float, optional): Height above the floor to keep wall points. Defaults to 1.5.
 
     Returns:
-        o3d.cpu.pybind.geometry.PointCloud: Point cloud containing wall points above the specified height,
-                                           colored blue for visualization.
+        tuple:
+            - o3d.cpu.pybind.geometry.PointCloud: Wall points above the specified height (blue).
+            - o3d.cpu.pybind.geometry.PointCloud: Points removed by the filter (red).
 
     Raises:
-        TypeError: If either input is not an Open3D PointCloud object.
+        TypeError: If either input is not an Open3D PointCloud.
         ValueError: If either point cloud is empty.
         ValueError: If no wall points are found above the specified height.
-
-    Example:
-        >>> floor_pcd = create_point_cloud(floor_points, color=[1, 0, 0])
-        >>> filtered_walls = keep_wall_points_from_x_height(wall_pcd, floor_pcd, height=2.0)
-        >>> print(f"Kept {len(filtered_walls.points)} wall points above 2.0m")
-        Kept 1523 wall points above 2.0m
-
-    Note:
-        - Uses minimum Z-coordinate from floor_pcd as reference height
-        - All filtered points are colored blue for visualization
-        - Useful for removing furniture and lower structural elements
     """
-    if not isinstance(
-        wall_pcd, o3d.cpu.pybind.geometry.PointCloud
-    ) or not isinstance(
-        floor_pcd, o3d.cpu.pybind.geometry.PointCloud
-    ):
+    # Validate inputs
+    if not isinstance(wall_pcd, o3d.cpu.pybind.geometry.PointCloud) or \
+       not isinstance(floor_pcd, o3d.cpu.pybind.geometry.PointCloud):
         raise TypeError("Both wall_pcd and floor_pcd must be Open3D PointCloud objects.")
     if len(wall_pcd.points) == 0 or len(floor_pcd.points) == 0:
-        raise ValueError("Both ceiling_pcd and floor_pcd must contain points.")
-    # Get the minimum z value from the floor point cloud
-    floor_height = np.min(np.asarray(floor_pcd.points)[:, 2])
+        raise ValueError("Both wall_pcd and floor_pcd must contain points.")
 
-    # Calculate the minimum z value for the ceiling points
+    # Determine floor reference height
+    floor_height = np.min(np.asarray(floor_pcd.points)[:, 2])
     min_z_value = floor_height + height
 
-    # Filter the wall point cloud to keep only points above the minimum z value
+    # Separate points above and below threshold
     wall_points = np.asarray(wall_pcd.points)
-    wall_points_filtered = wall_points[wall_points[:, 2] > min_z_value]
+    mask = wall_points[:, 2] > min_z_value
 
-    if wall_points_filtered.size == 0:
+    wall_points_kept = wall_points[mask]
+    wall_points_removed = wall_points[~mask]
+
+    if wall_points_kept.size == 0:
         raise ValueError("No wall points found above the specified height.")
 
-    # Create a new point cloud with the filtered points
-    filtered_wall_pcd = o3d.cpu.pybind.geometry.PointCloud()
-    filtered_wall_pcd.points = o3d.utility.Vector3dVector(wall_points_filtered)
-    # Make all new points blue
-    filtered_wall_pcd.colors = o3d.utility.Vector3dVector(np.tile([0, 0, 1], (len(filtered_wall_pcd.points), 1)))
+    # Create filtered (blue) point cloud
+    filtered_wall_pcd = o3d.geometry.PointCloud()
+    filtered_wall_pcd.points = o3d.utility.Vector3dVector(wall_points_kept)
+    filtered_wall_pcd.colors = o3d.utility.Vector3dVector(
+        np.tile([0, 0, 1], (len(filtered_wall_pcd.points), 1))
+    )
 
-    return filtered_wall_pcd
+    # Create removed (red) point cloud
+    removed_wall_pcd = o3d.geometry.PointCloud()
+    removed_wall_pcd.points = o3d.utility.Vector3dVector(wall_points_removed)
+    removed_wall_pcd.colors = o3d.utility.Vector3dVector(
+        np.tile([1, 0, 0], (len(removed_wall_pcd.points), 1))
+    )
+
+    return filtered_wall_pcd, removed_wall_pcd
 
 
 def connect_vertically_aligned_points(
