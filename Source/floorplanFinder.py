@@ -250,6 +250,7 @@ def get_keypoints(
     """
     NOTE: This function seems to be non-deterministic which may be due to the nature of the ISS algorithm.
     NOTE: This function has the habbit to crash the entire script from time to time without any message.
+    NOTE: I think I have fixed the crashing by using a newer version of open3d.
 
     Detects distinctive keypoints in a point cloud using the ISS (Intrinsic Shape Signatures) algorithm.
 
@@ -281,8 +282,6 @@ def get_keypoints(
     """
     if not isinstance(pcd, o3d.cpu.pybind.geometry.PointCloud):
         raise TypeError("Input must be an Open3D PointCloud.")
-
-    print("Testing keypoint detection...")
 
     keypoints = o3d.geometry.keypoint.compute_iss_keypoints(
         pcd,
