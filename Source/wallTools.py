@@ -216,8 +216,6 @@ def connect_vertically_aligned_points(
     all_points = np.vstack([floor_points, wall_points])
     wall_offset = len(floor_points)
 
-    # Build KDTree for fast lookup
-    from scipy.spatial import cKDTree
     wall_tree = cKDTree(wall_xy, leafsize=2)
     for i, xy in enumerate(floor_xy):
         dist, idx = wall_tree.query(xy, k=1)
@@ -310,3 +308,35 @@ def connect_vertically_aligned_points2(
     lineset.lines = o3d.utility.Vector2iVector(lines)
 
     return lineset
+
+
+def divide_wall_into_layers(wall_pcd: o3d.geometry.PointCloud, layer_amount: int = 10) -> List[np.ndarray]:
+    # function to detect horizontal layers in a wall point cloud based on Z-value, give back a list of ndarrays
+    if not isinstance(wall_pcd, o3d.geometry.PointCloud):
+        raise TypeError("wall_pcd must be an Open3D PointCloud object.")
+
+    if layer_amount <= 0:
+        raise ValueError("layer_amount must be a positive integer.")
+
+    if len(wall_pcd.points) == 0:
+        raise ValueError("wall_pcd must contain points.")
+
+    wall_points = np.asarray(wall_pcd.points)
+    z_values = wall_points[:, 2]
+
+    # Define height values to slice at
+    z_min, z_max = z_values.min(), z_values.max()
+
+    slice_heights = np.linspace(z_min, z_max, layer_amount + 1)
+
+    layers = []
+
+    # Only keep points that are 0.01m above and below the current z layer height
+    for slice_z in slice_heights:
+        mask = (z_values >= slice_z - 0.01) & (z_values <= slice_z + 0.01)
+        layer_points = wall_points[mask]
+
+        if len(layer_points) > 0:
+            layers.append(layer_points)
+
+    return layers
