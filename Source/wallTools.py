@@ -40,123 +40,79 @@ from scipy.spatial import cKDTree
 from Source.heightMapModule import create_point_cloud
 
 
-def create_correct_height_slice(
+def extract_wall_points(
     tbp_pcd: o3d.cpu.pybind.geometry.PointCloud,
     floor_contour_pcd: o3d.cpu.pybind.geometry.PointCloud,
-    height: float = 1.5,
     search_radius: float = 0.025,
-    height_tol: float = 0.75,
-    neighbor_window: int = 4,
-    min_low_neighbors: int = 3,
     print_bool: bool = False
 ) -> o3d.cpu.pybind.geometry.PointCloud:
     """
-    Create a slice of the point cloud at a specified height above the floor.
+    Keep all tbp_pcd points that are above the floor contour.
 
-    For each floor contour point, finds the closest point in the target point cloud
-    within the search radius that is at or below the slice height, creating a horizontal
-    slice at the specified height above the floor reference level.
+    For each floor contour point this collects every TBP point within `search_radius`
+    in XY whose Z is >= that floor contour point's Z. The result is the union of
+    all such TBP points (deduplicated), preserving all points that lie above the
+    contour rather than producing a single representative point per contour point.
 
     Args:
-        tbp_pcd (o3d.cpu.pybind.geometry.PointCloud): The point cloud to be sliced.
-        floor_contour_pcd (o3d.cpu.pybind.geometry.PointCloud): The floor point cloud to reference for height.
-        height (float, optional): The height at which to slice the point cloud in meters. Defaults to 1.5.
-        search_radius (float, optional): The radius within which to search for points in the tbp_pcd.
-            Must be a positive float. Defaults to 0.025.
-        height_tol (float, optional): The height tolerance in meters. Defaults to 0.75.
-        neighbor_window (int, optional): The number of neighbors on each side to check. Defaults to 4.
-        min_low_neighbors (int, optional): If at least this many neighbors are also low, keep the point. Defaults to 3.
-        print_bool (bool, optional): Whether to print progress information. Defaults to False.
+        tbp_pcd, floor_contour_pcd: Open3D PointClouds
+        search_radius: XY search radius to associate tbp points to floor points
+        other args kept for API compatibility
 
     Returns:
-        o3d.cpu.pybind.geometry.PointCloud: A new point cloud containing the sliced points at the target height.
-
-    Raises:
-        TypeError: If either input is not an Open3D PointCloud object.
-        ValueError: If either point cloud is empty.
-        ValueError: If search_radius is not positive.
-
-    Example:
-        >>> # Create a wall slice 1.5m above floor level
-        >>> floor_pcd = create_point_cloud(floor_corners, color=[1, 0, 0])
-        >>> wall_slice = create_correct_height_slice(building_pcd, floor_pcd, height=1.5)
-        >>> print(f"Created slice with {len(wall_slice.points)} points")
-        Created slice with 24 points
-
-    Note:
-        - Uses floor minimum Z-coordinate as reference height
-        - For points above slice height, creates new points at the slice level
-        - Prints progress information during processing
-        - Returns blue-colored point cloud for visualization 🟦.
+        Open3D PointCloud of selected points (colored blue)
     """
     if not all(isinstance(pc, o3d.cpu.pybind.geometry.PointCloud) for pc in [tbp_pcd, floor_contour_pcd]):
         raise TypeError("Both tbp_pcd and floor_contour_pcd must be Open3D PointCloud objects.")
-
     if len(tbp_pcd.points) == 0 or len(floor_contour_pcd.points) == 0:
         raise ValueError("Both tbp_pcd and floor_contour_pcd must contain points.")
-
     if search_radius <= 0:
         raise ValueError("search_radius must be a positive float.")
 
-    # Find at what height the wall points should be
-    floor_height = np.min(np.asarray(floor_contour_pcd.points)[:, 2])
-    slice_height = floor_height + height
-
-    tbp_countour_points = []
     floor_points = np.asarray(floor_contour_pcd.points)
     tbp_all_points = np.asarray(tbp_pcd.points)
 
     if print_bool:
-        # Show amount of floor points
         print(f"Number of floor points: {floor_points.shape[0]}")
         print(f"Number of TBP points: {tbp_all_points.shape[0]}")
 
-    for floor_pt in floor_points:
-        mask = (
-            (np.abs(tbp_all_points[:, 0] - floor_pt[0]) <= (search_radius)) &  # X-axis tolerance
-            (np.abs(tbp_all_points[:, 1] - floor_pt[1]) <= (search_radius))   # Y-axis tolerance
-        )
-        candidates = tbp_all_points[mask]
-        if candidates.size > 0:
-            if print_bool:
-                print(f"Found {len(candidates)} candidates for floor point {floor_pt}.")
-            # Pick the closest point that is not above the slice height but as close as possible
-            below_slice = candidates[candidates[:, 2] <= slice_height]
-            if below_slice.size > 0:
-                if print_bool:
-                    print(f"Found {len(below_slice)} candidates below the slice height for floor point {floor_pt}.")
+    floor_xy = floor_points[:, :2]
+    floor_z = floor_points[:, 2]
+    tbp_xy = tbp_all_points[:, :2]
+    tbp_z = tbp_all_points[:, 2]
 
-                idx = np.argmin(np.abs(below_slice[:, 2] - slice_height))
+    if floor_xy.shape[0] == 0 or tbp_xy.shape[0] == 0:
+        raise ValueError("No points available after conversion to arrays.")
 
-                # If there are more than one point near the floor point, pick the one with the highest Z value
-                if below_slice.shape[0] > 1:
-                    idx = np.argmax(below_slice[:, 2])
+    # Build KDTree on TBP XY so we can query all TBP points around each floor point
+    tbp_tree = cKDTree(tbp_xy, leafsize=2)
 
-                tbp_countour_points.append(below_slice[idx])
-            else:
-                # If there are no points at or below the slice height the ceiling should be above the slice height
-                # Which would mean you can place a point at the slice height
-                new_point = np.array([floor_pt[0], floor_pt[1], slice_height])
-                tbp_countour_points.append(new_point)
+    selected_indices = set()
 
-    tbp_countour_points = np.array(tbp_countour_points)
+    # For each floor point, get all tbp indices within search_radius and keep those above the floor z
+    for i, (fxy, fz) in enumerate(zip(floor_xy, floor_z)):
+        idxs = tbp_tree.query_ball_point(fxy, r=search_radius)
+        if not idxs:
+            continue
+        idxs = np.asarray(idxs, dtype=int)
+        # keep tbp points whose z is >= floor z at this contour point
+        above_mask = tbp_z[idxs] >= fz
+        if np.any(above_mask):
+            for idx in idxs[above_mask]:
+                selected_indices.add(int(idx))
 
-    if len(tbp_countour_points) > 2 * neighbor_window:
-        keep_mask = np.ones(len(tbp_countour_points), dtype=bool)
-        for i, pt in enumerate(tbp_countour_points):
-            if pt[2] < slice_height - height_tol:
-                # Check neighbors
-                start = max(0, i - neighbor_window)
-                end = min(len(tbp_countour_points), i + neighbor_window + 1)
-                neighbors = np.delete(tbp_countour_points[start:end], i - start, axis=0)
-                low_neighbors = np.sum(neighbors[:, 2] < slice_height - height_tol)
-                if low_neighbors < min_low_neighbors:
-                    keep_mask[i] = False  # Outlier, remove
-        tbp_countour_points = tbp_countour_points[keep_mask]
+    if len(selected_indices) == 0:
+        raise ValueError("No TBP points found above the contour within the given search radius.")
 
-    auspuf = create_point_cloud(tbp_countour_points, [0, 0, 1])
+    # Create ordered array of unique selected points
+    selected_idx_list = np.fromiter(sorted(selected_indices), dtype=int)
+    kept_points = tbp_all_points[selected_idx_list]
 
-    return auspuf
+    if print_bool:
+        print(f"Selected {kept_points.shape[0]} TBP points above the contour (union over all floor points).")
+
+    result_pcd = create_point_cloud(kept_points, [0, 0, 1])
+    return result_pcd
 
 
 def keep_wall_points_from_x_height(

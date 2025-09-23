@@ -72,7 +72,7 @@ def main():
     floor_corners_pcd = create_point_cloud(full_floor_corners, color=[1, 0, 0])  # Red color for corners
 
     # 7. Extract the roof points above a certain height (removes everything below)
-    new_roof_pcd = keep_wall_points_from_x_height(
+    new_roof_pcd, other_wall_pcd = keep_wall_points_from_x_height(
         new_pcd_tuple[1],
         floor_corners_pcd,
         height=1.5
