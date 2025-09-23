@@ -11,7 +11,7 @@ from Source.heightMapModule import transform_pointcloud_to_height_map, create_po
 from Source.linesetTools import contour_to_lineset, filter_lines_within_contour, merge_lineset, lineset_to_trianglemesh
 from Source.pointCloudAltering import remove_noise_statistical as rns, merge_point_clouds as merge_pcds, alter_point_density as apd  # noqa: E501
 from Source.roofTools import slice_roof_up
-from Source.wallTools import create_correct_height_slice, keep_wall_points_from_x_height, connect_vertically_aligned_points, connect_vertically_aligned_points2  # noqa: E501
+from Source.wallTools import extract_wall_points, keep_wall_points_from_x_height, connect_vertically_aligned_points, connect_vertically_aligned_points2  # noqa: E501
 from Source.surfaceReconstructor import repair_mesh_with_contour
 from Source.pointCloudEditor import open_point_cloud_editor as opce
 
@@ -70,16 +70,6 @@ def main():
 
     # 6. Create a wall slice at a certain height above the floor
     floor_corners_pcd = create_point_cloud(full_floor_corners, color=[1, 0, 0])  # Red color for corners
-    wall_slice = create_correct_height_slice(
-        new_pcd_tuple[1],
-        floor_corners_pcd,
-        height=1.5,
-        search_radius=0.01,
-        height_tol=0.75,
-        neighbor_window=4,
-        min_low_neighbors=6
-    )
-    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_slice])  # noqa: F841
 
     # 7. Extract the roof points above a certain height (removes everything below)
     new_roof_pcd = keep_wall_points_from_x_height(
@@ -87,6 +77,18 @@ def main():
         floor_corners_pcd,
         height=1.5
     )
+
+    temp_wall_pcd = merge_pcds([new_pcd_tuple[2], other_wall_pcd])
+
+    wall_pcd = extract_wall_points(
+        temp_wall_pcd,
+        floor_corners_pcd,
+        search_radius=0.05,
+    )
+
+    wall_floor_merge = merge_pcds([floor_corners_pcd, wall_pcd])  # noqa: F841
+
+    opce(wall_floor_merge, show_help=False)
 
     # 8. Slice the roof into horizontal slabs and flatten each slice
     sliced_roof_list = slice_roof_up(new_roof_pcd, 30, slab_fatness=0.01, voxel_size=0.05)

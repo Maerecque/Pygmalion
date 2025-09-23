@@ -18,7 +18,7 @@ from Source.heightMapModule import transform_pointcloud_to_height_map, create_po
 from Source.pointCloudEditor import open_point_cloud_editor as opce
 from Source.cityJsonModule import (
     find_boundary_from_floor, sort_points_in_hull, find_corners,
-    create_correct_height_slice, keep_wall_points_from_x_height,
+    extract_wall_points, keep_wall_points_from_x_height,
     slice_roof_up, keep_highest_point_above_corner
 )
 
@@ -386,7 +386,7 @@ class App:
             self.search_radius_entry.insert(0, "0.025")
 
         try:
-            self.wall_slice = create_correct_height_slice(
+            self.wall_slice = extract_wall_points(
                 self.new_pcd_tuple[1],
                 create_point_cloud(self.floor_corners, color=[1, 0, 0]),
                 height=float(self.slice_height_entry.get()),
