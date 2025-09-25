@@ -27,6 +27,7 @@ from Source.pointCloudEditor import open_point_cloud_editor as opce  # noqa: F40
 
 import trimesh
 import numpy as np
+from tqdm import tqdm
 
 
 def repair_mesh(meshes) -> o3d.geometry.TriangleMesh:
@@ -192,26 +193,28 @@ def main():
 
     wall_floor_merge = merge_pcds([floor_corners_pcd, wall_pcd])  # noqa: F841
 
-    # 8. Slice the roof into horizontal slabs and flatten each slice
-    sliced_roof_list = slice_roof_up(new_roof_pcd, 30, slab_fatness=0.01, voxel_size=0.05)
-
-    # # This is not used right now but not sure if to delete it
-    # floor_mesh_ball_pivoting = reconstruct_mesh_ball_pivoting(floor_corners_pcd, k=30, visualize=True)
-    # wall_mesh_ball_pivoting = reconstruct_mesh_ball_pivoting(new_pcd_tuple[2], visualize=True)
-    # roof_mesh_ball_pivoting = reconstruct_mesh_ball_pivoting(new_roof_pcd, visualize=True)
-
-    # # Take the first and second list in sliced_roof_list
-    # roof_wall_lineset = connect_vertically_aligned_points2(wall_pcd.points, sliced_roof_list, 0.1)
-
     roof_wall_lineset = o3d.geometry.LineSet()
 
-    wall_layer_list = divide_wall_into_layers(wall_pcd, layer_amount=10)
+    wall_layer_list = divide_wall_into_layers(wall_pcd, layer_amount=11)
 
-    opce(merge_pcds(wall_layer_list), show_help=False)
+    # opce(merge_pcds(wall_layer_list), show_help=False)
 
-    for i in range(len(wall_layer_list) - 1, 0, -1):
-        roof_wall_lineset += connect_vertically_aligned_points2(wall_layer_list[i - 1], wall_layer_list[i], 0.1)
+    for i in tqdm(range(len(wall_layer_list)), desc="Processing wall layers", unit="layer"):
+        roof_wall_lineset += connect_vertically_aligned_points2(
+            wall_layer_list[i - 1] if i > 0 else wall_layer_list[i], wall_layer_list[i], 0.1)
         roof_wall_lineset += contour_to_lineset(sort_points_in_hull(wall_layer_list[i]), max_line_length=0.5)
+        # o3d.visualization.draw(contour_to_lineset(sort_points_in_hull(wall_layer_list[i]), max_line_length=0.5))
+
+    # for i in range(len(wall_layer_list) - 1, 0, -1):
+    #     roof_wall_lineset += connect_vertically_aligned_points2(wall_layer_list[i - 1], wall_layer_list[i], 0.1)
+    #     roof_wall_lineset += contour_to_lineset(sort_points_in_hull(wall_layer_list[i + 1], 0.05), max_line_length=0.5)
+    #     print(len(wall_layer_list[i +1 ]))
+    #     print(len(sort_points_in_hull(wall_layer_list[i], 0.05)))
+    #     #
+    #     o3d.visualization.draw(contour_to_lineset(sort_points_in_hull(wall_layer_list[i], 0.05), max_line_length=0.5))
+
+    # 8. Slice the roof into horizontal slabs and flatten each slice
+    sliced_roof_list = slice_roof_up(new_roof_pcd, 30, slab_fatness=0.01, voxel_size=0.05)
 
     # Connect the rest of the roof layers with each other from top to the bottom and per layer create a contour
     for i in range(len(sliced_roof_list) - 1, 0, -1):
@@ -231,17 +234,12 @@ def main():
     total_lineset = merge_lineset(floor_lineset, roof_wall_lineset)
 
     part12 = lineset_to_trianglemesh(total_lineset, full_floor_corners)
+
     part12r = repair_mesh_with_contour(part12, create_point_cloud(full_floor_corners))
     part3 = lineset_to_trianglemesh(floor_lineset, full_floor_corners)
 
-    # Repair meshes
-    o3d.visualization.draw(repair_mesh([part12r, part3]))
-
-    # o3d.visualization.draw([
-    #     floor_lineset,
-    #     combined_lineset,
-    #     roof_wall_lineset
-    # ])
+    # Log some info about repair_mesh([part12r, part3])
+    repaired = repair_mesh([part12r, part3])
 
     o3d.visualization.draw([part12r, part3])
 
