@@ -99,7 +99,7 @@ def slice_roof_up(
 
     all_flattened_points = []
 
-    for z_center in tqdm(slice_centers, desc="Processing slices"):
+    for z_center in tqdm(slice_centers, desc="Processing roof slices"):
         mask = (z_vals >= z_center - slab_fatness) & (z_vals <= z_center + slab_fatness)
         slice_points = points[mask]
 

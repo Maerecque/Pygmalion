@@ -38,6 +38,7 @@ from typing import Union, List
 from scipy.spatial import cKDTree
 
 from Source.heightMapModule import create_point_cloud
+from tqdm import tqdm
 
 
 def extract_wall_points(
@@ -332,7 +333,7 @@ def divide_wall_into_layers(wall_pcd: o3d.geometry.PointCloud, layer_amount: int
     layers = []
 
     # Only keep points that are 0.01m above and below the current z layer height
-    for slice_z in slice_heights:
+    for slice_z in tqdm(slice_heights, desc="Slicing wall layers"):
         mask = (z_values >= slice_z - 0.01) & (z_values <= slice_z + 0.01)
         layer_points = wall_points[mask]
 
