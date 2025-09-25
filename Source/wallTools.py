@@ -328,7 +328,7 @@ def divide_wall_into_layers(wall_pcd: o3d.geometry.PointCloud, layer_amount: int
     # Define height values to slice at
     z_min, z_max = z_values.min(), z_values.max()
 
-    slice_heights = np.linspace(z_min, z_max, layer_amount + 1)
+    slice_heights = np.linspace(z_min, z_max, layer_amount)
 
     layers = []
 
