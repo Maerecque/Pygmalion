@@ -112,7 +112,7 @@ def extract_wall_points(
     if print_bool:
         print(f"Selected {kept_points.shape[0]} TBP points above the contour (union over all floor points).")
 
-    result_pcd = create_point_cloud(kept_points, [0, 0, 1])
+    result_pcd = create_point_cloud(kept_points, [0, 1, 0])
     return result_pcd
 
 
