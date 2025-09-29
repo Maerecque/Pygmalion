@@ -9,6 +9,7 @@ from Source.fileHandler import load_and_preprocess_pointcloud
 from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.linesetTools import contour_to_lineset, filter_lines_within_contour, merge_lineset, lineset_to_trianglemesh
+from Source.meshAlterer import o3d_to_cityjson
 from Source.pointCloudAltering import (
     remove_noise_statistical as rns,
     merge_point_clouds as merge_pcds,
@@ -127,55 +128,6 @@ def repair_mesh(meshes) -> o3d.geometry.TriangleMesh:
     repaired_mesh_o3d.compute_vertex_normals()
 
     return repaired_mesh_o3d
-
-
-def o3d_to_cityjson(
-    mesh: o3d.geometry.TriangleMesh,
-    cityobject_id: str = "obj1",
-    obj_type: str = "Building",
-    lod: str = "1.0",
-) -> dict:
-    """Convert an Open3D TriangleMesh into a minimal CityJSON object.
-
-    This function extracts the vertices and triangle faces from an
-    Open3D TriangleMesh and reformats them into a CityJSON-compliant
-    dictionary. The geometry is wrapped as a Solid with triangular
-    boundaries.
-
-    Args:
-        mesh (o3d.geometry.TriangleMesh): The input Open3D mesh.
-        cityobject_id (str, optional): Identifier for the CityObject.
-            Defaults to "obj1".
-        obj_type (str, optional): The CityJSON object type (e.g.,
-            "Building", "TINRelief"). Defaults to "Building".
-        lod (str, optional): Level of detail of the geometry.
-            Defaults to "1.0".
-
-    Returns:
-        dict: A CityJSON object containing vertices and geometry
-        definitions.
-    """
-    vertices = np.asarray(mesh.vertices).tolist()
-    faces = np.asarray(mesh.triangles).tolist()
-
-    cityjson = {
-        "type": "CityJSON",
-        "version": "1.1",
-        "CityObjects": {
-            cityobject_id: {
-                "type": obj_type,
-                "geometry": [
-                    {
-                        "type": "Solid",
-                        "lod": lod,
-                        "boundaries": [[[face] for face in faces]],
-                    }
-                ],
-            }
-        },
-        "vertices": vertices,
-    }
-    return cityjson
 
 
 def main():

@@ -151,3 +151,52 @@ def transform_pcd_to_mesh(
         shell.plot()
 
     return volume
+
+
+def o3d_to_cityjson(
+    mesh: o3d.geometry.TriangleMesh,
+    cityobject_id: str = "obj1",
+    obj_type: str = "Building",
+    lod: str = "1.0",
+) -> dict:
+    """Convert an Open3D TriangleMesh into a minimal CityJSON object.
+
+    This function extracts the vertices and triangle faces from an
+    Open3D TriangleMesh and reformats them into a CityJSON-compliant
+    dictionary. The geometry is wrapped as a Solid with triangular
+    boundaries.
+
+    Args:
+        mesh (o3d.geometry.TriangleMesh): The input Open3D mesh.
+        cityobject_id (str, optional): Identifier for the CityObject.
+            Defaults to "obj1".
+        obj_type (str, optional): The CityJSON object type (e.g.,
+            "Building", "TINRelief"). Defaults to "Building".
+        lod (str, optional): Level of detail of the geometry.
+            Defaults to "1.0".
+
+    Returns:
+        dict: A CityJSON object containing vertices and geometry
+        definitions.
+    """
+    vertices = np.asarray(mesh.vertices).tolist()
+    faces = np.asarray(mesh.triangles).tolist()
+
+    cityjson = {
+        "type": "CityJSON",
+        "version": "1.1",
+        "CityObjects": {
+            cityobject_id: {
+                "type": obj_type,
+                "geometry": [
+                    {
+                        "type": "Solid",
+                        "lod": lod,
+                        "boundaries": [[[face] for face in faces]],
+                    }
+                ],
+            }
+        },
+        "vertices": vertices,
+    }
+    return cityjson
