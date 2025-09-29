@@ -18,7 +18,7 @@ from Source.pointCloudAltering import (
 from Source.roofTools import slice_roof_up
 from Source.wallTools import (
     extract_wall_points,
-    keep_wall_points_from_x_height,
+    define_min_height_roof,
     connect_vertically_aligned_points,
     connect_vertically_aligned_points2,
     divide_wall_into_layers
@@ -61,7 +61,7 @@ def main():
     full_floor_corners_pcd = create_point_cloud(full_floor_corners, color=[1, 0, 0])  # Red color for corners
 
     # 7. Extract the roof points above a certain height (removes everything below)
-    new_roof_pcd, other_wall_pcd = keep_wall_points_from_x_height(
+    new_roof_pcd, other_wall_pcd = define_min_height_roof(
         new_pcd_tuple[1],
         full_floor_corners_pcd,
         height=1.5
@@ -80,9 +80,9 @@ def main():
 
     opce(merge_pcds([full_floor_corners_pcd, wall_pcd, new_roof_pcd]), show_help=False)
 
-    roof_wall_lineset = o3d.geometry.LineSet()
-
     wall_layer_list = divide_wall_into_layers(wall_pcd, layer_amount=20)
+
+    roof_wall_lineset = o3d.geometry.LineSet()
 
     # Connect the wall layers with each other from bottom to top and per layer create a contour
     for i in tqdm(range(len(wall_layer_list)), desc="Processing wall layers", unit="layer"):
@@ -104,10 +104,12 @@ def main():
     total_lineset = merge_lineset(floor_lineset, roof_wall_lineset)
 
     part12 = lineset_to_trianglemesh(total_lineset, full_floor_corners)
-
-    part12r = repair_mesh_with_contour(part12, create_point_cloud(full_floor_corners))
     part3 = lineset_to_trianglemesh(floor_lineset, full_floor_corners)
 
+    part12r = repair_mesh_with_contour(
+        part12,
+        create_point_cloud(full_floor_corners)
+    )  # Honestly not sure if this is needed or does anything
     repaired = repair_mesh([part12r, part3])
 
     o3d.visualization.draw([part12r, part3])

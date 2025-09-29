@@ -116,14 +116,13 @@ def extract_wall_points(
     return result_pcd
 
 
-def keep_wall_points_from_x_height(
+def define_min_height_roof(
     wall_pcd: o3d.cpu.pybind.geometry.PointCloud,
     floor_pcd: o3d.cpu.pybind.geometry.PointCloud,
     height: float = 1.5
 ) -> tuple[o3d.cpu.pybind.geometry.PointCloud, o3d.cpu.pybind.geometry.PointCloud]:
     """
-    Keep wall points above a certain height relative to the floor and
-    return removed points as a separate red-colored point cloud.
+    Filters wall points to retain only those above a specified height relative to the minimum floor level.
 
     Args:
         wall_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing wall points.
@@ -155,17 +154,17 @@ def keep_wall_points_from_x_height(
     wall_points = np.asarray(wall_pcd.points)
     mask = wall_points[:, 2] > min_z_value
 
-    wall_points_kept = wall_points[mask]
+    roof_points_kept = wall_points[mask]
     wall_points_removed = wall_points[~mask]
 
-    if wall_points_kept.size == 0:
+    if roof_points_kept.size == 0:
         raise ValueError("No wall points found above the specified height.")
 
     # Create filtered (blue) point cloud
-    filtered_wall_pcd = o3d.geometry.PointCloud()
-    filtered_wall_pcd.points = o3d.utility.Vector3dVector(wall_points_kept)
-    filtered_wall_pcd.colors = o3d.utility.Vector3dVector(
-        np.tile([0, 0, 1], (len(filtered_wall_pcd.points), 1))
+    filtered_roof_pcd = o3d.geometry.PointCloud()
+    filtered_roof_pcd.points = o3d.utility.Vector3dVector(roof_points_kept)
+    filtered_roof_pcd.colors = o3d.utility.Vector3dVector(
+        np.tile([0, 0, 1], (len(filtered_roof_pcd.points), 1))
     )
 
     # Create removed (red) point cloud
@@ -175,7 +174,7 @@ def keep_wall_points_from_x_height(
         np.tile([1, 0, 0], (len(removed_wall_pcd.points), 1))
     )
 
-    return filtered_wall_pcd, removed_wall_pcd
+    return filtered_roof_pcd, removed_wall_pcd
 
 
 def connect_vertically_aligned_points(
