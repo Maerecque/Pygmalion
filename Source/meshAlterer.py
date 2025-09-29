@@ -1,7 +1,8 @@
 import numpy as np
 import open3d as o3d
-from tqdm import tqdm
 import pyvista as pv
+import trimesh
+from tqdm import tqdm
 
 
 def compute_distances_to_point_cloud(
@@ -151,6 +152,110 @@ def transform_pcd_to_mesh(
         shell.plot()
 
     return volume
+
+
+def repair_mesh(meshes) -> o3d.geometry.TriangleMesh:
+    """Repair holes in a mesh or list of meshes and ensure face normals point outward.
+
+    Args:
+        meshes (o3d.geometry.TriangleMesh or list/tuple of o3d.geometry.TriangleMesh): The mesh or meshes to repair.
+
+    Returns:
+        o3d.geometry.TriangleMesh: The repaired mesh with holes filled and normals corrected.
+
+    Usage:
+        mesh = o3d.io.read_triangle_mesh("path_to_mesh.ply")
+        repaired_mesh = repair_mesh(mesh)
+    """
+    # allow single mesh or list/tuple of meshes
+    if isinstance(meshes, (list, tuple)):
+        trimesh_list = []
+        for m in meshes:
+            trimesh_list.append(
+                trimesh.Trimesh(
+                    vertices=np.asarray(m.vertices),
+                    faces=np.asarray(m.triangles),
+                    vertex_colors=(np.asarray(m.vertex_colors) * 255).astype(np.uint8)
+                    if m.has_vertex_colors() else None,
+                    process=False
+                )
+            )
+        # concatenate into a single Trimesh
+        mesh_trimesh = trimesh.util.concatenate(trimesh_list)
+    else:
+        mesh_o3d = meshes
+        mesh_trimesh = trimesh.Trimesh(
+            vertices=np.asarray(mesh_o3d.vertices),
+            faces=np.asarray(mesh_o3d.triangles),
+            vertex_colors=(np.asarray(mesh_o3d.vertex_colors) * 255).astype(np.uint8)
+            if mesh_o3d.has_vertex_colors() else None,
+            process=False
+        )
+
+    # remember original face count to detect newly created faces after fill
+    original_face_count = len(mesh_trimesh.faces)
+
+    # 2. Check for and fill any holes
+    if not mesh_trimesh.is_watertight:
+        print("Holes detected; filling mesh...")
+        mesh_trimesh.fill_holes()
+    else:
+        print("Mesh is already watertight; no action needed.")
+
+    # If new faces were added, ensure their normals point outward
+    if len(mesh_trimesh.faces) > original_face_count:
+        # clean mesh and compute face normals/centers
+        mesh_trimesh.update_faces(mesh_trimesh.unique_faces())
+        mesh_trimesh.update_faces(mesh_trimesh.nondegenerate_faces())
+        mesh_trimesh.remove_unreferenced_vertices()
+        face_normals = mesh_trimesh.face_normals
+        face_centers = mesh_trimesh.triangles_center
+
+        # iterate only new faces
+        new_indices = np.arange(original_face_count, len(mesh_trimesh.faces))
+        for fi in new_indices:
+            center = face_centers[fi]
+            normal = face_normals[fi]
+            # sample a point slightly along the face normal
+            sample = center + normal * 1e-3
+            # trimesh.contains expects a watertight mesh (we just filled holes),
+            # returns True if sample is inside the volume
+            try:
+                is_inside = mesh_trimesh.contains([sample])[0]
+            except Exception:
+                # fallback: use ray test - if uncertain, skip flipping
+                is_inside = False
+
+            # if the sampled point is inside the mesh, the face normal points inward -> flip face
+            if is_inside:
+                mesh_trimesh.faces[fi] = mesh_trimesh.faces[fi][::-1]
+
+        # post-process: remove artifacts, re-center and fix normals
+        mesh_trimesh.update_faces(mesh_trimesh.unique_faces())
+        mesh_trimesh.update_faces(mesh_trimesh.nondegenerate_faces())
+        mesh_trimesh.remove_unreferenced_vertices()
+        mesh_trimesh.rezero()
+        try:
+            mesh_trimesh.fix_normals()
+        except Exception:
+            # if fix_normals isn't available or fails, continue without crashing
+            pass
+
+    # 3. Convert the repaired Trimesh object back to Open3D
+    repaired_mesh_o3d = o3d.geometry.TriangleMesh(
+        vertices=o3d.utility.Vector3dVector(mesh_trimesh.vertices),
+        triangles=o3d.utility.Vector3iVector(mesh_trimesh.faces.astype(np.int32))
+    )
+
+    # 4. Handle colors and normals
+    if hasattr(mesh_trimesh.visual, "vertex_colors") and mesh_trimesh.visual.vertex_colors is not None:
+        repaired_mesh_o3d.vertex_colors = o3d.utility.Vector3dVector(
+            mesh_trimesh.visual.vertex_colors[:, :3].astype(np.float64) / 255.0
+        )
+
+    repaired_mesh_o3d.compute_vertex_normals()
+
+    return repaired_mesh_o3d
 
 
 def o3d_to_cityjson(
