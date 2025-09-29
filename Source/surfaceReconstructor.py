@@ -307,7 +307,7 @@ def _fill_hole_by_triangulation(
     return len(new_triangles)
 
 
-def fill_mesh_holes(
+def _fill_mesh_holes(
     mesh: o3d.geometry.TriangleMesh,
     contour: np.ndarray = None,
     max_hole_vertices: int = 500,
@@ -348,7 +348,7 @@ def fill_mesh_holes(
     return added
 
 
-def stitch_loop_pair(mesh: o3d.geometry.TriangleMesh, loopA: list, loopB: list) -> int:
+def _stitch_loop_pair(mesh: o3d.geometry.TriangleMesh, loopA: list, loopB: list) -> int:
     """
     Naive stitching that connects closest vertex pairs between two loops to form a fan of triangles.
     Useful when a hole is actually two concentric loops that must be bridged.
@@ -495,7 +495,7 @@ def repair_mesh_with_contour(
                     if d <= stitch_dist:
                         # stitch the pair
                         try:
-                            stitch_loop_pair(mesh, loops[i], loops[j])
+                            _stitch_loop_pair(mesh, loops[i], loops[j])
                         except Exception:
                             pass
                         used.add(i)
@@ -503,7 +503,7 @@ def repair_mesh_with_contour(
             # after stitching, we'll re-run hole filling on current mesh
 
     # 2) Fill remaining holes (clipped by contour if provided)
-    fill_mesh_holes(mesh, contour=contour_arr, max_hole_vertices=max_hole_vertices, max_edge_len=max_edge_len)
+    _fill_mesh_holes(mesh, contour=contour_arr, max_hole_vertices=max_hole_vertices, max_edge_len=max_edge_len)
 
     # recompute normals and return
     try:
