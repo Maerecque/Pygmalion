@@ -3,6 +3,7 @@ import open3d as o3d
 import pyvista as pv
 import trimesh
 from tqdm import tqdm
+from typing import List, Union
 
 
 def compute_distances_to_point_cloud(
@@ -154,7 +155,7 @@ def transform_pcd_to_mesh(
     return volume
 
 
-def repair_mesh(meshes) -> o3d.geometry.TriangleMesh:
+def repair_mesh(meshes: Union[o3d.geometry.TriangleMesh, List[o3d.geometry.TriangleMesh]]) -> o3d.geometry.TriangleMesh:
     """Repair holes in a mesh or list of meshes and ensure face normals point outward.
 
     Args:
@@ -192,54 +193,12 @@ def repair_mesh(meshes) -> o3d.geometry.TriangleMesh:
             process=False
         )
 
-    # remember original face count to detect newly created faces after fill
-    original_face_count = len(mesh_trimesh.faces)
-
     # 2. Check for and fill any holes
     if not mesh_trimesh.is_watertight:
         print("Holes detected; filling mesh...")
         mesh_trimesh.fill_holes()
     else:
         print("Mesh is already watertight; no action needed.")
-
-    # If new faces were added, ensure their normals point outward
-    if len(mesh_trimesh.faces) > original_face_count:
-        # clean mesh and compute face normals/centers
-        mesh_trimesh.update_faces(mesh_trimesh.unique_faces())
-        mesh_trimesh.update_faces(mesh_trimesh.nondegenerate_faces())
-        mesh_trimesh.remove_unreferenced_vertices()
-        face_normals = mesh_trimesh.face_normals
-        face_centers = mesh_trimesh.triangles_center
-
-        # iterate only new faces
-        new_indices = np.arange(original_face_count, len(mesh_trimesh.faces))
-        for fi in new_indices:
-            center = face_centers[fi]
-            normal = face_normals[fi]
-            # sample a point slightly along the face normal
-            sample = center + normal * 1e-3
-            # trimesh.contains expects a watertight mesh (we just filled holes),
-            # returns True if sample is inside the volume
-            try:
-                is_inside = mesh_trimesh.contains([sample])[0]
-            except Exception:
-                # fallback: use ray test - if uncertain, skip flipping
-                is_inside = False
-
-            # if the sampled point is inside the mesh, the face normal points inward -> flip face
-            if is_inside:
-                mesh_trimesh.faces[fi] = mesh_trimesh.faces[fi][::-1]
-
-        # post-process: remove artifacts, re-center and fix normals
-        mesh_trimesh.update_faces(mesh_trimesh.unique_faces())
-        mesh_trimesh.update_faces(mesh_trimesh.nondegenerate_faces())
-        mesh_trimesh.remove_unreferenced_vertices()
-        mesh_trimesh.rezero()
-        try:
-            mesh_trimesh.fix_normals()
-        except Exception:
-            # if fix_normals isn't available or fails, continue without crashing
-            pass
 
     # 3. Convert the repaired Trimesh object back to Open3D
     repaired_mesh_o3d = o3d.geometry.TriangleMesh(

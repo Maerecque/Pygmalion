@@ -78,8 +78,6 @@ def main():
     # Empty temporary wall point cloud to save memory
     temp_wall_pcd = None
 
-    opce(merge_pcds([full_floor_corners_pcd, wall_pcd, new_roof_pcd]), show_help=False)
-
     wall_layer_list = divide_wall_into_layers(wall_pcd, layer_amount=20)
 
     roof_wall_lineset = o3d.geometry.LineSet()
