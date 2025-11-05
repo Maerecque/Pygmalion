@@ -308,6 +308,11 @@ class App:
 
     # Processing steps
     def alter_point_density_step(self):
+        # This piece of code will be repeated so that when the steps are ran again and the lineset/mesh preview is active,
+        # it will switch back to point cloud view and not show the lineset/mesh preview.
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         try:
             if not self.points_per_cm_entry.get():
                 self.points_per_cm_entry.insert(0, "1")
@@ -331,6 +336,9 @@ class App:
             self.point_density_button.config(state=tk.NORMAL, text="Alter Point Density")
 
     def preprocessing_step(self):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         try:
             pcd = self.resized_point_cloud_data
 
@@ -362,6 +370,9 @@ class App:
             self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
 
     def heightmap_step(self):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         try:
             self.new_pcd_tuple = transform_pointcloud_to_height_map(
                 self.processed_pcd,
@@ -378,6 +389,9 @@ class App:
             self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
 
     def floor_detection_step(self):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         # Check if user filled in alpha_value and triangle_size
         if not self.floor_alpha_value_entry.get():
             self.floor_alpha_value_entry.insert(0, "8")
@@ -413,6 +427,9 @@ class App:
             self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
 
     def roof_extraction_step(self):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         try:
             if not self.slice_height_entry.get():
                 self.slice_height_entry.insert(0, "1.5")
@@ -437,6 +454,9 @@ class App:
             self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
 
     def roof_division_step(self):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         try:
             # Set default values if not provided
             if not self.roof_layers_entry.get():
@@ -467,6 +487,9 @@ class App:
             self.roof_division_button.config(state=tk.NORMAL, text="Divide Roof")
 
     def wall_extraction_step(self):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         try:
             if not self.wall_search_radius_entry.get():
                 self.wall_search_radius_entry.insert(0, "0.05")
@@ -511,6 +534,8 @@ class App:
             self.wall_division_button.config(state=tk.NORMAL, text="Divide Walls")
 
     def pcd_to_lineset_step(self):
+        self.mesh_preview = None
+
         try:
             if not self.xy_tolerance_entry.get():
                 self.xy_tolerance_entry.insert(0, "0.1")
@@ -553,6 +578,9 @@ class App:
             self.pcd_to_lineset_result_label.config(
                 text="Linesets created successfully."
             )
+
+            self.lineset_preview = True
+
             self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Convert to Lineset")
             self.enable_final_actions()
         except Exception as e:
@@ -608,6 +636,9 @@ class App:
         self.roof_wall_mesh = None
         self.repaired_mesh = None
         self.cityjson_data = None
+
+        self.lineset_preview = None
+        self.mesh_preview = None
 
         # Empty all input fields
         # Note: Always clear entries before disabling sections
