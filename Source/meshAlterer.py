@@ -218,6 +218,26 @@ def repair_mesh(meshes: Union[o3d.geometry.TriangleMesh, List[o3d.geometry.Trian
     return repaired_mesh_o3d
 
 
+def combine_meshes(meshes: List[o3d.geometry.TriangleMesh]) -> o3d.geometry.TriangleMesh:
+    """Combine multiple Open3D TriangleMesh objects into a single mesh.
+
+    Args:
+        meshes (List[o3d.geometry.TriangleMesh]): List of meshes to combine.
+
+    Returns:
+        o3d.geometry.TriangleMesh: The combined mesh.
+    """
+    combined_mesh = o3d.geometry.TriangleMesh()
+
+    vertex_offset = 0
+    for mesh in meshes:
+        combined_mesh += mesh
+        vertex_offset += len(mesh.vertices)
+
+    combined_mesh.compute_vertex_normals()
+    return combined_mesh
+
+
 def o3d_to_cityjson(
     mesh: o3d.geometry.TriangleMesh,
     cityobject_id: str = "obj1",
