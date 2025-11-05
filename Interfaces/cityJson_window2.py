@@ -582,18 +582,24 @@ class App:
             self.lineset_preview = True
 
             self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Convert to Lineset")
-            self.enable_final_actions()
+            self.enable_lineset_to_mesh_section()
         except Exception as e:
             self.pcd_to_lineset_result_label.config(text=f"Error: {str(e)}")
             self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Convert to Lineset")
 
     def lineset_to_mesh_step(self):
+
         try:
             self.floor_mesh = lineset_to_trianglemesh(self.floor_lineset, self.floor_corners)
             self.roof_wall_mesh = lineset_to_trianglemesh(self.total_lineset, self.floor_corners)
 
+            self.lineset_preview = False
+            self.mesh_preview = combine_meshes([self.floor_mesh, self.roof_wall_mesh])
+
             self.lineset_to_mesh_result_label.config(text="Meshes created successfully.")
             self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
+
+            self.enable_repair_mesh_section()
 
         except Exception as e:
             self.lineset_to_mesh_result_label.config(text=f"Error: {str(e)}")
@@ -602,13 +608,49 @@ class App:
     def repair_mesh_step(self):
         try:
             self.repaired_mesh = repair_mesh([self.roof_wall_mesh, self.floor_mesh])
+
+            self.mesh_preview = self.repaired_mesh
+
             self.repair_mesh_result_label.config(text="Mesh repaired successfully.")
             self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
-            self.enable_final_actions()
+            self.enable_cityjson_conversion_section()
 
         except Exception as e:
             self.repair_mesh_result_label.config(text=f"Error: {str(e)}")
             self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
+
+    def cityjson_conversion_step(self):
+        try:
+            self.cityjson_data = o3d_to_cityjson(
+                self.repaired_mesh,
+                cityobject_id="Building_1",
+                obj_type="Building",
+                lod="1.0"
+            )
+
+            self.cityjson_conversion_result_label.config(text="Converted to CityJSON successfully.")
+            self.cityjson_conversion_button.config(state=tk.NORMAL, text="Convert to CityJSON")
+            self.save_cityjson_button.config(state=tk.NORMAL)
+
+        except Exception as e:
+            self.cityjson_conversion_result_label.config(text=f"Error: {str(e)}")
+            self.cityjson_conversion_button.config(state=tk.NORMAL, text="Convert to CityJSON")
+
+    def save_cityjson_file_step(self):
+        try:
+            if self.cityjson_data is None:
+                self.show_message("Warning", "No CityJSON data to save. Please complete the conversion step first.", "warning")
+                return
+
+            save_path = get_save_file_path("CityJSON files", ["*.json"], default_name="building_cityjson.json")
+            if save_path:
+                with open(save_path, "w") as f:
+                    json.dump(self.cityjson_data, f, indent=2)
+
+                self.show_message("Info", f"CityJSON data saved successfully to {save_path}.", "info")
+
+        except Exception as e:
+            self.show_message("Error", f"Failed to save CityJSON file: {str(e)}", "error")
 
     def view_pointcloud(self, pointcloud):
         if pointcloud is not None:
@@ -1045,7 +1087,7 @@ class App:
 
         self.pcd_to_lineset_button = tk.Button(
             pcd_to_lineset_frame,
-            text="Convert to Lineset",
+            text="Convert to\nLineset",
             state=tk.DISABLED,
             command=self.start_pcd_to_lineset_thread
         )
@@ -1088,12 +1130,34 @@ class App:
         self.repair_mesh_result_label = tk.Label(repair_mesh_frame, text="Mesh not repaired.", anchor="w")
         self.repair_mesh_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
+        # CityJSON Conversion Frame
+        cityjson_conversion_frame = tk.LabelFrame(right_column, text="CityJSON Conversion")
+        cityjson_conversion_frame.pack(fill="x", pady=5, padx=10)
+        for i in range(3):
+            cityjson_conversion_frame.grid_columnconfigure(i, weight=1, uniform="col")
+
+        self.cityjson_conversion_button = tk.Button(
+            cityjson_conversion_frame,
+            text="Convert to CityJSON",
+            state=tk.DISABLED,
+            command=self.start_cityjson_conversion_thread
+        )
+        self.cityjson_conversion_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
+
+        self.cityjson_conversion_result_label = tk.Label(
+            cityjson_conversion_frame,
+            text="Not yet converted to CityJSON.",
+            anchor="w"
+        )
+        self.cityjson_conversion_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
         # Misc Frame (Final Actions)
         misc_frame = tk.LabelFrame(main_frame, text="Final Actions")
         misc_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             misc_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
+        # View Button
         self.view_button = tk.Button(
             misc_frame,
             text="View Result",
@@ -1102,6 +1166,16 @@ class App:
         )
         self.view_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
+        # Save CityJSON Button
+        self.save_cityjson_button = tk.Button(
+            misc_frame,
+            text="Save CityJSON",
+            state=tk.DISABLED,
+            command=self.save_cityjson_file_step
+        )
+        self.save_cityjson_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        # Reset Button
         self.reset_button = tk.Button(misc_frame, text="Reset All", command=self.reset_application)
         self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
@@ -1218,8 +1292,13 @@ class App:
         self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
         self.lineset_to_mesh_result_label.config(text="Mesh not created.")
 
-    def enable_final_actions(self):
-        self.view_button.config(state=tk.NORMAL)
+    def enable_repair_mesh_section(self):
+        self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
+        self.repair_mesh_result_label.config(text="Mesh not repaired.")
+
+    def enable_cityjson_conversion_section(self):
+        self.cityjson_conversion_button.config(state=tk.NORMAL, text="Convert to CityJSON")
+        self.cityjson_conversion_result_label.config(text="Not converted to CityJSON.")
 
     def enable_view_pointcloud(self, pointcloud):
         self.view_button.config(
