@@ -15,8 +15,7 @@ sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.fileHandler import (  # noqa: F401
     get_file_path,
     readout_LAS_file,
-    get_save_file_path,
-    load_and_preprocess_pointcloud
+    get_save_file_path
 )
 from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull, find_corners  # noqa: F401
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
@@ -26,7 +25,11 @@ from Source.linesetTools import (  # noqa: F401
     merge_lineset,
     lineset_to_trianglemesh
 )
-from Source.meshAlterer import o3d_to_cityjson, repair_mesh  # noqa: F401
+from Source.meshAlterer import (
+    o3d_to_cityjson,                # noqa: F401
+    repair_mesh,
+    combine_meshes
+)
 from Source.pointCloudAltering import (  # noqa: F401
     remove_noise_statistical,
     merge_point_clouds as merge_pcds,
