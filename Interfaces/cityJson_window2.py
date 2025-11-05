@@ -120,7 +120,7 @@ class App:
         self.create_widgets()
 
         # Load presets
-        self.load_presets()
+        self.load_presets()  # DOESN'T WORK YET
 
         # If point cloud data is provided, load it
         if self.point_cloud_data is not None and self.point_cloud_path is not None:
@@ -275,6 +275,10 @@ class App:
         self.disable_section(self.pcd_to_lineset_button, "Converting to lineset...")
         threading.Thread(target=self.pcd_to_lineset_step).start()
 
+    def start_lineset_to_mesh_thread(self):
+        self.disable_section(self.lineset_to_mesh_button, "Converting to mesh...")
+        threading.Thread(target=self.lineset_to_mesh_step).start()
+
     # Processing steps
     def alter_point_density_step(self):
         try:
@@ -352,6 +356,8 @@ class App:
             self.floor_alpha_value_entry.insert(0, "8")
         if not self.floor_triangle_size_entry.get():
             self.floor_triangle_size_entry.insert(0, "1e-10")
+        if not self.corner_distance_threshold_entry.get():
+            self.corner_distance_threshold_entry.insert(0, "0.045")
 
         try:
             self.floor_lines = find_boundary_from_floor(
@@ -361,9 +367,6 @@ class App:
             )
 
             # Sort points in hull
-            if not self.corner_distance_threshold_entry.get():
-                self.corner_distance_threshold_entry.insert(0, "0.045")
-
             self.floor_hull = sort_points_in_hull(
                 self.floor_lines,
                 threshold=float(self.corner_distance_threshold_entry.get())
@@ -415,6 +418,10 @@ class App:
                 self.roof_layer_fatness_entry.insert(0, "0.01")
             if not self.roof_voxel_size_entry.get():
                 self.roof_voxel_size_entry.insert(0, "0.05")
+            if not self.roof_merge_radius_entry.get():
+                self.roof_merge_radius_entry.insert(0, "0.1")
+            if not self.roof_angle_threshold_entry.get():
+                self.roof_angle_threshold_entry.insert(0, "45")
 
             self.roof_layer_list = slice_roof_up(
                 self.roof_pcd,
@@ -525,6 +532,29 @@ class App:
             self.pcd_to_lineset_result_label.config(text=f"Error: {str(e)}")
             self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Convert to Lineset")
 
+    def lineset_to_mesh_step(self):
+        try:
+            self.floor_mesh = lineset_to_trianglemesh(self.floor_lineset, self.floor_corners)
+            self.roof_wall_mesh = lineset_to_trianglemesh(self.total_lineset, self.floor_corners)
+
+            self.lineset_to_mesh_result_label.config(text="Meshes created successfully.")
+            self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
+
+        except Exception as e:
+            self.lineset_to_mesh_result_label.config(text=f"Error: {str(e)}")
+            self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
+
+    def repair_mesh_step(self):
+        try:
+            self.repaired_mesh = repair_mesh([self.roof_wall_mesh, self.floor_mesh])
+            self.repair_mesh_result_label.config(text="Mesh repaired successfully.")
+            self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
+            self.enable_final_actions()
+
+        except Exception as e:
+            self.repair_mesh_result_label.config(text=f"Error: {str(e)}")
+            self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
+
     def view_pointcloud(self, pointcloud):
         if pointcloud is not None:
             opce(pointcloud, False)
@@ -551,6 +581,28 @@ class App:
         self.roof_wall_mesh = None
         self.repaired_mesh = None
         self.cityjson_data = None
+
+        # Empty all input fields
+        # Note: Always clear entries before disabling sections
+        self.points_per_cm_entry.delete(0, tk.END)
+        self.roof_merge_radius_entry.delete(0, tk.END)
+        self.roof_angle_threshold_entry.delete(0, tk.END)
+        self.max_line_length_entry.delete(0, tk.END)
+        self.xy_tolerance_entry.delete(0, tk.END)
+        self.neighbour_amount_entry.delete(0, tk.END)
+        self.std_ratio_entry.delete(0, tk.END)
+        self.floor_alpha_value_entry.delete(0, tk.END)
+        self.floor_triangle_size_entry.delete(0, tk.END)
+        self.corner_distance_threshold_entry.delete(0, tk.END)
+        self.slice_height_entry.delete(0, tk.END)
+        self.roof_layers_entry.delete(0, tk.END)
+        self.roof_layer_fatness_entry.delete(0, tk.END)
+        self.roof_voxel_size_entry.delete(0, tk.END)
+        self.wall_search_radius_entry.delete(0, tk.END)
+        self.wall_layer_amount_entry.delete(0, tk.END)
+        self.xy_tolerance_entry.delete(0, tk.END)
+        self.max_line_length_entry.delete(0, tk.END)
+        self.file_label.config(text="No file selected", fg="black")
 
         # Reset all sections
         self.disable_all_sections()
@@ -944,6 +996,40 @@ class App:
         self.pcd_to_lineset_result_label = tk.Label(pcd_to_lineset_frame, text="Lineset not created.", anchor="w")
         self.pcd_to_lineset_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
+        # Lineset to Mesh Frame
+        lineset_to_mesh_frame = tk.LabelFrame(right_column, text="Lineset to Mesh")
+        lineset_to_mesh_frame.pack(fill="x", pady=5, padx=10)
+        for i in range(3):
+            lineset_to_mesh_frame.grid_columnconfigure(i, weight=1, uniform="col")
+
+        self.lineset_to_mesh_button = tk.Button(
+            lineset_to_mesh_frame,
+            text="Convert to Mesh",
+            state=tk.DISABLED,
+            command=self.start_lineset_to_mesh_thread
+        )
+        self.lineset_to_mesh_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
+
+        self.lineset_to_mesh_result_label = tk.Label(lineset_to_mesh_frame, text="Mesh not created.", anchor="w")
+        self.lineset_to_mesh_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
+        # Repair Mesh Frame
+        repair_mesh_frame = tk.LabelFrame(right_column, text="Mesh Repair")
+        repair_mesh_frame.pack(fill="x", pady=5, padx=10)
+        for i in range(3):
+            repair_mesh_frame.grid_columnconfigure(i, weight=1, uniform="col")
+
+        self.repair_mesh_button = tk.Button(
+            repair_mesh_frame,
+            text="Repair Mesh",
+            state=tk.DISABLED,
+            command=self.start_repair_mesh_thread
+        )
+        self.repair_mesh_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
+
+        self.repair_mesh_result_label = tk.Label(repair_mesh_frame, text="Mesh not repaired.", anchor="w")
+        self.repair_mesh_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
         # Misc Frame (Final Actions)
         misc_frame = tk.LabelFrame(main_frame, text="Final Actions")
         misc_frame.pack(fill="x", pady=5, padx=10)
@@ -1070,6 +1156,10 @@ class App:
         self.xy_tolerance_entry.config(state=tk.NORMAL)
         self.max_line_length_entry.config(state=tk.NORMAL)
 
+    def enable_lineset_to_mesh_section(self):
+        self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
+        self.lineset_to_mesh_result_label.config(text="Mesh not created.")
+
     def enable_final_actions(self):
         self.view_button.config(state=tk.NORMAL)
 
@@ -1097,46 +1187,27 @@ class App:
         config = configparser.ConfigParser()
         presets_file = 'cityjson_presets.ini'
 
-        if os.path.exists(presets_file):
-            config.read(presets_file)
-            try:
-                # Load default values
-                self.points_per_cm_entry.insert(0, config.get('Settings', 'points_per_cm', fallback='1'))
-                self.neighbour_amount_entry.insert(0, config.get('Settings', 'neighbour_amount', fallback='20'))
-                self.std_ratio_entry.insert(0, config.get('Settings', 'std_ratio', fallback='2.0'))
-                self.floor_alpha_value_entry.insert(0, config.get('Settings', 'alpha_value', fallback='8'))
-                self.floor_triangle_size_entry.insert(0, config.get('Settings', 'triangle_size', fallback='1e-10'))
-                self.corner_distance_threshold_entry.insert(0, config.get('Settings', 'distance_threshold', fallback='0.045'))
-                self.slice_height_entry.insert(0, config.get('Settings', 'slice_height', fallback='1.5'))
-                self.roof_layers_entry.insert(0, config.get('Settings', 'roof_layers', fallback='50'))
-                self.roof_layer_fatness_entry.insert(0, config.get('Settings', 'roof_layer_fatness', fallback='0.01'))
-                self.roof_voxel_size_entry.insert(0, config.get('Settings', 'roof_voxel_size', fallback='0.05'))
-                self.roof_angle_threshold_entry.insert(0, config.get('Settings', 'angle_threshold', fallback='45'))
-                self.roof_merge_radius_entry.insert(0, config.get('Settings', 'merge_radius', fallback='0.1'))
-                self.wall_search_radius_entry.insert(0, config.get('Settings', 'wall_search_radius', fallback='0.05'))
-                self.wall_layer_amount_entry.insert(0, config.get('Settings', 'wall_layer_amount', fallback='20'))
-                self.xy_tolerance_entry.insert(0, config.get('Settings', 'xy_tolerance', fallback='0.1'))
-                self.max_line_length_entry.insert(0, config.get('Settings', 'max_line_length', fallback='0.5'))
-            except Exception as e:
-                print(f"Error loading presets: {e}")
-        else:
-            # Set default values if no presets file exists
-            self.points_per_cm_entry.insert(0, '1')
-            self.neighbour_amount_entry.insert(0, '20')
-            self.std_ratio_entry.insert(0, '2.0')
-            self.floor_alpha_value_entry.insert(0, '8')
-            self.floor_triangle_size_entry.insert(0, '1e-10')
-            self.corner_distance_threshold_entry.insert(0, '0.045')
-            self.slice_height_entry.insert(0, '1.5')
-            self.roof_layers_entry.insert(0, '50')
-            self.roof_layer_fatness_entry.insert(0, '0.01')
-            self.roof_voxel_size_entry.insert(0, '0.05')
-            self.roof_angle_threshold_entry.insert(0, '45')
-            self.roof_merge_radius_entry.insert(0, '0.1')
-            self.wall_search_radius_entry.insert(0, '0.05')
-            self.wall_layer_amount_entry.insert(0, '20')
-            self.xy_tolerance_entry.insert(0, '0.1')
-            self.max_line_length_entry.insert(0, '0.5')
+        config.read(presets_file)
+        try:
+            # Load default values
+            self.points_per_cm_entry.insert(0, config.get('Settings', 'points_per_cm', fallback='1'))
+            self.neighbour_amount_entry.insert(0, config.get('Settings', 'neighbour_amount', fallback='20'))
+            self.std_ratio_entry.insert(0, config.get('Settings', 'std_ratio', fallback='2.0'))
+            self.floor_alpha_value_entry.insert(0, config.get('Settings', 'alpha_value', fallback='8'))
+            self.floor_triangle_size_entry.insert(0, config.get('Settings', 'triangle_size', fallback='1e-10'))
+            self.corner_distance_threshold_entry.insert(0, config.get('Settings', 'distance_threshold', fallback='0.045'))
+            self.slice_height_entry.insert(0, config.get('Settings', 'slice_height', fallback='1.5'))
+            self.roof_layers_entry.insert(0, config.get('Settings', 'roof_layers', fallback='50'))
+            self.roof_layer_fatness_entry.insert(0, config.get('Settings', 'roof_layer_fatness', fallback='0.01'))
+            self.roof_voxel_size_entry.insert(0, config.get('Settings', 'roof_voxel_size', fallback='0.05'))
+            self.roof_angle_threshold_entry.insert(0, config.get('Settings', 'angle_threshold', fallback='45'))
+            self.roof_merge_radius_entry.insert(0, config.get('Settings', 'merge_radius', fallback='0.1'))
+            self.wall_search_radius_entry.insert(0, config.get('Settings', 'wall_search_radius', fallback='0.05'))
+            self.wall_layer_amount_entry.insert(0, config.get('Settings', 'wall_layer_amount', fallback='20'))
+            self.xy_tolerance_entry.insert(0, config.get('Settings', 'xy_tolerance', fallback='0.1'))
+            self.max_line_length_entry.insert(0, config.get('Settings', 'max_line_length', fallback='0.5'))
+        except Exception as e:
+            print(f"Error loading presets: {e}")
 
     def on_close(self):
         # Perform any cleanup or final actions before closing
