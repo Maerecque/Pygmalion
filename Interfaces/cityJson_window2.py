@@ -242,49 +242,69 @@ class App:
     # Threading functions for each step
     def start_alter_point_density_thread(self):
         if not self.point_cloud_data:
+            self.point_density_result_label.config(text="Altering Point Density, please wait...")
             self.show_message("Warning", "Please select a point cloud file first.", "warning")
             return
-        self.disable_section(self.point_density_button, "Altering point density...")
+        self.disable_section(self.point_density_button, "Altering Point Density...")
         threading.Thread(target=self.alter_point_density_step).start()
 
     def start_preprocessing_thread(self):
         if not self.resized_point_cloud_data:
+            self.preprocessing_result_label.config(text="Preprocessing, please wait...")
             self.show_message("Warning", "Please complete point density step first.", "warning")
             return
         self.disable_section(self.preprocessing_button, "Preprocessing...")
         threading.Thread(target=self.preprocessing_step).start()
 
     def start_heightmap_thread(self):
-        self.disable_section(self.heightmap_button, "Creating heightmap...")
+        self.disable_section(self.heightmap_button, "Creating Heightmap...")
+        self.heightmap_result_label.config(text="Creating Heightmap, please wait...")
         threading.Thread(target=self.heightmap_step).start()
 
     def start_floor_detection_thread(self):
-        self.disable_section(self.floor_detection_button, "Detecting floor...")
+        self.disable_section(self.floor_detection_button, "Detecting Floor...")
+        self.floor_detection_result_label.config(text="Detecting Floor, please wait...")
         threading.Thread(target=self.floor_detection_step).start()
 
     def start_roof_extraction_thread(self):
-        self.disable_section(self.roof_extraction_button, "Extracting roof...")
+        self.disable_section(self.roof_extraction_button, "Extracting Roof...")
+        self.roof_extraction_result_label.config(text="Extracting Roof, please wait...")
         threading.Thread(target=self.roof_extraction_step).start()
 
     def start_roof_division_thread(self):
-        self.disable_section(self.roof_division_button, "Dividing roof...")
+        self.disable_section(self.roof_division_button, "Dividing Roof...")
+        self.roof_division_result_label.config(text="Dividing Roof, please wait...")
         threading.Thread(target=self.roof_division_step).start()
 
     def start_wall_extraction_thread(self):
-        self.disable_section(self.wall_extraction_button, "Extracting walls...")
+        self.disable_section(self.wall_extraction_button, "Extracting Walls...")
+        self.wall_extraction_result_label.config(text="Extracting Walls, please wait...")
         threading.Thread(target=self.wall_extraction_step).start()
 
     def start_wall_division_thread(self):
-        self.disable_section(self.wall_division_button, "Dividing walls...")
+        self.disable_section(self.wall_division_button, "Dividing Walls...")
+        self.wall_division_result_label.config(text="Dividing Walls, please wait...")
         threading.Thread(target=self.wall_division_step).start()
 
     def start_pcd_to_lineset_thread(self):
-        self.disable_section(self.pcd_to_lineset_button, "Converting to lineset...")
+        self.disable_section(self.pcd_to_lineset_button, "Converting to\nLineset...")
+        self.pcd_to_lineset_result_label.config(text="Converting to Lineset, please wait...")
         threading.Thread(target=self.pcd_to_lineset_step).start()
 
     def start_lineset_to_mesh_thread(self):
-        self.disable_section(self.lineset_to_mesh_button, "Converting to mesh...")
+        self.disable_section(self.lineset_to_mesh_button, "Converting to Mesh...")
+        self.lineset_to_mesh_result_label.config(text="Converting to Mesh, please wait...")
         threading.Thread(target=self.lineset_to_mesh_step).start()
+
+    def start_repair_mesh_thread(self):
+        self.disable_section(self.repair_mesh_button, "Repairing Mesh...")
+        self.repair_mesh_result_label.config(text="Repairing Mesh, please wait...")
+        threading.Thread(target=self.repair_mesh_step).start()
+
+    def start_cityjson_conversion_thread(self):
+        self.disable_section(self.cityjson_conversion_button, "Converting to CityJSON...")
+        self.cityjson_conversion_result_label.config(text="Converting to CityJSON, please wait...")
+        threading.Thread(target=self.cityjson_conversion_step).start()
 
     # Processing steps
     def alter_point_density_step(self):
