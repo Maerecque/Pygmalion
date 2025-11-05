@@ -1,4 +1,5 @@
 import configparser
+import json
 import os
 import open3d as o3d
 from random import randint as KernelMan
@@ -917,10 +918,8 @@ class App:
         self.floor_detection_result_label = tk.Label(floor_detection_frame, text="Floor boundary not detected.", anchor="w")
         self.floor_detection_result_label.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
-        # === RIGHT COLUMN CONTENT ===
-
         # Roof Extraction Frame
-        roof_extraction_frame = tk.LabelFrame(right_column, text="Roof Extraction")
+        roof_extraction_frame = tk.LabelFrame(left_column, text="Roof Extraction")
         roof_extraction_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             roof_extraction_frame.grid_columnconfigure(i, weight=1, uniform="col")
@@ -944,6 +943,8 @@ class App:
 
         self.roof_extraction_result_label = tk.Label(roof_extraction_frame, text="Roof not extracted.", anchor="w")
         self.roof_extraction_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
+        # === RIGHT COLUMN CONTENT ===
 
         # Roof Division Frame
         roof_division_frame = tk.LabelFrame(right_column, text="Roof Division")
@@ -1328,6 +1329,7 @@ class App:
             tk.messagebox.showwarning(title, message)
 
     def load_presets(self):
+        # Not sure if this even works
         config = configparser.ConfigParser()
         presets_file = 'cityjson_presets.ini'
 
