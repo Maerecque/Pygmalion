@@ -84,6 +84,7 @@ class App:
         self.root.title("Point Cloud to CityJSON Converter")
         self.root.resizable(False, False)
         self.root.iconbitmap("Source\\support_files\\logo.ico")
+        self.root.geometry("+20+20")  # Open window in the top-left corner
 
         # Store the point cloud data and path
         self.point_cloud_data = point_cloud_data
