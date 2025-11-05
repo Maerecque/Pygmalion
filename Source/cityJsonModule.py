@@ -23,7 +23,6 @@ from Source.wallTools import (
     connect_vertically_aligned_points2,
     divide_wall_into_layers
 )
-from Source.surfaceReconstructor import repair_mesh_with_contour
 from Source.pointCloudEditor import open_point_cloud_editor as opce  # Keep here  # noqa: F401
 
 from tqdm import tqdm
@@ -104,15 +103,11 @@ def main():
     part12 = lineset_to_trianglemesh(total_lineset, full_floor_corners)
     part3 = lineset_to_trianglemesh(floor_lineset, full_floor_corners)
 
-    part12r = repair_mesh_with_contour(
-        part12,
-        create_point_cloud(full_floor_corners)
-    )  # Honestly not sure if this is needed or does anything
-    repaired = repair_mesh([part12r, part3])
+    combined = repair_mesh([part12, part3])
 
-    o3d.visualization.draw([part12r, part3])
+    o3d.visualization.draw([combined])
 
-    cityjson_data = o3d_to_cityjson(repaired, cityobject_id="building_1", obj_type="Building", lod="1.0")
+    cityjson_data = o3d_to_cityjson(combined, cityobject_id="building_1", obj_type="Building", lod="1.0")
 
     # For testing: save to file
     import json
