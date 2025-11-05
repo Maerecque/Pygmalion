@@ -654,10 +654,15 @@ class App:
             self.show_message("Error", f"Failed to save CityJSON file: {str(e)}", "error")
 
     def view_pointcloud(self, pointcloud):
+        # NOTE: Jumping back and forth between steps of LineSet and/or Mesh can cause an infinite loop.
+        # It's caused by a what-looks-like Open3d bug where the draw function keeps calling itself when
+        # while it's telling itself that the GLFW library is not initialized.
+
         # This will be called when the pointcloud is changed to a lineset
         if self.lineset_preview is True and self.total_lineset is not None:
             o3d.visualization.draw([self.total_lineset])
 
+        # This will be called when the Lineset is changed to a mesh
         elif self.mesh_preview is not None:
             o3d.visualization.draw([self.mesh_preview])
 
