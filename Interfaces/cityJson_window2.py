@@ -110,6 +110,9 @@ class App:
         self.repaired_mesh = None
         self.cityjson_data = None
 
+        self.lineset_preview = None
+        self.mesh_preview = None
+
         # If the escape key is pressed, activate the on_close method
         self.root.bind("<Escape>", lambda e: self.on_close())
 
