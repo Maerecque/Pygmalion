@@ -653,7 +653,14 @@ class App:
             self.show_message("Error", f"Failed to save CityJSON file: {str(e)}", "error")
 
     def view_pointcloud(self, pointcloud):
-        if pointcloud is not None:
+        # This will be called when the pointcloud is changed to a lineset
+        if self.lineset_preview is True and self.total_lineset is not None:
+            o3d.visualization.draw([self.total_lineset])
+
+        elif self.mesh_preview is not None:
+            o3d.visualization.draw([self.mesh_preview])
+
+        elif pointcloud is not None:
             opce(pointcloud, False)
         else:
             self.show_message("Warning", "No point cloud to view.", "warning")
