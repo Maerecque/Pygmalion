@@ -157,6 +157,7 @@ def transform_pcd_to_mesh(
 
 def repair_mesh(meshes: Union[o3d.geometry.TriangleMesh, List[o3d.geometry.TriangleMesh]]) -> o3d.geometry.TriangleMesh:
     """Repair holes in a mesh or list of meshes and ensure face normals point outward.
+    This function can also be used to stitch multiple meshes together.
 
     Args:
         meshes (o3d.geometry.TriangleMesh or list/tuple of o3d.geometry.TriangleMesh): The mesh or meshes to repair.
