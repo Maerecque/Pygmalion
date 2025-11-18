@@ -1,4 +1,10 @@
 [![Python 3.9.7](https://img.shields.io/badge/python-3.9.7-blue.svg)](https://www.python.org/downloads/release/python-397/) [![Python 3.7.9](https://img.shields.io/badge/python-3.7.9-blue.svg)](https://www.python.org/downloads/release/python-379/)
+<p>
+  <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" height="30" alt="CC">
+  <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" height="30" alt="BY">
+  <img src="https://mirrors.creativecommons.org/presskit/icons/nc-eu.svg" height="30" alt="NC">
+  <img src="https://mirrors.creativecommons.org/presskit/icons/sa.svg" height="30" alt="SA">
+</p>
 
 # Product Code
 This repository will contain the code made for the Utrecht local government. This project will contain the code that will be used for saving the wharf cellar in an organized matter. This Python script is designed for processing point cloud data, primarily in LAS and LAZ file formats. It offers various functionalities for point cloud manipulation, including downsampling, noise removal, plane extraction, repairing, and transformation. Below, you'll find an overview of the script and how to use it effectively.
