@@ -1337,8 +1337,21 @@ class App:
         # Not sure if this even works
         config = configparser.ConfigParser()
         presets_file = 'cityjson_presets.ini'
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        presets_file = os.path.join(current_dir, presets_file)
 
         config.read(presets_file)
+
+        # Print statement to check if the preset file is found
+        print(f"Reading presets from: {presets_file}")
+        print(f"Preset file found: {os.path.exists(presets_file)}")
+
+        # Testing print statements to see if they even load in
+        print("Loaded presets:")
+        for section in config.sections():
+            for key, value in config.items(section):
+                print(f"{key} = {value}")
+
         try:
             # Load default values
             self.points_per_cm_entry.insert(0, config.get('Settings', 'points_per_cm', fallback='1'))
