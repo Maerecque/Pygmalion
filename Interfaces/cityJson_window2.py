@@ -184,6 +184,27 @@ class App:
         except Exception:
             pass
 
+    def validate_empty_field(self, entry_widget):
+        """
+        Validates that an entry field is not empty.
+        Automatically extracts field name from widget attribute name.
+        """
+        if entry_widget.get() == "":
+            # Extract the field name from the widget's attribute name
+            field_name = None
+            for attr_name in dir(self):
+                if getattr(self, attr_name) is entry_widget:
+                    # Convert from snake_case to readable format, but only capitalize first letter
+                    field_name = attr_name.replace('_entry', '').replace('_', ' ').capitalize()
+                    break
+
+            if field_name is None:
+                field_name = "Field"
+
+            raise ValueError(f"Please enter a value for {field_name}.")
+
+        return True
+
     def validate_integer(self, value):
         if value.isdigit() or value == "":
             return True
@@ -315,8 +336,7 @@ class App:
         self.mesh_preview = None
 
         try:
-            if not self.points_per_cm_entry.get():
-                self.points_per_cm_entry.insert(0, "1")
+            self.validate_empty_field(self.points_per_cm_entry)
 
             resized_pcd = alter_point_density(
                 self.point_cloud_data,
@@ -343,11 +363,8 @@ class App:
         try:
             pcd = self.resized_point_cloud_data
 
-            # Check if user filled in nb_neighbors and std_ratio
-            if not self.neighbour_amount_entry.get():
-                self.neighbour_amount_entry.insert(0, "20")
-            if not self.std_ratio_entry.get():
-                self.std_ratio_entry.insert(0, "2.0")
+            self.validate_empty_field(self.neighbour_amount_entry)
+            self.validate_empty_field(self.std_ratio_entry)
 
             # Remove noise from the point cloud
             if self.neighbour_amount_entry.get() and self.std_ratio_entry.get():
@@ -394,12 +411,9 @@ class App:
         self.mesh_preview = None
 
         # Check if user filled in alpha_value and triangle_size
-        if not self.floor_alpha_value_entry.get():
-            self.floor_alpha_value_entry.insert(0, "8")
-        if not self.floor_triangle_size_entry.get():
-            self.floor_triangle_size_entry.insert(0, "1e-10")
-        if not self.corner_distance_threshold_entry.get():
-            self.corner_distance_threshold_entry.insert(0, "0.045")
+        self.validate_empty_field(self.floor_alpha_value_entry)
+        self.validate_empty_field(self.floor_triangle_size_entry)
+        self.validate_empty_field(self.corner_distance_threshold_entry)
 
         try:
             self.floor_lines = find_boundary_from_floor(
@@ -432,8 +446,7 @@ class App:
         self.mesh_preview = None
 
         try:
-            if not self.slice_height_entry.get():
-                self.slice_height_entry.insert(0, "1.5")
+            self.validate_empty_field(self.slice_height_entry)
 
             floor_corners_pcd = create_point_cloud(self.floor_corners, color=[1, 0, 0])
 
@@ -460,16 +473,11 @@ class App:
 
         try:
             # Set default values if not provided
-            if not self.roof_layers_entry.get():
-                self.roof_layers_entry.insert(0, "50")
-            if not self.roof_layer_fatness_entry.get():
-                self.roof_layer_fatness_entry.insert(0, "0.01")
-            if not self.roof_voxel_size_entry.get():
-                self.roof_voxel_size_entry.insert(0, "0.05")
-            if not self.roof_merge_radius_entry.get():
-                self.roof_merge_radius_entry.insert(0, "0.1")
-            if not self.roof_angle_threshold_entry.get():
-                self.roof_angle_threshold_entry.insert(0, "45")
+            self.validate_empty_field(self.roof_layers_entry)
+            self.validate_empty_field(self.roof_layer_fatness_entry)
+            self.validate_empty_field(self.roof_voxel_size_entry)
+            self.validate_empty_field(self.roof_merge_radius_entry)
+            self.validate_empty_field(self.roof_angle_threshold_entry)
 
             self.roof_layer_list = slice_roof_up(
                 self.roof_pcd,
@@ -492,8 +500,7 @@ class App:
         self.mesh_preview = None
 
         try:
-            if not self.wall_search_radius_entry.get():
-                self.wall_search_radius_entry.insert(0, "0.05")
+            self.validate_empty_field(self.wall_search_radius_entry)
 
             # Merge new_pcd_tuple[2] with temp_wall_pcd
             temp_wall_pcd_merged = merge_pcds([self.new_pcd_tuple[2], self.temp_wall_pcd])
@@ -517,8 +524,7 @@ class App:
 
     def wall_division_step(self):
         try:
-            if not self.wall_layer_amount_entry.get():
-                self.wall_layer_amount_entry.insert(0, "20")
+            self.validate_empty_field(self.wall_layer_amount_entry)
 
             self.wall_layer_list = divide_wall_into_layers(
                 self.wall_pcd,
@@ -538,10 +544,8 @@ class App:
         self.mesh_preview = None
 
         try:
-            if not self.xy_tolerance_entry.get():
-                self.xy_tolerance_entry.insert(0, "0.1")
-            if not self.max_line_length_entry.get():
-                self.max_line_length_entry.insert(0, "0.5")
+            self.validate_empty_field(self.xy_tolerance_entry)
+            self.validate_empty_field(self.max_line_length_entry)
 
             self.roof_wall_lineset = o3d.geometry.LineSet()
 
@@ -1372,10 +1376,10 @@ class App:
                 # Only insert value if it exists in the config file
                 if config.has_option('Settings', key):
                     value = config.get('Settings', key)
-                    entry.config(state=tk.NORMAL)  # Enable temporarily
-                    entry.delete(0, tk.END)        # Clear any existing content
-                    entry.insert(0, value)         # Insert the preset value
-                    entry.config(state=tk.DISABLED) # Disable again
+                    entry.config(state=tk.NORMAL)       # Enable temporarily
+                    entry.delete(0, tk.END)             # Clear any existing content
+                    entry.insert(0, value)              # Insert the preset value
+                    entry.config(state=tk.DISABLED)     # Disable again
                 # If no value exists, leave the field empty (don't insert anything)
 
         except Exception as e:
