@@ -1336,40 +1336,48 @@ class App:
     def load_presets(self):
         # Not sure if this even works
         config = configparser.ConfigParser()
-        presets_file = 'cityjson_presets.ini'
+        presets_file = 'cityjson_presets.ini'  # Think about making this user definable later
         current_dir = os.path.dirname(os.path.abspath(__file__))
         presets_file = os.path.join(current_dir, presets_file)
 
         config.read(presets_file)
 
-        # Print statement to check if the preset file is found
-        print(f"Reading presets from: {presets_file}")
-        print(f"Preset file found: {os.path.exists(presets_file)}")
-
-        # Testing print statements to see if they even load in
-        print("Loaded presets:")
-        for section in config.sections():
-            for key, value in config.items(section):
-                print(f"{key} = {value}")
+        # Check if there is an presets_file found. If not give a tkinter warning and skip loading presets.
+        if not os.path.isfile(presets_file):
+            tk.messagebox.showwarning("Warning", f"Presets file not found: {presets_file}")
+            return
 
         try:
-            # Load default values
-            self.points_per_cm_entry.insert(0, config.get('Settings', 'points_per_cm', fallback='1'))
-            self.neighbour_amount_entry.insert(0, config.get('Settings', 'neighbour_amount', fallback='20'))
-            self.std_ratio_entry.insert(0, config.get('Settings', 'std_ratio', fallback='2.0'))
-            self.floor_alpha_value_entry.insert(0, config.get('Settings', 'alpha_value', fallback='8'))
-            self.floor_triangle_size_entry.insert(0, config.get('Settings', 'triangle_size', fallback='1e-10'))
-            self.corner_distance_threshold_entry.insert(0, config.get('Settings', 'distance_threshold', fallback='0.045'))
-            self.slice_height_entry.insert(0, config.get('Settings', 'slice_height', fallback='1.5'))
-            self.roof_layers_entry.insert(0, config.get('Settings', 'roof_layers', fallback='50'))
-            self.roof_layer_fatness_entry.insert(0, config.get('Settings', 'roof_layer_fatness', fallback='0.01'))
-            self.roof_voxel_size_entry.insert(0, config.get('Settings', 'roof_voxel_size', fallback='0.05'))
-            self.roof_angle_threshold_entry.insert(0, config.get('Settings', 'angle_threshold', fallback='45'))
-            self.roof_merge_radius_entry.insert(0, config.get('Settings', 'merge_radius', fallback='0.1'))
-            self.wall_search_radius_entry.insert(0, config.get('Settings', 'wall_search_radius', fallback='0.05'))
-            self.wall_layer_amount_entry.insert(0, config.get('Settings', 'wall_layer_amount', fallback='20'))
-            self.xy_tolerance_entry.insert(0, config.get('Settings', 'xy_tolerance', fallback='0.1'))
-            self.max_line_length_entry.insert(0, config.get('Settings', 'max_line_length', fallback='0.5'))
+            # Temporarily enable all entry fields, insert values if they exist, then disable them again
+            entries_and_keys = [
+                (self.points_per_cm_entry, 'points_per_cm'),
+                (self.neighbour_amount_entry, 'neighbour_amount'),
+                (self.std_ratio_entry, 'std_ratio'),
+                (self.floor_alpha_value_entry, 'alpha_value'),
+                (self.floor_triangle_size_entry, 'triangle_size'),
+                (self.corner_distance_threshold_entry, 'distance_threshold'),
+                (self.slice_height_entry, 'slice_height'),
+                (self.roof_layers_entry, 'roof_layers'),
+                (self.roof_layer_fatness_entry, 'roof_layer_fatness'),
+                (self.roof_voxel_size_entry, 'roof_voxel_size'),
+                (self.roof_angle_threshold_entry, 'angle_threshold'),
+                (self.roof_merge_radius_entry, 'merge_radius'),
+                (self.wall_search_radius_entry, 'wall_search_radius'),
+                (self.wall_layer_amount_entry, 'wall_layer_amount'),
+                (self.xy_tolerance_entry, 'xy_tolerance'),
+                (self.max_line_length_entry, 'max_line_length')
+            ]
+
+            for entry, key in entries_and_keys:
+                # Only insert value if it exists in the config file
+                if config.has_option('Settings', key):
+                    value = config.get('Settings', key)
+                    entry.config(state=tk.NORMAL)  # Enable temporarily
+                    entry.delete(0, tk.END)        # Clear any existing content
+                    entry.insert(0, value)         # Insert the preset value
+                    entry.config(state=tk.DISABLED) # Disable again
+                # If no value exists, leave the field empty (don't insert anything)
+
         except Exception as e:
             print(f"Error loading presets: {e}")
 
