@@ -1339,7 +1339,7 @@ class App:
     def load_presets(self):
         # Not sure if this even works
         config = configparser.ConfigParser()
-        presets_file = 'cityjson_presets.ini'  # Think about making this user definable later
+        presets_file = 'presets.ini'  # Think about making this user definable later
         current_dir = os.path.dirname(os.path.abspath(__file__))
         presets_file = os.path.join(current_dir, presets_file)
 
