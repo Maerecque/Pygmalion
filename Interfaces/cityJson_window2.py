@@ -82,7 +82,7 @@ class Tooltip:
 class App:
     def __init__(self, root, point_cloud_data=None, point_cloud_path=None):
         self.root = root
-        self.root.title("Point Cloud to CityJSON Converter")
+        self.root.title("Pygmalion CityJSON Generator")
         self.root.resizable(False, False)
         self.root.iconbitmap("Source\\support_files\\logo.ico")
         self.root.geometry("+20+20")  # Open window in the top-left corner
@@ -201,7 +201,7 @@ class App:
             if field_name is None:
                 field_name = "Field"
 
-            raise ValueError(f"Please enter a value for {field_name}.")
+            raise ValueError(f"Voor een waarde in voor veld: {field_name}.")
 
         return True
 
@@ -220,17 +220,17 @@ class App:
     def select_file(self):
         """Select a point cloud file and load it"""
         try:
-            file_path = get_file_path("Point Cloud files", ["*.las", "*.laz"], False)
+            file_path = get_file_path("Puntenwolk bestanden", ["*.las", "*.laz"], False)
             if file_path:
                 self.point_cloud_path = file_path
 
                 # Update the file label
-                self.file_label.config(text=f"Selected file: {os.path.basename(file_path)}")
+                self.file_label.config(text=f"Geselecteerd bestand: {os.path.basename(file_path)}")
 
                 # Load the point cloud data
                 self.point_cloud_data = readout_LAS_file(file_path, False)
 
-                self.file_select_button.config(text="Change File")
+                self.file_select_button.config(text="Bestand wijzigen")
                 self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
                 # Enable point density section
@@ -241,91 +241,91 @@ class App:
 
                 # Update the file label with point count
                 self.file_label.config(
-                    text=f"Selected file: {os.path.basename(file_path)}\nPoints: {len(self.point_cloud_data.points)}"
+                    text=f"Geselecteerd bestand: {os.path.basename(file_path)}\nPunten: {len(self.point_cloud_data.points)}"
                 )
 
         except Exception as e:
-            self.show_message("Error", f"Failed to load point cloud file: {str(e)}", "error")
+            self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
 
             # Update the file label with an error message
             self.file_label.config(
-                text=f"Error loading file: {os.path.basename(file_path)}",
+                text=f"Fout bij laden van puntenwolkbestand: {os.path.basename(file_path)}",
                 fg="red"
             )
 
     def load_point_cloud_data(self):
         """Load point cloud data when provided during initialization"""
         if self.point_cloud_path and os.path.exists(self.point_cloud_path):
-            self.file_label.config(text=f"Selected file: {os.path.basename(self.point_cloud_path)}")
-            self.file_select_button.config(text="Change File")
+            self.file_label.config(text=f"Geselecteerd bestand: {os.path.basename(self.point_cloud_path)}")
+            self.file_select_button.config(text="Bestand wijzigen")
             self.update_view_pointcloud(self.point_cloud_data)
             self.enable_point_density_section()
 
     # Threading functions for each step
     def start_alter_point_density_thread(self):
         if not self.point_cloud_data:
-            self.point_density_result_label.config(text="Altering Point Density, please wait...")
-            self.show_message("Warning", "Please select a point cloud file first.", "warning")
+            self.point_density_result_label.config(text="Puntdichtheid aanpassen, even geduld...")
+            self.show_message("Waarschuwing", "Selecteer eerst een puntenwolkbestand.", "warning")
             return
-        self.disable_section(self.point_density_button, "Altering Point Density...")
+        self.disable_section(self.point_density_button, "Puntdichtheid aanpassen...")
         threading.Thread(target=self.alter_point_density_step).start()
 
     def start_preprocessing_thread(self):
         if not self.resized_point_cloud_data:
-            self.preprocessing_result_label.config(text="Preprocessing, please wait...")
-            self.show_message("Warning", "Please complete point density step first.", "warning")
+            self.preprocessing_result_label.config(text="Voorbewerking, even geduld...")
+            self.show_message("Waarschuwing", "Voltooi eerst de stap puntdichtheid.", "warning")
             return
-        self.disable_section(self.preprocessing_button, "Preprocessing...")
+        self.disable_section(self.preprocessing_button, "Voorbewerking...")
         threading.Thread(target=self.preprocessing_step).start()
 
     def start_heightmap_thread(self):
-        self.disable_section(self.heightmap_button, "Creating Heightmap...")
-        self.heightmap_result_label.config(text="Creating Heightmap, please wait...")
+        self.disable_section(self.heightmap_button, "Hoogtekaart maken...")
+        self.heightmap_result_label.config(text="Hoogtekaart maken, even geduld...")
         threading.Thread(target=self.heightmap_step).start()
 
     def start_floor_detection_thread(self):
-        self.disable_section(self.floor_detection_button, "Detecting Floor...")
-        self.floor_detection_result_label.config(text="Detecting Floor, please wait...")
+        self.disable_section(self.floor_detection_button, "Vloer detecteren...")
+        self.floor_detection_result_label.config(text="Vloer detecteren, even geduld...")
         threading.Thread(target=self.floor_detection_step).start()
 
     def start_roof_extraction_thread(self):
-        self.disable_section(self.roof_extraction_button, "Extracting Roof...")
-        self.roof_extraction_result_label.config(text="Extracting Roof, please wait...")
+        self.disable_section(self.roof_extraction_button, "Dak extractie...")
+        self.roof_extraction_result_label.config(text="Dak extractie, even geduld...")
         threading.Thread(target=self.roof_extraction_step).start()
 
     def start_roof_division_thread(self):
-        self.disable_section(self.roof_division_button, "Dividing Roof...")
-        self.roof_division_result_label.config(text="Dividing Roof, please wait...")
+        self.disable_section(self.roof_division_button, "Dak verdelen...")
+        self.roof_division_result_label.config(text="Dak verdelen, even geduld...")
         threading.Thread(target=self.roof_division_step).start()
 
     def start_wall_extraction_thread(self):
-        self.disable_section(self.wall_extraction_button, "Extracting Walls...")
-        self.wall_extraction_result_label.config(text="Extracting Walls, please wait...")
+        self.disable_section(self.wall_extraction_button, "Muren extraheren...")
+        self.wall_extraction_result_label.config(text="Muren extraheren, even geduld...")
         threading.Thread(target=self.wall_extraction_step).start()
 
     def start_wall_division_thread(self):
-        self.disable_section(self.wall_division_button, "Dividing Walls...")
-        self.wall_division_result_label.config(text="Dividing Walls, please wait...")
+        self.disable_section(self.wall_division_button, "Muren verdelen...")
+        self.wall_division_result_label.config(text="Muren verdelen, even geduld...")
         threading.Thread(target=self.wall_division_step).start()
 
     def start_pcd_to_lineset_thread(self):
-        self.disable_section(self.pcd_to_lineset_button, "Converting to\nLineset...")
-        self.pcd_to_lineset_result_label.config(text="Converting to Lineset, please wait...")
+        self.disable_section(self.pcd_to_lineset_button, "Converteren naar\nLineset...")
+        self.pcd_to_lineset_result_label.config(text="Converteren naar Lineset, even geduld...")
         threading.Thread(target=self.pcd_to_lineset_step).start()
 
     def start_lineset_to_mesh_thread(self):
-        self.disable_section(self.lineset_to_mesh_button, "Converting to Mesh...")
-        self.lineset_to_mesh_result_label.config(text="Converting to Mesh, please wait...")
+        self.disable_section(self.lineset_to_mesh_button, "Converteren naar Mesh...")
+        self.lineset_to_mesh_result_label.config(text="Converteren naar Mesh, even geduld...")
         threading.Thread(target=self.lineset_to_mesh_step).start()
 
     def start_repair_mesh_thread(self):
-        self.disable_section(self.repair_mesh_button, "Repairing Mesh...")
-        self.repair_mesh_result_label.config(text="Repairing Mesh, please wait...")
+        self.disable_section(self.repair_mesh_button, "Repareren Mesh...")
+        self.repair_mesh_result_label.config(text="Repareren Mesh, even geduld...")
         threading.Thread(target=self.repair_mesh_step).start()
 
     def start_cityjson_conversion_thread(self):
-        self.disable_section(self.cityjson_conversion_button, "Converting to CityJSON...")
-        self.cityjson_conversion_result_label.config(text="Converting to CityJSON, please wait...")
+        self.disable_section(self.cityjson_conversion_button, "Converteren naar CityJSON...")
+        self.cityjson_conversion_result_label.config(text="Converteren naar CityJSON, even geduld...")
         threading.Thread(target=self.cityjson_conversion_step).start()
 
     # Processing steps
@@ -344,17 +344,17 @@ class App:
             )
 
             self.point_density_result_label.config(
-                text=f"Point density altered from {len(self.point_cloud_data.points)} → {len(resized_pcd.points)} points."
+                text=f"Puntdichtheid aangepast van {len(self.point_cloud_data.points)} → {len(resized_pcd.points)} punten."
             )
 
             self.resized_point_cloud_data = resized_pcd
-            self.point_density_button.config(state=tk.NORMAL, text="Alter Point Density")
+            self.point_density_button.config(state=tk.NORMAL, text="Puntdichtheid aanpassen")
             self.update_view_pointcloud(resized_pcd)
             self.enable_preprocessing_section()
 
         except Exception as e:
-            self.point_density_result_label.config(text=f"Error: {str(e)}")
-            self.point_density_button.config(state=tk.NORMAL, text="Alter Point Density")
+            self.point_density_result_label.config(text=f"Fout: {str(e)}")
+            self.point_density_button.config(state=tk.NORMAL, text="Puntdichtheid aanpassen")
 
     def preprocessing_step(self):
         self.lineset_preview = None
@@ -379,13 +379,13 @@ class App:
             amount_removed = len(self.resized_point_cloud_data.points) - len(pcd.points)
 
             self.processed_pcd = pcd
-            self.preprocessing_result_label.config(text=f"{amount_removed} points removed, {len(pcd.points)} points remaining.")
-            self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
+            self.preprocessing_result_label.config(text=f"{amount_removed} punten verwijderd, {len(pcd.points)} punten over.")
+            self.preprocessing_button.config(state=tk.NORMAL, text="Start voorbewerking")
             self.update_view_pointcloud(pcd)
             self.enable_heightmap_section()
         except Exception as e:
-            self.preprocessing_result_label.config(text=f"Error: {str(e)}")
-            self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
+            self.preprocessing_result_label.config(text=f"Fout: {str(e)}")
+            self.preprocessing_button.config(state=tk.NORMAL, text="Start voorbewerking")
 
     def heightmap_step(self):
         self.lineset_preview = None
@@ -398,13 +398,13 @@ class App:
                 visualize_map_np=False,
                 debugging_logs=False
             )
-            self.heightmap_result_label.config(text="Heightmap created successfully.")
-            self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
+            self.heightmap_result_label.config(text="Hoogtekaart succesvol aangemaakt.")
+            self.heightmap_button.config(state=tk.NORMAL, text="Hoogtekaart maken")
             self.update_view_pointcloud(self.new_pcd_tuple[0])
             self.enable_floor_detection_section()
         except Exception as e:
-            self.heightmap_result_label.config(text=f"Error: {str(e)}")
-            self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
+            self.heightmap_result_label.config(text=f"Fout: {str(e)}")
+            self.heightmap_button.config(state=tk.NORMAL, text="Hoogtekaart maken")
 
     def floor_detection_step(self):
         self.lineset_preview = None
@@ -432,14 +432,14 @@ class App:
             self.floor_corners = self.floor_hull  # For now, use hull as corners
 
             self.floor_detection_result_label.config(
-                text=f"Floor boundary detected.\n{len(self.floor_lines)} boundary points, {len(self.floor_corners)} corners."
+                text=f"Vloergrens gedetecteerd.\n{len(self.floor_lines)} grenspunten, {len(self.floor_corners)} hoeken."
             )
-            self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
+            self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
             self.update_view_pointcloud(create_point_cloud(self.floor_corners, color=[1, 0, 0]))
             self.enable_roof_extraction_section()
         except Exception as e:
-            self.floor_detection_result_label.config(text=f"Error: {str(e)}")
-            self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
+            self.floor_detection_result_label.config(text=f"Fout: {str(e)}")
+            self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
 
     def roof_extraction_step(self):
         self.lineset_preview = None
@@ -458,14 +458,14 @@ class App:
             )
 
             self.roof_extraction_result_label.config(
-                text=f"Roof extracted: {len(self.roof_pcd.points)} roof points, {len(self.temp_wall_pcd.points)} wall points."
+                text=f"Dak geëxtraheerd: {len(self.roof_pcd.points)} dakpunten, {len(self.temp_wall_pcd.points)} muurpunten."
             )
-            self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
+            self.roof_extraction_button.config(state=tk.NORMAL, text="Exporteer dakpunten")
             self.update_view_pointcloud(self.roof_pcd)
             self.enable_roof_division_section()
         except Exception as e:
-            self.roof_extraction_result_label.config(text=f"Error: {str(e)}")
-            self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
+            self.roof_extraction_result_label.config(text=f"Fout: {str(e)}")
+            self.roof_extraction_button.config(state=tk.NORMAL, text="Exporteer dakpunten")
 
     def roof_division_step(self):
         self.lineset_preview = None
@@ -487,13 +487,13 @@ class App:
             )
 
             self.roof_division_result_label.config(
-                text=f"Roof divided into {len(self.roof_layer_list)} layers."
+                text=f"Dak verdeeld in {len(self.roof_layer_list)} lagen."
             )
-            self.roof_division_button.config(state=tk.NORMAL, text="Divide Roof")
+            self.roof_division_button.config(state=tk.NORMAL, text="Verdeel dak")
             self.enable_wall_extraction_section()
         except Exception as e:
-            self.roof_division_result_label.config(text=f"Error: {str(e)}")
-            self.roof_division_button.config(state=tk.NORMAL, text="Divide Roof")
+            self.roof_division_result_label.config(text=f"Fout: {str(e)}")
+            self.roof_division_button.config(state=tk.NORMAL, text="Verdeel dak")
 
     def wall_extraction_step(self):
         self.lineset_preview = None
@@ -513,14 +513,14 @@ class App:
             )
 
             self.wall_extraction_result_label.config(
-                text=f"Walls extracted: {len(self.wall_pcd.points)} wall points."
+                text=f"Muren geëxtraheerd: {len(self.wall_pcd.points)} muurpunten."
             )
-            self.wall_extraction_button.config(state=tk.NORMAL, text="Extract Walls")
+            self.wall_extraction_button.config(state=tk.NORMAL, text="Exporteer muren")
             self.update_view_pointcloud(self.wall_pcd)
             self.enable_wall_division_section()
         except Exception as e:
-            self.wall_extraction_result_label.config(text=f"Error: {str(e)}")
-            self.wall_extraction_button.config(state=tk.NORMAL, text="Extract Walls")
+            self.wall_extraction_result_label.config(text=f"Fout: {str(e)}")
+            self.wall_extraction_button.config(state=tk.NORMAL, text="Exporteer muren")
 
     def wall_division_step(self):
         try:
@@ -532,13 +532,13 @@ class App:
             )
 
             self.wall_division_result_label.config(
-                text=f"Walls divided into {len(self.wall_layer_list)} layers."
+                text=f"Muren verdeeld in {len(self.wall_layer_list)} lagen."
             )
-            self.wall_division_button.config(state=tk.NORMAL, text="Divide Walls")
+            self.wall_division_button.config(state=tk.NORMAL, text="Verdeel muren")
             self.enable_pcd_to_lineset_section()
         except Exception as e:
-            self.wall_division_result_label.config(text=f"Error: {str(e)}")
-            self.wall_division_button.config(state=tk.NORMAL, text="Divide Walls")
+            self.wall_division_result_label.config(text=f"Fout: {str(e)}")
+            self.wall_division_button.config(state=tk.NORMAL, text="Verdeel muren")
 
     def pcd_to_lineset_step(self):
         self.mesh_preview = None
@@ -550,7 +550,7 @@ class App:
             self.roof_wall_lineset = o3d.geometry.LineSet()
 
             # Connect wall layers
-            for i in tqdm(range(len(self.wall_layer_list)), desc="Processing wall layers", unit="layer"):
+            for i in tqdm(range(len(self.wall_layer_list)), desc="Bereken muur lagen", unit="laag"):
                 self.roof_wall_lineset += connect_vertically_aligned_points2(
                     self.wall_layer_list[i - 1] if i > 0 else self.wall_layer_list[i],
                     self.wall_layer_list[i],
@@ -581,19 +581,18 @@ class App:
             self.total_lineset = merge_lineset(self.floor_lineset, self.roof_wall_lineset)
 
             self.pcd_to_lineset_result_label.config(
-                text="Linesets created successfully."
+                text="Linesets succesvol aangemaakt."
             )
 
             self.lineset_preview = True
 
-            self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Convert to Lineset")
+            self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Converteer naar Lineset")
             self.enable_lineset_to_mesh_section()
         except Exception as e:
-            self.pcd_to_lineset_result_label.config(text=f"Error: {str(e)}")
-            self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Convert to Lineset")
+            self.pcd_to_lineset_result_label.config(text=f"Fout: {str(e)}")
+            self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Converteer naar Lineset")
 
     def lineset_to_mesh_step(self):
-
         try:
             self.floor_mesh = lineset_to_trianglemesh(self.floor_lineset, self.floor_corners)
             self.roof_wall_mesh = lineset_to_trianglemesh(self.total_lineset, self.floor_corners)
@@ -601,14 +600,14 @@ class App:
             self.lineset_preview = False
             self.mesh_preview = combine_meshes([self.floor_mesh, self.roof_wall_mesh])
 
-            self.lineset_to_mesh_result_label.config(text="Meshes created successfully.")
-            self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
+            self.lineset_to_mesh_result_label.config(text="Meshes succesvol aangemaakt.")
+            self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Converteer naar Mesh")
 
             self.enable_repair_mesh_section()
 
         except Exception as e:
-            self.lineset_to_mesh_result_label.config(text=f"Error: {str(e)}")
-            self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
+            self.lineset_to_mesh_result_label.config(text=f"Fout: {str(e)}")
+            self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Converteer naar Mesh")
 
     def repair_mesh_step(self):
         try:
@@ -616,46 +615,46 @@ class App:
 
             self.mesh_preview = self.repaired_mesh
 
-            self.repair_mesh_result_label.config(text="Mesh repaired successfully.")
-            self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
+            self.repair_mesh_result_label.config(text="Mesh succesvol hersteld.")
+            self.repair_mesh_button.config(state=tk.NORMAL, text="Herstel Mesh")
             self.enable_cityjson_conversion_section()
 
         except Exception as e:
-            self.repair_mesh_result_label.config(text=f"Error: {str(e)}")
-            self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
+            self.repair_mesh_result_label.config(text=f"Fout: {str(e)}")
+            self.repair_mesh_button.config(state=tk.NORMAL, text="Herstel Mesh")
 
     def cityjson_conversion_step(self):
         try:
             self.cityjson_data = o3d_to_cityjson(
                 self.repaired_mesh,
-                cityobject_id="Building_1",
+                cityobject_id="Gebouw_1",
                 obj_type="Building",
                 lod="1.0"
             )
 
-            self.cityjson_conversion_result_label.config(text="Converted to CityJSON successfully.")
-            self.cityjson_conversion_button.config(state=tk.NORMAL, text="Convert to CityJSON")
+            self.cityjson_conversion_result_label.config(text="Succesvol geconverteerd naar CityJSON.")
+            self.cityjson_conversion_button.config(state=tk.NORMAL, text="Converteer naar CityJSON")
             self.save_cityjson_button.config(state=tk.NORMAL)
 
         except Exception as e:
-            self.cityjson_conversion_result_label.config(text=f"Error: {str(e)}")
-            self.cityjson_conversion_button.config(state=tk.NORMAL, text="Convert to CityJSON")
+            self.cityjson_conversion_result_label.config(text=f"Fout: {str(e)}")
+            self.cityjson_conversion_button.config(state=tk.NORMAL, text="Converteer naar CityJSON")
 
     def save_cityjson_file_step(self):
         try:
             if self.cityjson_data is None:
-                self.show_message("Warning", "No CityJSON data to save. Please complete the conversion step first.", "warning")
+                self.show_message("Waarschuwing", "Geen CityJSON-gegevens om op te slaan. Voltooi eerst de conversiestap.", "warning")  # noqa: E501
                 return
 
-            save_path = get_save_file_path("CityJSON files", ["*.json"], default_name="building_cityjson.json")
+            save_path = get_save_file_path("CityJSON-bestanden", ["*.json"], default_name="building_cityjson.json")
             if save_path:
                 with open(save_path, "w") as f:
                     json.dump(self.cityjson_data, f, indent=2)
 
-                self.show_message("Info", f"CityJSON data saved successfully to {save_path}.", "info")
+                self.show_message("Info", f"CityJSON-gegevens succesvol opgeslagen in {save_path}.", "info")
 
         except Exception as e:
-            self.show_message("Error", f"Failed to save CityJSON file: {str(e)}", "error")
+            self.show_message("Fout", f"Opslaan van CityJSON-bestand mislukt: {str(e)}", "error")
 
     def view_pointcloud(self, pointcloud):
         # NOTE: Jumping back and forth between steps of LineSet and/or Mesh can cause an infinite loop.
@@ -673,7 +672,7 @@ class App:
         elif pointcloud is not None:
             opce(pointcloud, False)
         else:
-            self.show_message("Warning", "No point cloud to view.", "warning")
+            self.show_message("Waarschuwing", "Geen puntenwolk om te bekijken.", "warning")
 
     def reset_application(self):
         self.point_cloud_data = None
@@ -719,11 +718,11 @@ class App:
         self.wall_layer_amount_entry.delete(0, tk.END)
         self.xy_tolerance_entry.delete(0, tk.END)
         self.max_line_length_entry.delete(0, tk.END)
-        self.file_label.config(text="No file selected", fg="black")
+        self.file_label.config(text="Geen bestand geselecteerd", fg="black")
 
         # Reset all sections
         self.disable_all_sections()
-        self.show_message("Info", "Application reset successfully.")
+        self.show_message("Info", "Applicatie succesvol gereset.")
 
     def create_widgets(self):
         main_frame = tk.Frame(self.root, padx=10, pady=10)
@@ -754,17 +753,17 @@ class App:
         # === LEFT COLUMN CONTENT ===
 
         # File Selection Frame
-        file_frame = tk.LabelFrame(left_column, text="File Selection")
+        file_frame = tk.LabelFrame(left_column, text="Bestand selecteren")
         file_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             file_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        self.file_label = tk.Label(file_frame, text="No file selected", anchor="w")
+        self.file_label = tk.Label(file_frame, text="Geen bestand geselecteerd", anchor="w")
         self.file_label.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
         self.file_select_button = tk.Button(
             file_frame,
-            text="Select Point Cloud File",
+            text="Selecteer Puntenwolkbestand",
             command=self.select_file,
             anchor="center",
             justify="right"
@@ -772,12 +771,12 @@ class App:
         self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
         # Point Density Frame
-        point_density_frame = tk.LabelFrame(left_column, text="Point Density")
+        point_density_frame = tk.LabelFrame(left_column, text="Puntdichtheid")
         point_density_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             point_density_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(point_density_frame, text="Points per cm", anchor="w").grid(
+        tk.Label(point_density_frame, text="Punten per cm²", anchor="w").grid(
             row=0,
             column=0,
             padx=5,
@@ -794,7 +793,7 @@ class App:
 
         self.point_density_button = tk.Button(
             point_density_frame,
-            text="Alter Point Density",
+            text="Pas puntdichtheid aan",
             command=self.start_alter_point_density_thread,
             state=tk.DISABLED
         )
@@ -804,12 +803,12 @@ class App:
         self.point_density_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Noise Removal Frame
-        noise_removal_frame = tk.LabelFrame(left_column, text="Noise Removal")
+        noise_removal_frame = tk.LabelFrame(left_column, text="Ruis verwijderen")
         noise_removal_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             noise_removal_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(noise_removal_frame, text="Neighbour Amount", anchor="w").grid(
+        tk.Label(noise_removal_frame, text="Aantal buren", anchor="w").grid(
             row=0,
             column=0,
             padx=5,
@@ -824,7 +823,7 @@ class App:
         )
         self.neighbour_amount_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(noise_removal_frame, text="Std Ratio", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(noise_removal_frame, text="Std ratio", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.std_ratio_entry = tk.Entry(
             noise_removal_frame,
             validate="key",
@@ -837,7 +836,7 @@ class App:
         self.show_removed_points_var = tk.BooleanVar()
         self.show_removed_points_checkbox = tk.Checkbutton(
             noise_removal_frame,
-            text="Show removed points",
+            text="Toon verwijderde punten",
             variable=self.show_removed_points_var,
             state=tk.DISABLED,
             anchor="w"
@@ -846,7 +845,7 @@ class App:
 
         self.preprocessing_button = tk.Button(
             noise_removal_frame,
-            text="Start Preprocessing",
+            text="Start voorbewerking",
             command=self.start_preprocessing_thread,
             state=tk.DISABLED
         )
@@ -856,7 +855,7 @@ class App:
         self.preprocessing_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Heightmap Frame
-        heightmap_frame = tk.LabelFrame(left_column, text="Heightmap Creation")
+        heightmap_frame = tk.LabelFrame(left_column, text="Hoogtekaart genereren")
         heightmap_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             heightmap_frame.grid_columnconfigure(i, weight=1, uniform="col")
@@ -865,7 +864,7 @@ class App:
         self.visualize_heightmap_var = tk.BooleanVar()
         self.visualize_heightmap_checkbox = tk.Checkbutton(
             heightmap_frame,
-            text="Visualize map",
+            text="Visualiseer kaart",
             variable=self.visualize_heightmap_var,
             state=tk.DISABLED,
             anchor="w"
@@ -874,22 +873,22 @@ class App:
 
         self.heightmap_button = tk.Button(
             heightmap_frame,
-            text="Create Heightmap",
+            text="Maak hoogtekaart",
             state=tk.DISABLED,
             command=self.start_heightmap_thread
         )
         self.heightmap_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
-        self.heightmap_result_label = tk.Label(heightmap_frame, text="Heightmap not created.", anchor="w")
+        self.heightmap_result_label = tk.Label(heightmap_frame, text="Hoogtekaart niet gemaakt.", anchor="w")
         self.heightmap_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Floor Detection Frame
-        floor_detection_frame = tk.LabelFrame(left_column, text="Floor Boundary Detection")
+        floor_detection_frame = tk.LabelFrame(left_column, text="Vloergrens detectie")
         floor_detection_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             floor_detection_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(floor_detection_frame, text="Alpha Value", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(floor_detection_frame, text="Alpha waarde", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.floor_alpha_value_entry = tk.Entry(
             floor_detection_frame,
             validate="key",
@@ -898,7 +897,7 @@ class App:
         )
         self.floor_alpha_value_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(floor_detection_frame, text="Triangle Size", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(floor_detection_frame, text="Driehoekgrootte", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.floor_triangle_size_entry = tk.Entry(
             floor_detection_frame,
             validate="key",
@@ -907,7 +906,7 @@ class App:
         )
         self.floor_triangle_size_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(floor_detection_frame, text="Distance Threshold", anchor="w").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(floor_detection_frame, text="Afstandsdrempel", anchor="w").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
         self.corner_distance_threshold_entry = tk.Entry(
             floor_detection_frame,
             validate="key",
@@ -918,22 +917,22 @@ class App:
 
         self.floor_detection_button = tk.Button(
             floor_detection_frame,
-            text="Detect Floor Boundary",
+            text="Detecteer vloergrens",
             state=tk.DISABLED,
             command=self.start_floor_detection_thread
         )
         self.floor_detection_button.grid(row=0, column=2, rowspan=3, padx=5, pady=5, sticky="nsew")
 
-        self.floor_detection_result_label = tk.Label(floor_detection_frame, text="Floor boundary not detected.", anchor="w")
+        self.floor_detection_result_label = tk.Label(floor_detection_frame, text="Vloergrens niet gedetecteerd.", anchor="w")
         self.floor_detection_result_label.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Roof Extraction Frame
-        roof_extraction_frame = tk.LabelFrame(left_column, text="Roof Extraction")
+        roof_extraction_frame = tk.LabelFrame(left_column, text="Dakextractie")
         roof_extraction_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             roof_extraction_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(roof_extraction_frame, text="Slice Height", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_extraction_frame, text="Snijlaaghoogte", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.slice_height_entry = tk.Entry(
             roof_extraction_frame,
             validate="key",
@@ -944,24 +943,24 @@ class App:
 
         self.roof_extraction_button = tk.Button(
             roof_extraction_frame,
-            text="Extract Roof Points",
+            text="Extraheer dakpunten",
             state=tk.DISABLED,
             command=self.start_roof_extraction_thread
         )
         self.roof_extraction_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
-        self.roof_extraction_result_label = tk.Label(roof_extraction_frame, text="Roof not extracted.", anchor="w")
+        self.roof_extraction_result_label = tk.Label(roof_extraction_frame, text="Dak niet geëxtraheerd.", anchor="w")
         self.roof_extraction_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # === RIGHT COLUMN CONTENT ===
 
         # Roof Division Frame
-        roof_division_frame = tk.LabelFrame(right_column, text="Roof Division")
+        roof_division_frame = tk.LabelFrame(right_column, text="Dakverdeling")
         roof_division_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             roof_division_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(roof_division_frame, text="Roof Layers", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_division_frame, text="Daklagen", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.roof_layers_entry = tk.Entry(
             roof_division_frame,
             validate="key",
@@ -970,7 +969,7 @@ class App:
         )
         self.roof_layers_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(roof_division_frame, text="Layer Fatness", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_division_frame, text="Laagdikte", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.roof_layer_fatness_entry = tk.Entry(
             roof_division_frame,
             validate="key",
@@ -979,7 +978,7 @@ class App:
         )
         self.roof_layer_fatness_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(roof_division_frame, text="Voxel Size", anchor="w").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_division_frame, text="Voxelgrootte", anchor="w").grid(row=2, column=0, padx=5, pady=5, sticky="ew")
         self.roof_voxel_size_entry = tk.Entry(
             roof_division_frame,
             validate="key",
@@ -988,7 +987,7 @@ class App:
         )
         self.roof_voxel_size_entry.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(roof_division_frame, text="Angle Threshold", anchor="w").grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_division_frame, text="Hoekdrempel", anchor="w").grid(row=0, column=2, padx=5, pady=5, sticky="ew")
         self.roof_angle_threshold_entry = tk.Entry(
             roof_division_frame,
             validate="key",
@@ -997,7 +996,7 @@ class App:
         )
         self.roof_angle_threshold_entry.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
 
-        tk.Label(roof_division_frame, text="Point Window", anchor="w").grid(row=2, column=2, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_division_frame, text="Puntvenster", anchor="w").grid(row=2, column=2, padx=5, pady=5, sticky="ew")
         self.roof_point_window_amount_entry = tk.Entry(
             roof_division_frame,
             validate="key",
@@ -1006,7 +1005,7 @@ class App:
         )
         # Note: No grid placement for this entry as it's not used in slice_roof_up
 
-        tk.Label(roof_division_frame, text="Merge Radius", anchor="w").grid(row=3, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(roof_division_frame, text="Koppelradius", anchor="w").grid(row=3, column=0, padx=5, pady=5, sticky="ew")
         self.roof_merge_radius_entry = tk.Entry(
             roof_division_frame,
             validate="key",
@@ -1017,22 +1016,22 @@ class App:
 
         self.roof_division_button = tk.Button(
             roof_division_frame,
-            text="Divide Roof",
+            text="Verdeel dak",
             state=tk.DISABLED,
             command=self.start_roof_division_thread
         )
         self.roof_division_button.grid(row=3, column=2, padx=5, pady=5, sticky="ew")
 
-        self.roof_division_result_label = tk.Label(roof_division_frame, text="Roof not divided.", anchor="w")
+        self.roof_division_result_label = tk.Label(roof_division_frame, text="Dak niet verdeeld.", anchor="w")
         self.roof_division_result_label.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Wall Extraction Frame
-        wall_extraction_frame = tk.LabelFrame(right_column, text="Wall Extraction")
+        wall_extraction_frame = tk.LabelFrame(right_column, text="Wandextractie")
         wall_extraction_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             wall_extraction_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(wall_extraction_frame, text="Search Radius", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(wall_extraction_frame, text="Zoekradius", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.wall_search_radius_entry = tk.Entry(
             wall_extraction_frame,
             validate="key",
@@ -1043,22 +1042,22 @@ class App:
 
         self.wall_extraction_button = tk.Button(
             wall_extraction_frame,
-            text="Extract Walls",
+            text="Exporteer wanden",
             state=tk.DISABLED,
             command=self.start_wall_extraction_thread
         )
         self.wall_extraction_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
-        self.wall_extraction_result_label = tk.Label(wall_extraction_frame, text="Walls not extracted.", anchor="w")
+        self.wall_extraction_result_label = tk.Label(wall_extraction_frame, text="Wanden niet geëxporteerd.", anchor="w")
         self.wall_extraction_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Wall Division Frame
-        wall_division_frame = tk.LabelFrame(right_column, text="Wall Division")
+        wall_division_frame = tk.LabelFrame(right_column, text="Wandverdeling")
         wall_division_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             wall_division_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(wall_division_frame, text="Layer Amount", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(wall_division_frame, text="Aantal lagen", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.wall_layer_amount_entry = tk.Entry(
             wall_division_frame,
             validate="key",
@@ -1069,22 +1068,22 @@ class App:
 
         self.wall_division_button = tk.Button(
             wall_division_frame,
-            text="Divide Walls",
+            text="Verdeel muren",
             state=tk.DISABLED,
             command=self.start_wall_division_thread
         )
         self.wall_division_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
-        self.wall_division_result_label = tk.Label(wall_division_frame, text="Walls not divided.", anchor="w")
+        self.wall_division_result_label = tk.Label(wall_division_frame, text="Muren niet verdeeld.", anchor="w")
         self.wall_division_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # PCD to Lineset Frame
-        pcd_to_lineset_frame = tk.LabelFrame(right_column, text="Point Cloud to Lineset")
+        pcd_to_lineset_frame = tk.LabelFrame(right_column, text="Puntenwolk naar Lineset")
         pcd_to_lineset_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             pcd_to_lineset_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
-        tk.Label(pcd_to_lineset_frame, text="XY Tolerance", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(pcd_to_lineset_frame, text="XY tolerantie", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.xy_tolerance_entry = tk.Entry(
             pcd_to_lineset_frame,
             validate="key",
@@ -1093,7 +1092,7 @@ class App:
         )
         self.xy_tolerance_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-        tk.Label(pcd_to_lineset_frame, text="Max Line Length", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        tk.Label(pcd_to_lineset_frame, text="Max. lijnlengte", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="ew")
         self.max_line_length_entry = tk.Entry(
             pcd_to_lineset_frame,
             validate="key",
@@ -1104,58 +1103,58 @@ class App:
 
         self.pcd_to_lineset_button = tk.Button(
             pcd_to_lineset_frame,
-            text="Convert to\nLineset",
+            text="Converteer naar\nLineset",
             state=tk.DISABLED,
             command=self.start_pcd_to_lineset_thread
         )
         self.pcd_to_lineset_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
-        self.pcd_to_lineset_result_label = tk.Label(pcd_to_lineset_frame, text="Lineset not created.", anchor="w")
+        self.pcd_to_lineset_result_label = tk.Label(pcd_to_lineset_frame, text="Lineset niet gemaakt.", anchor="w")
         self.pcd_to_lineset_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Lineset to Mesh Frame
-        lineset_to_mesh_frame = tk.LabelFrame(right_column, text="Lineset to Mesh")
+        lineset_to_mesh_frame = tk.LabelFrame(right_column, text="Lineset naar Mesh")
         lineset_to_mesh_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             lineset_to_mesh_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         self.lineset_to_mesh_button = tk.Button(
             lineset_to_mesh_frame,
-            text="Convert to Mesh",
+            text="Converteer naar Mesh",
             state=tk.DISABLED,
             command=self.start_lineset_to_mesh_thread
         )
         self.lineset_to_mesh_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
-        self.lineset_to_mesh_result_label = tk.Label(lineset_to_mesh_frame, text="Mesh not created.", anchor="w")
+        self.lineset_to_mesh_result_label = tk.Label(lineset_to_mesh_frame, text="Mesh niet gemaakt.", anchor="w")
         self.lineset_to_mesh_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Repair Mesh Frame
-        repair_mesh_frame = tk.LabelFrame(right_column, text="Mesh Repair")
+        repair_mesh_frame = tk.LabelFrame(right_column, text="Mesh reparatie")
         repair_mesh_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             repair_mesh_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         self.repair_mesh_button = tk.Button(
             repair_mesh_frame,
-            text="Repair Mesh",
+            text="Repareer Mesh",
             state=tk.DISABLED,
             command=self.start_repair_mesh_thread
         )
         self.repair_mesh_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
-        self.repair_mesh_result_label = tk.Label(repair_mesh_frame, text="Mesh not repaired.", anchor="w")
+        self.repair_mesh_result_label = tk.Label(repair_mesh_frame, text="Mesh niet gerepareerd.", anchor="w")
         self.repair_mesh_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # CityJSON Conversion Frame
-        cityjson_conversion_frame = tk.LabelFrame(right_column, text="CityJSON Conversion")
+        cityjson_conversion_frame = tk.LabelFrame(right_column, text="CityJSON conversie")
         cityjson_conversion_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             cityjson_conversion_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         self.cityjson_conversion_button = tk.Button(
             cityjson_conversion_frame,
-            text="Convert to CityJSON",
+            text="Converteer naar CityJSON",
             state=tk.DISABLED,
             command=self.start_cityjson_conversion_thread
         )
@@ -1163,13 +1162,13 @@ class App:
 
         self.cityjson_conversion_result_label = tk.Label(
             cityjson_conversion_frame,
-            text="Not yet converted to CityJSON.",
+            text="Nog niet geconverteerd naar CityJSON.",
             anchor="w"
         )
         self.cityjson_conversion_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Misc Frame (Final Actions)
-        misc_frame = tk.LabelFrame(main_frame, text="Final Actions")
+        misc_frame = tk.LabelFrame(main_frame, text="Eindacties")
         misc_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
             misc_frame.grid_columnconfigure(i, weight=1, uniform="col")
@@ -1177,7 +1176,7 @@ class App:
         # View Button
         self.view_button = tk.Button(
             misc_frame,
-            text="View Result",
+            text="Bekijk resultaat",
             state=tk.DISABLED,
             command=lambda: None  # Default disabled command
         )
@@ -1186,18 +1185,18 @@ class App:
         # Save CityJSON Button
         self.save_cityjson_button = tk.Button(
             misc_frame,
-            text="Save CityJSON",
+            text="Sla CityJSON op",
             state=tk.DISABLED,
             command=self.save_cityjson_file_step
         )
         self.save_cityjson_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         # Reset Button
-        self.reset_button = tk.Button(misc_frame, text="Reset All", command=self.reset_application)
+        self.reset_button = tk.Button(misc_frame, text="Reset alles", command=self.reset_application)
         self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
         # Exit Button
-        exit_button = tk.Button(main_frame, text="Back", command=self.on_close)
+        exit_button = tk.Button(main_frame, text="Terug", command=self.on_close)
         exit_button.pack(pady=10, fill=tk.X)
 
         self.root.bind("<Escape>", lambda event: self.on_close())  # Bind Escape key to close the window
@@ -1208,57 +1207,57 @@ class App:
 
     def disable_all_sections(self):
         "Disable all sections and reset their states."
-        self.file_select_button.config(state=tk.NORMAL, text="Select Point Cloud File")
+        self.file_select_button.config(state=tk.NORMAL, text="Selecteer puntenwolk Bestand")
 
         self.points_per_cm_entry.config(state=tk.DISABLED)
-        self.point_density_button.config(state=tk.DISABLED, text="Alter Point Density")
+        self.point_density_button.config(state=tk.DISABLED, text="Verander puntdichtheid")
         self.point_density_result_label.config(text="")
 
         self.neighbour_amount_entry.config(state=tk.DISABLED)
         self.std_ratio_entry.config(state=tk.DISABLED)
         self.show_removed_points_checkbox.config(state=tk.DISABLED)
         self.show_removed_points_var.set(False)
-        self.preprocessing_button.config(state=tk.DISABLED, text="Start Preprocessing")
+        self.preprocessing_button.config(state=tk.DISABLED, text="Start voorbewerking")
         self.preprocessing_result_label.config(text="")
 
         self.visualize_heightmap_checkbox.config(state=tk.DISABLED)
         self.visualize_heightmap_var.set(False)
-        self.heightmap_button.config(state=tk.DISABLED, text="Create Heightmap")
-        self.heightmap_result_label.config(text="Heightmap not created.")
+        self.heightmap_button.config(state=tk.DISABLED, text="Maak hoogtekaart")
+        self.heightmap_result_label.config(text="Hoogtekaart niet gemaakt.")
 
         self.floor_alpha_value_entry.config(state=tk.DISABLED)
         self.floor_triangle_size_entry.config(state=tk.DISABLED)
         self.corner_distance_threshold_entry.config(state=tk.DISABLED)
-        self.floor_detection_button.config(state=tk.DISABLED, text="Detect Floor Boundary")
-        self.floor_detection_result_label.config(text="Floor boundary not detected.")
+        self.floor_detection_button.config(state=tk.DISABLED, text="Detecteer vloergrens")
+        self.floor_detection_result_label.config(text="Vloergrens niet gedetecteerd.")
 
         self.slice_height_entry.config(state=tk.DISABLED)
-        self.roof_extraction_button.config(state=tk.DISABLED, text="Extract Roof Points")
-        self.roof_extraction_result_label.config(text="Roof not extracted.")
+        self.roof_extraction_button.config(state=tk.DISABLED, text="Extraheer dakpunten")
+        self.roof_extraction_result_label.config(text="Dak niet geëxtraheerd.")
 
         self.roof_layers_entry.config(state=tk.DISABLED)
         self.roof_layer_fatness_entry.config(state=tk.DISABLED)
         self.roof_voxel_size_entry.config(state=tk.DISABLED)
         self.roof_angle_threshold_entry.config(state=tk.DISABLED)
         self.roof_merge_radius_entry.config(state=tk.DISABLED)
-        self.roof_division_button.config(state=tk.DISABLED, text="Divide Roof")
-        self.roof_division_result_label.config(text="Roof not divided.")
+        self.roof_division_button.config(state=tk.DISABLED, text="Verdeel dak")
+        self.roof_division_result_label.config(text="Dak niet verdeeld.")
 
         self.wall_search_radius_entry.config(state=tk.DISABLED)
-        self.wall_extraction_button.config(state=tk.DISABLED, text="Extract Walls")
-        self.wall_extraction_result_label.config(text="Walls not extracted.")
+        self.wall_extraction_button.config(state=tk.DISABLED, text="Extraheer muren")
+        self.wall_extraction_result_label.config(text="Muren niet geëxtraheerd.")
 
         self.wall_layer_amount_entry.config(state=tk.DISABLED)
-        self.wall_division_button.config(state=tk.DISABLED, text="Divide Walls")
-        self.wall_division_result_label.config(text="Walls not divided.")
+        self.wall_division_button.config(state=tk.DISABLED, text="Verdeel muren")
+        self.wall_division_result_label.config(text="Muren niet verdeeld.")
 
         self.xy_tolerance_entry.config(state=tk.DISABLED)
         self.max_line_length_entry.config(state=tk.DISABLED)
-        self.pcd_to_lineset_button.config(state=tk.DISABLED, text="Convert to Lineset")
-        self.pcd_to_lineset_result_label.config(text="Lineset not created.")
+        self.pcd_to_lineset_button.config(state=tk.DISABLED, text="Converteer naar Lineset")
+        self.pcd_to_lineset_result_label.config(text="Lineset niet gemaakt.")
 
         self.view_button.config(state=tk.DISABLED)
-        self.file_label.config(text="No file selected")
+        self.file_label.config(text="Geen bestand geselecteerd")
 
     def enable_point_density_section(self):
         self.points_per_cm_entry.config(state=tk.NORMAL)
@@ -1268,24 +1267,24 @@ class App:
         self.neighbour_amount_entry.config(state=tk.NORMAL)
         self.std_ratio_entry.config(state=tk.NORMAL)
         self.show_removed_points_checkbox.config(state=tk.NORMAL)
-        self.preprocessing_button.config(state=tk.NORMAL, text="Start Preprocessing")
+        self.preprocessing_button.config(state=tk.NORMAL, text="Start voorbewerking")
 
     def enable_heightmap_section(self):
-        self.heightmap_button.config(state=tk.NORMAL, text="Create Heightmap")
+        self.heightmap_button.config(state=tk.NORMAL, text="Maak hoogtekaart")
         self.visualize_heightmap_checkbox.config(state=tk.NORMAL)
 
     def enable_floor_detection_section(self):
-        self.floor_detection_button.config(state=tk.NORMAL, text="Detect Floor Boundary")
+        self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
         self.floor_alpha_value_entry.config(state=tk.NORMAL)
         self.floor_triangle_size_entry.config(state=tk.NORMAL)
         self.corner_distance_threshold_entry.config(state=tk.NORMAL)
 
     def enable_roof_extraction_section(self):
-        self.roof_extraction_button.config(state=tk.NORMAL, text="Extract Roof Points")
+        self.roof_extraction_button.config(state=tk.NORMAL, text="Extraheer dakpunten")
         self.slice_height_entry.config(state=tk.NORMAL)
 
     def enable_roof_division_section(self):
-        self.roof_division_button.config(state=tk.NORMAL, text="Divide Roof")
+        self.roof_division_button.config(state=tk.NORMAL, text="Verdeel dak")
         self.roof_layers_entry.config(state=tk.NORMAL)
         self.roof_layer_fatness_entry.config(state=tk.NORMAL)
         self.roof_voxel_size_entry.config(state=tk.NORMAL)
@@ -1293,29 +1292,29 @@ class App:
         self.roof_merge_radius_entry.config(state=tk.NORMAL)
 
     def enable_wall_extraction_section(self):
-        self.wall_extraction_button.config(state=tk.NORMAL, text="Extract Walls")
+        self.wall_extraction_button.config(state=tk.NORMAL, text="Extraheer muren")
         self.wall_search_radius_entry.config(state=tk.NORMAL)
 
     def enable_wall_division_section(self):
-        self.wall_division_button.config(state=tk.NORMAL, text="Divide Walls")
+        self.wall_division_button.config(state=tk.NORMAL, text="Verdeel muren")
         self.wall_layer_amount_entry.config(state=tk.NORMAL)
 
     def enable_pcd_to_lineset_section(self):
-        self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Convert to Lineset")
+        self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Converteer naar Lineset")
         self.xy_tolerance_entry.config(state=tk.NORMAL)
         self.max_line_length_entry.config(state=tk.NORMAL)
 
     def enable_lineset_to_mesh_section(self):
-        self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Convert to Mesh")
-        self.lineset_to_mesh_result_label.config(text="Mesh not created.")
+        self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Converteer naar Mesh")
+        self.lineset_to_mesh_result_label.config(text="Mesh niet gemaakt.")
 
     def enable_repair_mesh_section(self):
-        self.repair_mesh_button.config(state=tk.NORMAL, text="Repair Mesh")
-        self.repair_mesh_result_label.config(text="Mesh not repaired.")
+        self.repair_mesh_button.config(state=tk.NORMAL, text="Repareer Mesh")
+        self.repair_mesh_result_label.config(text="Mesh niet gerepareerd.")
 
     def enable_cityjson_conversion_section(self):
-        self.cityjson_conversion_button.config(state=tk.NORMAL, text="Convert to CityJSON")
-        self.cityjson_conversion_result_label.config(text="Not converted to CityJSON.")
+        self.cityjson_conversion_button.config(state=tk.NORMAL, text="Converteer naar CityJSON")
+        self.cityjson_conversion_result_label.config(text="Niet geconverteerd naar CityJSON.")
 
     def enable_view_pointcloud(self, pointcloud):
         self.view_button.config(
@@ -1348,7 +1347,7 @@ class App:
 
         # Check if there is an presets_file found. If not give a tkinter warning and skip loading presets.
         if not os.path.isfile(presets_file):
-            tk.messagebox.showwarning("Warning", f"Presets file not found: {presets_file}")
+            tk.messagebox.showwarning("Waarschuwing", f"Bestand met presets niet gevonden: {presets_file}")
             return
 
         try:
@@ -1383,11 +1382,11 @@ class App:
                 # If no value exists, leave the field empty (don't insert anything)
 
         except Exception as e:
-            print(f"Error loading presets: {e}")
+            print(f"Fout bij het laden van presets: {e}")
 
     def on_close(self):
         # Perform any cleanup or final actions before closing
-        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+        if messagebox.askokcancel("Afsluiten", "Weet je zeker dat je wilt afsluiten?"):
             self.root.quit()  # Exit the Tkinter main loop
             exit()
 
