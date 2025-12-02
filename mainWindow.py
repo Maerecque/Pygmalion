@@ -1,5 +1,6 @@
 import configparser
 import json
+import locale
 import os
 import open3d as o3d
 from random import randint as KernelMan
@@ -9,6 +10,8 @@ import time
 import tkinter as tk
 from tkinter import messagebox
 from tqdm import tqdm
+
+locale.setlocale(locale.LC_ALL, 'nl_NL.UTF-8')
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
@@ -220,7 +223,12 @@ class App:
     def select_file(self):
         """Select a point cloud file and load it"""
         try:
+            # Update button and label text
+            self.file_select_button.config(text="Bestand laden...")
+            self.file_label.config(text="Bestand wordt geladen...", fg="black")
+
             file_path = get_file_path("Puntenwolk bestanden", ["*.las", "*.laz"], False)
+
             if file_path:
                 self.point_cloud_path = file_path
 
@@ -241,10 +249,14 @@ class App:
 
                 # Update the file label with point count
                 self.file_label.config(
-                    text=f"Geselecteerd bestand: {os.path.basename(file_path)}\nPunten: {len(self.point_cloud_data.points)}"
+                    text=f"Geselecteerd bestand: {os.path.basename(file_path)}\nPunten: {len(self.point_cloud_data.points):n}"
                 )
 
         except Exception as e:
+            # Bring back the file select button text
+            self.file_select_button.config(text="Bestand selecteren")
+            self.file_label.config(text="Geen bestand geselecteerd", fg="black")
+
             self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
 
             # Update the file label with an error message
@@ -344,7 +356,7 @@ class App:
             )
 
             self.point_density_result_label.config(
-                text=f"Puntdichtheid aangepast van {len(self.point_cloud_data.points)} → {len(resized_pcd.points)} punten."
+                text=f"Puntdichtheid aangepast van {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten."
             )
 
             self.resized_point_cloud_data = resized_pcd
