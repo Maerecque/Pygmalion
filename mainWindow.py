@@ -472,12 +472,12 @@ class App:
             self.roof_extraction_result_label.config(
                 text=f"Dak geëxtraheerd: {len(self.roof_pcd.points)} dakpunten, {len(self.temp_wall_pcd.points)} muurpunten."
             )
-            self.roof_extraction_button.config(state=tk.NORMAL, text="Exporteer dakpunten")
+            self.roof_extraction_button.config(state=tk.NORMAL, text="Extraheer dakpunten")
             self.update_view_pointcloud(self.roof_pcd)
             self.enable_roof_division_section()
         except Exception as e:
             self.roof_extraction_result_label.config(text=f"Fout: {str(e)}")
-            self.roof_extraction_button.config(state=tk.NORMAL, text="Exporteer dakpunten")
+            self.roof_extraction_button.config(state=tk.NORMAL, text="Extraheer dakpunten")
 
     def roof_division_step(self):
         self.lineset_preview = None
@@ -527,12 +527,12 @@ class App:
             self.wall_extraction_result_label.config(
                 text=f"Muren geëxtraheerd: {len(self.wall_pcd.points)} muurpunten."
             )
-            self.wall_extraction_button.config(state=tk.NORMAL, text="Exporteer muren")
+            self.wall_extraction_button.config(state=tk.NORMAL, text="Extraheer muren")
             self.update_view_pointcloud(self.wall_pcd)
             self.enable_wall_division_section()
         except Exception as e:
             self.wall_extraction_result_label.config(text=f"Fout: {str(e)}")
-            self.wall_extraction_button.config(state=tk.NORMAL, text="Exporteer muren")
+            self.wall_extraction_button.config(state=tk.NORMAL, text="Extraheer muren")
 
     def wall_division_step(self):
         try:
@@ -734,6 +734,9 @@ class App:
 
         # Reset all sections
         self.disable_all_sections()
+
+        self.load_presets()
+
         self.show_message("Info", "Applicatie succesvol gereset.")
 
     def create_widgets(self):
@@ -1054,13 +1057,13 @@ class App:
 
         self.wall_extraction_button = tk.Button(
             wall_extraction_frame,
-            text="Exporteer wanden",
+            text="Extraheer muren",
             state=tk.DISABLED,
             command=self.start_wall_extraction_thread
         )
         self.wall_extraction_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
-        self.wall_extraction_result_label = tk.Label(wall_extraction_frame, text="Wanden niet geëxporteerd.", anchor="w")
+        self.wall_extraction_result_label = tk.Label(wall_extraction_frame, text="Muren niet geëxtraheerd.", anchor="w")
         self.wall_extraction_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
 
         # Wall Division Frame
@@ -1174,7 +1177,7 @@ class App:
 
         self.cityjson_conversion_result_label = tk.Label(
             cityjson_conversion_frame,
-            text="Nog niet geconverteerd naar CityJSON.",
+            text="Niet geconverteerd naar CityJSON.",
             anchor="w"
         )
         self.cityjson_conversion_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
@@ -1219,10 +1222,10 @@ class App:
 
     def disable_all_sections(self):
         "Disable all sections and reset their states."
-        self.file_select_button.config(state=tk.NORMAL, text="Selecteer puntenwolk Bestand")
+        self.file_select_button.config(state=tk.NORMAL, text="Selecteer puntenwolkbestand")
 
         self.points_per_cm_entry.config(state=tk.DISABLED)
-        self.point_density_button.config(state=tk.DISABLED, text="Verander puntdichtheid")
+        self.point_density_button.config(state=tk.DISABLED, text="Pas puntdichtheid aan")
         self.point_density_result_label.config(text="")
 
         self.neighbour_amount_entry.config(state=tk.DISABLED)
@@ -1265,7 +1268,7 @@ class App:
 
         self.xy_tolerance_entry.config(state=tk.DISABLED)
         self.max_line_length_entry.config(state=tk.DISABLED)
-        self.pcd_to_lineset_button.config(state=tk.DISABLED, text="Converteer naar Lineset")
+        self.pcd_to_lineset_button.config(state=tk.DISABLED, text="Converteer naar\nLineset")
         self.pcd_to_lineset_result_label.config(text="Lineset niet gemaakt.")
 
         self.lineset_to_mesh_button.config(state=tk.DISABLED, text="Converteer naar Mesh")
