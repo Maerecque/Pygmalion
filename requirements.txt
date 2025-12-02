@@ -2,11 +2,14 @@ laspy==2.3.0
 laszip==0.1.0
 lazrs==0.4.5
 matplotlib==3.6.0
-numpy==1.23.3
+numpy==1.26.4
 open3d==0.19.0
 plyfile==0.7.4
+pyvista==0.44.1
 scikit-learn==1.2.0
-scipy
+scipy==1.10.0
+shapely==2.0.7
 tk==0.1.0
 tqdm==4.65.0
+trimesh==4.4.3
 shapely==2.0.7
