@@ -336,7 +336,9 @@ def divide_wall_into_layers(wall_pcd: o3d.geometry.PointCloud, layer_amount: int
         mask = (z_values >= slice_z - 0.01) & (z_values <= slice_z + 0.01)
         layer_points = wall_points[mask]
 
-        if len(layer_points) > 0:
+        # When there are no points in this layer, skip it
+        # When it's one point it can't be made into a lineset later, so skip that too
+        if len(layer_points) > 1:
             layers.append(layer_points)
 
     return layers
