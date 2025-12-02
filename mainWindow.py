@@ -1268,6 +1268,15 @@ class App:
         self.pcd_to_lineset_button.config(state=tk.DISABLED, text="Converteer naar Lineset")
         self.pcd_to_lineset_result_label.config(text="Lineset niet gemaakt.")
 
+        self.lineset_to_mesh_button.config(state=tk.DISABLED, text="Converteer naar Mesh")
+        self.lineset_to_mesh_result_label.config(text="Mesh niet gemaakt.")
+
+        self.repair_mesh_button.config(state=tk.DISABLED, text="Repareer Mesh")
+        self.repair_mesh_result_label.config(text="Mesh niet gerepareerd.")
+
+        self.cityjson_conversion_button.config(state=tk.DISABLED, text="Converteer naar CityJSON")
+        self.cityjson_conversion_result_label.config(text="Niet geconverteerd naar CityJSON.")
+
         self.view_button.config(state=tk.DISABLED)
         self.file_label.config(text="Geen bestand geselecteerd")
 
