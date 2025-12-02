@@ -763,7 +763,7 @@ class App:
 
         self.file_select_button = tk.Button(
             file_frame,
-            text="Selecteer Puntenwolkbestand",
+            text="Selecteer puntenwolkbestand",
             command=self.select_file,
             anchor="center",
             justify="right"
@@ -996,14 +996,14 @@ class App:
         )
         self.roof_angle_threshold_entry.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
 
-        tk.Label(roof_division_frame, text="Puntvenster", anchor="w").grid(row=2, column=2, padx=5, pady=5, sticky="ew")
-        self.roof_point_window_amount_entry = tk.Entry(
-            roof_division_frame,
-            validate="key",
-            validatecommand=(self.validate_int, '%P'),
-            state=tk.DISABLED
-        )
-        # Note: No grid placement for this entry as it's not used in slice_roof_up
+        # tk.Label(roof_division_frame, text="Puntvenster", anchor="w").grid(row=2, column=2, padx=5, pady=5, sticky="ew")
+        # self.roof_point_window_amount_entry = tk.Entry(
+        #     roof_division_frame,
+        #     validate="key",
+        #     validatecommand=(self.validate_int, '%P'),
+        #     state=tk.DISABLED
+        # )
+        # # Note: No grid placement for this entry as it's not used in slice_roof_up
 
         tk.Label(roof_division_frame, text="Koppelradius", anchor="w").grid(row=3, column=0, padx=5, pady=5, sticky="ew")
         self.roof_merge_radius_entry = tk.Entry(
