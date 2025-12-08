@@ -225,7 +225,8 @@ class App:
         try:
             # Update button and label text
             self.file_select_button.config(text="Bestand laden...")
-            self.file_label.config(text="Bestand wordt geladen...", fg="black")
+            self.file_label.config(text="Bestand wordt geladen...")
+            self.point_amount_label.config(text="Punten worden geteld...")
 
             file_path = get_file_path("Puntenwolk bestanden", ["*.las", "*.laz"], False)
 
@@ -239,7 +240,6 @@ class App:
                 self.point_cloud_data = readout_LAS_file(file_path, False)
 
                 self.file_select_button.config(text="Bestand wijzigen")
-                self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
                 # Enable point density section
                 self.enable_point_density_section()
@@ -247,15 +247,14 @@ class App:
                 # Enable view button
                 self.enable_view_pointcloud(self.point_cloud_data)
 
-                # Update the file label with point count
-                self.file_label.config(
-                    text=f"Geselecteerd bestand: {os.path.basename(file_path)}\nPunten: {len(self.point_cloud_data.points):n}"
-                )
+                # Update the file label with file name and point count
+                self.file_label.config(text=f"Geselecteerd bestand: {os.path.basename(file_path)}")
+                self.point_amount_label.config(text=f"Punten: {len(self.point_cloud_data.points):n}")
 
         except Exception as e:
             # Bring back the file select button text
             self.file_select_button.config(text="Bestand selecteren")
-            self.file_label.config(text="Geen bestand geselecteerd", fg="black")
+            self.point_amount_label.config(text="")
 
             self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
 
@@ -268,7 +267,7 @@ class App:
     def load_point_cloud_data(self):
         """Load point cloud data when provided during initialization"""
         if self.point_cloud_path and os.path.exists(self.point_cloud_path):
-            self.file_label.config(text=f"Geselecteerd bestand: {os.path.basename(self.point_cloud_path)}")
+            self.file_label.config(text=f"Geselecteerd bestand:{os.path.basename(self.point_cloud_path)}")
             self.file_select_button.config(text="Bestand wijzigen")
             self.update_view_pointcloud(self.point_cloud_data)
             self.enable_point_density_section()
@@ -444,7 +443,7 @@ class App:
             self.floor_corners = self.floor_hull  # For now, use hull as corners
 
             self.floor_detection_result_label.config(
-                text=f"Vloergrens gedetecteerd.\n{len(self.floor_lines)} grenspunten, {len(self.floor_corners)} hoeken."
+                text=f"Vloergrens gedetecteerd. {len(self.floor_lines)} grenspunten, {len(self.floor_corners)} hoeken."
             )
             self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
             self.update_view_pointcloud(create_point_cloud(self.floor_corners, color=[1, 0, 0]))
@@ -730,7 +729,6 @@ class App:
         self.wall_layer_amount_entry.delete(0, tk.END)
         self.xy_tolerance_entry.delete(0, tk.END)
         self.max_line_length_entry.delete(0, tk.END)
-        self.file_label.config(text="Geen bestand geselecteerd", fg="black")
 
         # Reset all sections
         self.disable_all_sections()
@@ -771,19 +769,23 @@ class App:
         file_frame = tk.LabelFrame(left_column, text="Bestand selecteren")
         file_frame.pack(fill="x", pady=5, padx=10)
         for i in range(3):
-            file_frame.grid_columnconfigure(i, weight=1, uniform="col")
+            file_frame.grid_columnconfigure(i, weight=1, uniform="col_with_button")
+
+        self.point_amount_label = tk.Label(file_frame, text="", anchor="w")
+        self.point_amount_label.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
         self.file_label = tk.Label(file_frame, text="Geen bestand geselecteerd", anchor="w")
-        self.file_label.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        self.file_label.grid(row=1, column=0, padx=5, pady=5, sticky="ew", columnspan=2)
 
         self.file_select_button = tk.Button(
             file_frame,
             text="Selecteer puntenwolkbestand",
             command=self.select_file,
             anchor="center",
-            justify="right"
+            justify="right",
+            width=30
         )
-        self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="nsew", rowspan=2)
 
         # Point Density Frame
         point_density_frame = tk.LabelFrame(left_column, text="Puntdichtheid")
@@ -810,12 +812,13 @@ class App:
             point_density_frame,
             text="Pas puntdichtheid aan",
             command=self.start_alter_point_density_thread,
-            state=tk.DISABLED
+            state=tk.DISABLED,
+            width=30
         )
-        self.point_density_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        self.point_density_button.grid(row=0, column=2, padx=5, pady=5, sticky="nsew", rowspan=2)
 
         self.point_density_result_label = tk.Label(point_density_frame, text="", anchor="w")
-        self.point_density_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.point_density_result_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Noise Removal Frame
         noise_removal_frame = tk.LabelFrame(left_column, text="Ruis verwijderen")
@@ -862,7 +865,8 @@ class App:
             noise_removal_frame,
             text="Start voorbewerking",
             command=self.start_preprocessing_thread,
-            state=tk.DISABLED
+            state=tk.DISABLED,
+            width=30
         )
         self.preprocessing_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
@@ -884,18 +888,26 @@ class App:
             state=tk.DISABLED,
             anchor="w"
         )
-        self.visualize_heightmap_checkbox.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        self.visualize_heightmap_checkbox.grid(
+            row=0,
+            column=0,
+            padx=5,
+            pady=5,
+            sticky="ew",
+            columnspan=2
+        )
 
         self.heightmap_button = tk.Button(
             heightmap_frame,
             text="Maak hoogtekaart",
             state=tk.DISABLED,
-            command=self.start_heightmap_thread
+            command=self.start_heightmap_thread,
+            width=30
         )
-        self.heightmap_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        self.heightmap_button.grid(row=0, column=2, padx=5, pady=5, sticky="nsew", rowspan=2)
 
         self.heightmap_result_label = tk.Label(heightmap_frame, text="Hoogtekaart niet gemaakt.", anchor="w")
-        self.heightmap_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.heightmap_result_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Floor Detection Frame
         floor_detection_frame = tk.LabelFrame(left_column, text="Vloergrens detectie")
@@ -934,12 +946,13 @@ class App:
             floor_detection_frame,
             text="Detecteer vloergrens",
             state=tk.DISABLED,
-            command=self.start_floor_detection_thread
+            command=self.start_floor_detection_thread,
+            width=30
         )
         self.floor_detection_button.grid(row=0, column=2, rowspan=3, padx=5, pady=5, sticky="nsew")
 
         self.floor_detection_result_label = tk.Label(floor_detection_frame, text="Vloergrens niet gedetecteerd.", anchor="w")
-        self.floor_detection_result_label.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.floor_detection_result_label.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Roof Extraction Frame
         roof_extraction_frame = tk.LabelFrame(left_column, text="Dakextractie")
@@ -960,12 +973,13 @@ class App:
             roof_extraction_frame,
             text="Extraheer dakpunten",
             state=tk.DISABLED,
-            command=self.start_roof_extraction_thread
+            command=self.start_roof_extraction_thread,
+            width=30
         )
-        self.roof_extraction_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        self.roof_extraction_button.grid(row=0, column=2, padx=5, pady=5, sticky="nsew", rowspan=2)
 
         self.roof_extraction_result_label = tk.Label(roof_extraction_frame, text="Dak niet geëxtraheerd.", anchor="w")
-        self.roof_extraction_result_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.roof_extraction_result_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # === RIGHT COLUMN CONTENT ===
 
@@ -1142,7 +1156,7 @@ class App:
         self.lineset_to_mesh_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
         self.lineset_to_mesh_result_label = tk.Label(lineset_to_mesh_frame, text="Mesh niet gemaakt.", anchor="w")
-        self.lineset_to_mesh_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.lineset_to_mesh_result_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Repair Mesh Frame
         repair_mesh_frame = tk.LabelFrame(right_column, text="Mesh reparatie")
@@ -1159,7 +1173,7 @@ class App:
         self.repair_mesh_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
         self.repair_mesh_result_label = tk.Label(repair_mesh_frame, text="Mesh niet gerepareerd.", anchor="w")
-        self.repair_mesh_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.repair_mesh_result_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # CityJSON Conversion Frame
         cityjson_conversion_frame = tk.LabelFrame(right_column, text="CityJSON conversie")
@@ -1180,7 +1194,7 @@ class App:
             text="Niet geconverteerd naar CityJSON.",
             anchor="w"
         )
-        self.cityjson_conversion_result_label.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.cityjson_conversion_result_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Misc Frame (Final Actions)
         misc_frame = tk.LabelFrame(main_frame, text="Eindacties")
@@ -1216,6 +1230,13 @@ class App:
 
         self.root.bind("<Escape>", lambda event: self.on_close())  # Bind Escape key to close the window
 
+        # Make all input fields on left column 20 wide
+        for child in left_column.winfo_children():
+            if isinstance(child, tk.LabelFrame):
+                for subchild in child.winfo_children():
+                    if isinstance(subchild, tk.Entry):
+                        subchild.config(width=20)
+
     # Section enabling/disabling functions
     def disable_section(self, button, label_text):
         button.config(state=tk.DISABLED, text=label_text)
@@ -1223,6 +1244,8 @@ class App:
     def disable_all_sections(self):
         "Disable all sections and reset their states."
         self.file_select_button.config(state=tk.NORMAL, text="Selecteer puntenwolkbestand")
+        self.point_amount_label.config(text="")
+        self.file_label.config(text="Geen bestand geselecteerd")
 
         self.points_per_cm_entry.config(state=tk.DISABLED)
         self.point_density_button.config(state=tk.DISABLED, text="Pas puntdichtheid aan")
