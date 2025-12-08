@@ -699,6 +699,11 @@ class App:
                 return
 
             save_path = get_save_file_path("CityJSON-bestanden", ["*.json"], default_name="building_cityjson.json")
+
+            # Check if path ends with .json, if not, add it
+            if save_path and not save_path.lower().endswith(".json"):
+                save_path += ".json"
+
             if save_path:
                 with open(save_path, "w") as f:
                     json.dump(self.cityjson_data, f, indent=2)
