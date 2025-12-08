@@ -21,7 +21,7 @@ from Source.fileHandler import (  # noqa: F401
     readout_LAS_file,
     get_save_file_path
 )
-from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull, find_corners  # noqa: F401
+from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
 from Source.linesetTools import (  # noqa: F401
     contour_to_lineset,
@@ -41,7 +41,6 @@ from Source.pointCloudAltering import (  # noqa: F401
 )
 from Source.pointCloudEditor import open_point_cloud_editor as opce
 from Source.roofTools import slice_roof_up
-from Source.surfaceReconstructor import repair_mesh_with_contour  # noqa: F401
 from Source.wallTools import (
     extract_wall_points,
     define_min_height_roof,
