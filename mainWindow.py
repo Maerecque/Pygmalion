@@ -278,6 +278,7 @@ class App:
             self.point_density_result_label.config(text="Puntdichtheid aanpassen, even geduld...")
             self.show_message("Waarschuwing", "Selecteer eerst een puntenwolkbestand.", "warning")
             return
+        self.root.config(cursor="watch")
         self.disable_section(self.point_density_button, "Puntdichtheid aanpassen...")
         threading.Thread(target=self.alter_point_density_step).start()
 
@@ -286,60 +287,72 @@ class App:
             self.preprocessing_result_label.config(text="Voorbewerking, even geduld...")
             self.show_message("Waarschuwing", "Voltooi eerst de stap puntdichtheid.", "warning")
             return
+        self.root.config(cursor="watch")
         self.disable_section(self.preprocessing_button, "Voorbewerking...")
         threading.Thread(target=self.preprocessing_step).start()
 
     def start_heightmap_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.heightmap_button, "Hoogtekaart maken...")
         self.heightmap_result_label.config(text="Hoogtekaart maken, even geduld...")
         threading.Thread(target=self.heightmap_step).start()
 
     def start_floor_detection_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.floor_detection_button, "Vloer detecteren...")
         self.floor_detection_result_label.config(text="Vloer detecteren, even geduld...")
         threading.Thread(target=self.floor_detection_step).start()
 
     def start_floor_2_lineset_2_cityjson_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.floor_to_cityjson_button, "Vloer naar 2D CityJSON")
         self.floor_detection_result_label.config(text="Even geduld...")
         threading.Thread(target=self.floor_2_lineset_2_cityjson_step).start()
 
     def start_roof_extraction_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.roof_extraction_button, "Dak extractie...")
         self.roof_extraction_result_label.config(text="Dak extractie, even geduld...")
         threading.Thread(target=self.roof_extraction_step).start()
 
     def start_roof_division_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.roof_division_button, "Dak verdelen...")
         self.roof_division_result_label.config(text="Dak verdelen, even geduld...")
         threading.Thread(target=self.roof_division_step).start()
 
     def start_wall_extraction_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.wall_extraction_button, "Muren extraheren...")
         self.wall_extraction_result_label.config(text="Muren extraheren, even geduld...")
         threading.Thread(target=self.wall_extraction_step).start()
 
     def start_wall_division_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.wall_division_button, "Muren verdelen...")
         self.wall_division_result_label.config(text="Muren verdelen, even geduld...")
         threading.Thread(target=self.wall_division_step).start()
 
     def start_pcd_to_lineset_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.pcd_to_lineset_button, "Converteren naar\nLineset...")
         self.pcd_to_lineset_result_label.config(text="Converteren naar Lineset, even geduld...")
         threading.Thread(target=self.pcd_to_lineset_step).start()
 
     def start_lineset_to_mesh_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.lineset_to_mesh_button, "Converteren naar Mesh...")
         self.lineset_to_mesh_result_label.config(text="Converteren naar Mesh, even geduld...")
         threading.Thread(target=self.lineset_to_mesh_step).start()
 
     def start_repair_mesh_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.repair_mesh_button, "Repareren Mesh...")
         self.repair_mesh_result_label.config(text="Repareren Mesh, even geduld...")
         threading.Thread(target=self.repair_mesh_step).start()
 
     def start_cityjson_conversion_thread(self):
+        self.root.config(cursor="watch")
         self.disable_section(self.cityjson_conversion_button, "Converteren naar CityJSON...")
         self.cityjson_conversion_result_label.config(text="Converteren naar CityJSON, even geduld...")
         threading.Thread(target=self.cityjson_conversion_step).start()
@@ -367,10 +380,11 @@ class App:
             self.point_density_button.config(state=tk.NORMAL, text="Puntdichtheid aanpassen")
             self.update_view_pointcloud(resized_pcd)
             self.enable_preprocessing_section()
-
+            self.root.config(cursor="")
         except Exception as e:
             self.point_density_result_label.config(text=f"Fout: {str(e)}")
             self.point_density_button.config(state=tk.NORMAL, text="Puntdichtheid aanpassen")
+            self.root.config(cursor="")
 
     def preprocessing_step(self):
         self.lineset_preview = None
@@ -399,9 +413,11 @@ class App:
             self.preprocessing_button.config(state=tk.NORMAL, text="Start voorbewerking")
             self.update_view_pointcloud(pcd)
             self.enable_heightmap_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.preprocessing_result_label.config(text=f"Fout: {str(e)}")
             self.preprocessing_button.config(state=tk.NORMAL, text="Start voorbewerking")
+            self.root.config(cursor="")
 
     def heightmap_step(self):
         self.lineset_preview = None
@@ -418,9 +434,11 @@ class App:
             self.heightmap_button.config(state=tk.NORMAL, text="Hoogtekaart maken")
             self.update_view_pointcloud(self.new_pcd_tuple[0])
             self.enable_floor_detection_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.heightmap_result_label.config(text=f"Fout: {str(e)}")
             self.heightmap_button.config(state=tk.NORMAL, text="Hoogtekaart maken")
+            self.root.config(cursor="")
 
     def floor_detection_step(self):
         self.lineset_preview = None
@@ -454,9 +472,11 @@ class App:
             self.update_view_pointcloud(create_point_cloud(self.floor_corners, color=[1, 0, 0]))
             self.enable_floor_to_cityjson_section()
             self.enable_roof_extraction_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.floor_detection_result_label.config(text=f"Fout: {str(e)}")
             self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
+            self.root.config(cursor="")
 
     def floor_2_lineset_2_cityjson_step(self):
         # In this function we convert the floor to a lineset, then to a mesh and then to a cityjson object. All within one step.
@@ -486,12 +506,14 @@ class App:
             # Store the cityjson data for saving later
             self.cityjson_data = cityjson_data
 
+            self.root.config(cursor="")
+
             # Enable save button
             self.save_cityjson_button.config(state=tk.NORMAL)
-
         except Exception as e:
             self.floor_detection_result_label.config(text=f"Fout: {str(e)}")
             self.floor_to_cityjson_button.config(state=tk.NORMAL, text="Vloer naar 2D CityJSON")
+            self.root.config(cursor="")
 
     def roof_extraction_step(self):
         self.lineset_preview = None
@@ -515,9 +537,11 @@ class App:
             self.roof_extraction_button.config(state=tk.NORMAL, text="Extraheer dakpunten")
             self.update_view_pointcloud(self.roof_pcd)
             self.enable_roof_division_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.roof_extraction_result_label.config(text=f"Fout: {str(e)}")
             self.roof_extraction_button.config(state=tk.NORMAL, text="Extraheer dakpunten")
+            self.root.config(cursor="")
 
     def roof_division_step(self):
         self.lineset_preview = None
@@ -543,9 +567,11 @@ class App:
             )
             self.roof_division_button.config(state=tk.NORMAL, text="Verdeel dak")
             self.enable_wall_extraction_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.roof_division_result_label.config(text=f"Fout: {str(e)}")
             self.roof_division_button.config(state=tk.NORMAL, text="Verdeel dak")
+            self.root.config(cursor="")
 
     def wall_extraction_step(self):
         self.lineset_preview = None
@@ -570,9 +596,11 @@ class App:
             self.wall_extraction_button.config(state=tk.NORMAL, text="Extraheer muren")
             self.update_view_pointcloud(self.wall_pcd)
             self.enable_wall_division_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.wall_extraction_result_label.config(text=f"Fout: {str(e)}")
             self.wall_extraction_button.config(state=tk.NORMAL, text="Extraheer muren")
+            self.root.config(cursor="")
 
     def wall_division_step(self):
         try:
@@ -588,9 +616,11 @@ class App:
             )
             self.wall_division_button.config(state=tk.NORMAL, text="Verdeel muren")
             self.enable_pcd_to_lineset_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.wall_division_result_label.config(text=f"Fout: {str(e)}")
             self.wall_division_button.config(state=tk.NORMAL, text="Verdeel muren")
+            self.root.config(cursor="")
 
     def pcd_to_lineset_step(self):
         self.mesh_preview = None
@@ -640,9 +670,11 @@ class App:
 
             self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Converteer naar Lineset")
             self.enable_lineset_to_mesh_section()
+            self.root.config(cursor="")
         except Exception as e:
             self.pcd_to_lineset_result_label.config(text=f"Fout: {str(e)}")
             self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Converteer naar Lineset")
+            self.root.config(cursor="")
 
     def lineset_to_mesh_step(self):
         try:
@@ -656,10 +688,11 @@ class App:
             self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Converteer naar Mesh")
 
             self.enable_repair_mesh_section()
-
+            self.root.config(cursor="")
         except Exception as e:
             self.lineset_to_mesh_result_label.config(text=f"Fout: {str(e)}")
             self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Converteer naar Mesh")
+            self.root.config(cursor="")
 
     def repair_mesh_step(self):
         try:
@@ -670,10 +703,11 @@ class App:
             self.repair_mesh_result_label.config(text="Mesh succesvol hersteld.")
             self.repair_mesh_button.config(state=tk.NORMAL, text="Herstel Mesh")
             self.enable_cityjson_conversion_section()
-
+            self.root.config(cursor="")
         except Exception as e:
             self.repair_mesh_result_label.config(text=f"Fout: {str(e)}")
             self.repair_mesh_button.config(state=tk.NORMAL, text="Herstel Mesh")
+            self.root.config(cursor="")
 
     def cityjson_conversion_step(self):
         try:
@@ -687,10 +721,11 @@ class App:
             self.cityjson_conversion_result_label.config(text="Succesvol geconverteerd naar CityJSON.")
             self.cityjson_conversion_button.config(state=tk.NORMAL, text="Converteer naar CityJSON")
             self.save_cityjson_button.config(state=tk.NORMAL)
-
+            self.root.config(cursor="")
         except Exception as e:
             self.cityjson_conversion_result_label.config(text=f"Fout: {str(e)}")
             self.cityjson_conversion_button.config(state=tk.NORMAL, text="Converteer naar CityJSON")
+            self.root.config(cursor="")
 
     def save_cityjson_file_step(self):
         try:
