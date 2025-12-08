@@ -299,6 +299,11 @@ class App:
         self.floor_detection_result_label.config(text="Vloer detecteren, even geduld...")
         threading.Thread(target=self.floor_detection_step).start()
 
+    def start_floor_2_lineset_2_cityjson_thread(self):
+        self.disable_section(self.floor_to_cityjson_button, "Vloer naar 2D CityJSON")
+        self.floor_detection_result_label.config(text="Even geduld...")
+        threading.Thread(target=self.floor_2_lineset_2_cityjson_step).start()
+
     def start_roof_extraction_thread(self):
         self.disable_section(self.roof_extraction_button, "Dak extractie...")
         self.roof_extraction_result_label.config(text="Dak extractie, even geduld...")
@@ -447,10 +452,46 @@ class App:
             )
             self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
             self.update_view_pointcloud(create_point_cloud(self.floor_corners, color=[1, 0, 0]))
+            self.enable_floor_to_cityjson_section()
             self.enable_roof_extraction_section()
         except Exception as e:
             self.floor_detection_result_label.config(text=f"Fout: {str(e)}")
             self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
+
+    def floor_2_lineset_2_cityjson_step(self):
+        # In this function we convert the floor to a lineset, then to a mesh and then to a cityjson object. All within one step.
+        # There won't be a preview for this step, as it's just a combination of already existing steps.
+        self.lineset_preview = None
+        self.mesh_preview = None
+
+        try:
+            # Check if we received a config value for max_line_length
+            if self.validate_empty_field(self.max_line_length_entry):
+                max_line_length = float(self.max_line_length_entry.get())
+                floor_lineset = contour_to_lineset(self.floor_corners, max_line_length=max_line_length)
+            else:
+                floor_lineset = contour_to_lineset(self.floor_corners)
+            # No need for x-y tolerance or max line length here, as it's just the floor (it's flat anyway)
+            floor_mesh = lineset_to_trianglemesh(floor_lineset, self.floor_corners)
+            cityjson_data = o3d_to_cityjson(
+                floor_mesh,
+                cityobject_id="Gebouw_Vloer_1",
+                obj_type="Building",
+                lod="1.0"
+            )
+
+            self.floor_detection_result_label.config(text="Vloer succesvol geconverteerd naar CityJSON.")
+            self.floor_to_cityjson_button.config(state=tk.NORMAL, text="Vloer naar 2D CityJSON")
+
+            # Store the cityjson data for saving later
+            self.cityjson_data = cityjson_data
+
+            # Enable save button
+            self.save_cityjson_button.config(state=tk.NORMAL)
+
+        except Exception as e:
+            self.floor_detection_result_label.config(text=f"Fout: {str(e)}")
+            self.floor_to_cityjson_button.config(state=tk.NORMAL, text="Vloer naar 2D CityJSON")
 
     def roof_extraction_step(self):
         self.lineset_preview = None
@@ -951,6 +992,15 @@ class App:
         )
         self.floor_detection_button.grid(row=0, column=2, rowspan=3, padx=5, pady=5, sticky="nsew")
 
+        self.floor_to_cityjson_button = tk.Button(
+            floor_detection_frame,
+            text="Vloer naar 2D CityJSON",
+            state=tk.DISABLED,
+            command=self.start_floor_2_lineset_2_cityjson_thread,
+            width=30
+        )
+        self.floor_to_cityjson_button.grid(row=3, column=2, padx=5, pady=5, sticky="nsew")
+
         self.floor_detection_result_label = tk.Label(floor_detection_frame, text="Vloergrens niet gedetecteerd.", anchor="w")
         self.floor_detection_result_label.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
@@ -1267,6 +1317,7 @@ class App:
         self.floor_triangle_size_entry.config(state=tk.DISABLED)
         self.corner_distance_threshold_entry.config(state=tk.DISABLED)
         self.floor_detection_button.config(state=tk.DISABLED, text="Detecteer vloergrens")
+        self.floor_to_cityjson_button.config(state=tk.DISABLED, text="Vloer naar 2D CityJSON")
         self.floor_detection_result_label.config(text="Vloergrens niet gedetecteerd.")
 
         self.slice_height_entry.config(state=tk.DISABLED)
@@ -1304,6 +1355,8 @@ class App:
         self.cityjson_conversion_result_label.config(text="Niet geconverteerd naar CityJSON.")
 
         self.view_button.config(state=tk.DISABLED)
+        self.save_cityjson_button.config(state=tk.DISABLED)
+        self.pointcloud = None
         self.file_label.config(text="Geen bestand geselecteerd")
 
     def enable_point_density_section(self):
@@ -1325,6 +1378,9 @@ class App:
         self.floor_alpha_value_entry.config(state=tk.NORMAL)
         self.floor_triangle_size_entry.config(state=tk.NORMAL)
         self.corner_distance_threshold_entry.config(state=tk.NORMAL)
+
+    def enable_floor_to_cityjson_section(self):
+        self.floor_to_cityjson_button.config(state=tk.NORMAL, text="Vloer naar 2D CityJSON")
 
     def enable_roof_extraction_section(self):
         self.roof_extraction_button.config(state=tk.NORMAL, text="Extraheer dakpunten")
