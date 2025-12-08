@@ -6,7 +6,7 @@
   <img src="https://mirrors.creativecommons.org/presskit/icons/sa.svg" height="30" alt="SA">
 </p>
 
-# Product Code
+# Pymalion Pointcloud Converter
 This repository will contain the code made for the Utrecht local government. This project will contain the code that will be used for saving the wharf cellar in an organized matter. This Python script is designed for processing point cloud data, primarily in LAS and LAZ file formats. It offers various functionalities for point cloud manipulation, including downsampling, noise removal, plane extraction, repairing, and transformation. Below, you'll find an overview of the script and how to use it effectively.
 
 ## Table of Contents
@@ -17,10 +17,10 @@ This repository will contain the code made for the Utrecht local government. Thi
 - [Contributing](#contributing)
 - [License](#license)
 
-## Requirements
+## Requirements [OLD]
 Before using this script, ensure you have the following prerequisites installed on your system:
 
-- Python 3.x
+- Python 3.x [tested with versions 3.7.9 and 3.9.7]
 - Required Python packages, which can be installed using pip as mentioned [below](#installation):
   - laspy
   - laszip
@@ -41,7 +41,7 @@ Before using this script, ensure you have the following prerequisites installed 
    pip install -r requirements.txt
    ```
 
-## Usage
+## Usage in CLI
 1. Open a terminal and navigate to the directory where the script is located.
 2. Run the script using the following command:
 
@@ -52,7 +52,11 @@ Before using this script, ensure you have the following prerequisites installed 
 3. The script will prompt you to select an LAS or LAZ file for processing. Choose the appropriate file.
 4. The script will execute a series of point cloud processing operations, and you will be presented with intermediate results and the option to visualize the point cloud data using an external viewer.
 
-## Functionality
+## Usage as application
+1. Open and execute `prep.cmd`. This will take several minutes, depending on your system specifications.
+2. After this step is finished a new file named `Pygmalion.exe` will be created. Open this file to start the application.
+
+## Functionality [OLD]
 The script provides the following main functionalities:
 
 1. **Downsampling:** The point cloud is downsampled to reduce the number of points, improving processing speed.
@@ -68,3 +72,7 @@ The script provides the following main functionalities:
 6. **PLY Module (Optional):** This section of the script is commented out by default but can be uncommented if you want to save the processed point cloud data as a PLY file.
 
 Please note that the script contains additional commented-out functionality related to PLY file conversion, which can be enabled if needed.
+
+
+## License
+This repository and code is made under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license. You are free to share and adapt the material, provided you give appropriate credit, do not use it for commercial purposes, and distribute any modified material under the same license.
