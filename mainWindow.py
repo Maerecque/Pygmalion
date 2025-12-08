@@ -701,12 +701,12 @@ class App:
             self.mesh_preview = self.repaired_mesh
 
             self.repair_mesh_result_label.config(text="Mesh succesvol hersteld.")
-            self.repair_mesh_button.config(state=tk.NORMAL, text="Herstel Mesh")
+            self.repair_mesh_button.config(state=tk.NORMAL, text="Repareer Mesh")
             self.enable_cityjson_conversion_section()
             self.root.config(cursor="")
         except Exception as e:
             self.repair_mesh_result_label.config(text=f"Fout: {str(e)}")
-            self.repair_mesh_button.config(state=tk.NORMAL, text="Herstel Mesh")
+            self.repair_mesh_button.config(state=tk.NORMAL, text="Repareer Mesh")
             self.root.config(cursor="")
 
     def cityjson_conversion_step(self):
