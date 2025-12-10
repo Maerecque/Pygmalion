@@ -55,30 +55,113 @@ class Tooltip:
         self.widget = widget
         self.text = text
         self.tipwindow = None
-        widget.bind("<Enter>", self.show_tip)
-        widget.bind("<Leave>", self.hide_tip)
+        self.timer_id = None
+        self.check_id = None
+
+        widget.bind("<Enter>", self.on_enter, add="+")
+        widget.bind("<Leave>", self.on_leave, add="+")
+        widget.bind("<Button>", self.on_leave, add="+")
 
         o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
 
-    def show_tip(self, event=None):
-        if self.tipwindow or not self.text:
+    def on_enter(self, event=None):
+        if not self.text:
             return
-        x, y, cx, cy = self.widget.bbox("insert") if hasattr(self.widget, "bbox") else (0, 0, 0, 0)
-        x = x + self.widget.winfo_rootx() + 25
-        y = y + self.widget.winfo_rooty() + 20
-        self.tipwindow = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(True)
-        tw.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(tw, text=self.text, justify='left',
-                         background="#ffffe0", relief='solid', borderwidth=1,
-                         font=("tahoma", "8", "normal"))
-        label.pack(ipadx=1)
+        self.schedule_show()
 
-    def hide_tip(self, event=None):
-        tw = self.tipwindow
-        self.tipwindow = None
-        if tw:
-            tw.destroy()
+    def on_leave(self, event=None):
+        self.cancel_all()
+        self.destroy_tooltip()
+
+    def schedule_show(self):
+        self.cancel_timer()
+        try:
+            self.timer_id = self.widget.after(1500, self.show_tooltip)
+        except Exception:
+            pass
+
+    def show_tooltip(self):
+        self.timer_id = None
+
+        if self.tipwindow:
+            return
+
+        try:
+            x = self.widget.winfo_rootx() + 25
+            y = self.widget.winfo_rooty() + 20
+
+            self.tipwindow = tk.Toplevel(self.widget)
+            self.tipwindow.wm_overrideredirect(True)
+            self.tipwindow.wm_geometry(f"+{x}+{y}")
+
+            label = tk.Label(
+                self.tipwindow,
+                text=self.text,
+                justify='left',
+                background="#ffffe0",
+                relief='solid',
+                borderwidth=1,
+                font=("tahoma", "8", "normal")
+            )
+            label.pack(ipadx=1)
+
+            self.check_position()
+        except Exception:
+            self.destroy_tooltip()
+
+    def check_position(self):
+        if not self.tipwindow:
+            self.check_id = None
+            return
+
+        try:
+            mouse_x = self.widget.winfo_pointerx()
+            mouse_y = self.widget.winfo_pointery()
+            widget_x = self.widget.winfo_rootx()
+            widget_y = self.widget.winfo_rooty()
+            widget_w = self.widget.winfo_width()
+            widget_h = self.widget.winfo_height()
+
+            x_in = widget_x <= mouse_x <= widget_x + widget_w
+            y_in = widget_y <= mouse_y <= widget_y + widget_h
+
+            if not (x_in and y_in):
+                self.destroy_tooltip()
+                return
+
+            self.check_id = self.widget.after(100, self.check_position)
+        except Exception:
+            self.destroy_tooltip()
+
+    def cancel_timer(self):
+        if self.timer_id:
+            try:
+                self.widget.after_cancel(self.timer_id)
+            except Exception:
+                pass
+            self.timer_id = None
+
+    def cancel_check(self):
+        if self.check_id:
+            try:
+                self.widget.after_cancel(self.check_id)
+            except Exception:
+                pass
+            self.check_id = None
+
+    def cancel_all(self):
+        self.cancel_timer()
+        self.cancel_check()
+
+    def destroy_tooltip(self):
+        self.cancel_check()
+
+        if self.tipwindow:
+            try:
+                self.tipwindow.destroy()
+            except Exception:
+                pass
+            self.tipwindow = None
 
 
 class App:
@@ -92,6 +175,9 @@ class App:
         # Store the point cloud data and path
         self.point_cloud_data = point_cloud_data
         self.point_cloud_path = point_cloud_path
+
+        # Tooltip tracking
+        self.tooltips = []
 
         # Processing results storage
         self.resized_point_cloud_data = None
@@ -128,6 +214,38 @@ class App:
 
         # Create widgets first
         self.create_widgets()
+
+        # Load presets
+        self.load_presets()  # DOESN'T WORK YET
+
+        # If point cloud data is provided, load it
+        if self.point_cloud_data is not None and self.point_cloud_path is not None:
+            self.load_point_cloud_data()
+
+        # Schedule periodic internal validation
+        self._schedule_integrity_check()
+
+        # Schedule periodic tooltip reset
+        self._schedule_tooltip_reset()
+
+    def _schedule_tooltip_reset(self):
+        """Reset all tooltips every 5 seconds to prevent stuck states"""
+        self.reset_all_tooltips()
+        self.root.after(5000, self._schedule_tooltip_reset)
+
+    def reset_all_tooltips(self):
+        """Reset all tooltip instances to their initial state"""
+        for tooltip in self.tooltips:
+            try:
+                tooltip.reset()
+            except Exception:
+                pass
+
+    def add_tooltip(self, widget, text):
+        """Create a tooltip and track it"""
+        tooltip = Tooltip(widget, text)
+        self.tooltips.append(tooltip)
+        return tooltip
 
         # Load presets
         self.load_presets()  # DOESN'T WORK YET
@@ -873,6 +991,7 @@ class App:
             width=30
         )
         self.file_select_button.grid(row=0, column=2, padx=5, pady=5, sticky="nsew", rowspan=2)
+        Tooltip(self.file_select_button, "Selecteer een .las of .laz puntenwolkbestand om te beginnen.")
 
         # Point Density Frame
         point_density_frame = tk.LabelFrame(left_column, text="Puntdichtheid")
@@ -1306,6 +1425,7 @@ class App:
             command=lambda: None  # Default disabled command
         )
         self.view_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        Tooltip(self.view_button, "Bekijk het huidige resultaat in een nieuw venster.")
 
         # Save CityJSON Button
         self.save_cityjson_button = tk.Button(
@@ -1315,14 +1435,17 @@ class App:
             command=self.save_cityjson_file_step
         )
         self.save_cityjson_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        Tooltip(self.save_cityjson_button, "Sla het gegenereerde CityJSON-bestand op.")
 
         # Reset Button
         self.reset_button = tk.Button(misc_frame, text="Reset alles", command=self.reset_application)
         self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        Tooltip(self.reset_button, "Reset de applicatie naar de begintoestand.")
 
         # Exit Button
         exit_button = tk.Button(main_frame, text="Terug", command=self.on_close)
         exit_button.pack(pady=10, fill=tk.X)
+        Tooltip(exit_button, "Sluit de applicatie.")
 
         self.root.bind("<Escape>", lambda event: self.on_close())  # Bind Escape key to close the window
 
@@ -1336,6 +1459,7 @@ class App:
     # Section enabling/disabling functions
     def disable_section(self, button, label_text):
         button.config(state=tk.DISABLED, text=label_text)
+        Tooltip(button, "")
 
     def disable_all_sections(self):
         "Disable all sections and reset their states."
@@ -1344,60 +1468,91 @@ class App:
         self.file_label.config(text="Geen bestand geselecteerd")
 
         self.points_per_cm_entry.config(state=tk.DISABLED)
+        Tooltip(self.points_per_cm_entry, "")
         self.point_density_button.config(state=tk.DISABLED, text="Pas puntdichtheid aan")
+        Tooltip(self.point_density_button, "")
         self.point_density_result_label.config(text="")
 
         self.neighbour_amount_entry.config(state=tk.DISABLED)
+        Tooltip(self.neighbour_amount_entry, "")
         self.std_ratio_entry.config(state=tk.DISABLED)
+        Tooltip(self.std_ratio_entry, "")
         self.show_removed_points_checkbox.config(state=tk.DISABLED)
+        Tooltip(self.show_removed_points_checkbox, "")
         self.show_removed_points_var.set(False)
         self.preprocessing_button.config(state=tk.DISABLED, text="Start voorbewerking")
+        Tooltip(self.preprocessing_button, "")
         self.preprocessing_result_label.config(text="")
 
         self.visualize_heightmap_checkbox.config(state=tk.DISABLED)
+        Tooltip(self.visualize_heightmap_checkbox, "")
         self.visualize_heightmap_var.set(False)
         self.heightmap_button.config(state=tk.DISABLED, text="Maak hoogtekaart")
+        Tooltip(self.heightmap_button, "")
         self.heightmap_result_label.config(text="Hoogtekaart niet gemaakt.")
 
         self.floor_alpha_value_entry.config(state=tk.DISABLED)
+        Tooltip(self.floor_alpha_value_entry, "")
         self.floor_triangle_size_entry.config(state=tk.DISABLED)
+        Tooltip(self.floor_triangle_size_entry, "")
         self.corner_distance_threshold_entry.config(state=tk.DISABLED)
+        Tooltip(self.corner_distance_threshold_entry, "")
         self.floor_detection_button.config(state=tk.DISABLED, text="Detecteer vloergrens")
+        Tooltip(self.floor_detection_button, "")
         self.floor_to_cityjson_button.config(state=tk.DISABLED, text="Vloer naar 2D CityJSON")
+        Tooltip(self.floor_to_cityjson_button, "")
         self.floor_detection_result_label.config(text="Vloergrens niet gedetecteerd.")
 
         self.slice_height_entry.config(state=tk.DISABLED)
+        Tooltip(self.slice_height_entry, "")
         self.roof_extraction_button.config(state=tk.DISABLED, text="Extraheer dakpunten")
+        Tooltip(self.roof_extraction_button, "")
         self.roof_extraction_result_label.config(text="Dak niet geëxtraheerd.")
 
         self.roof_layers_entry.config(state=tk.DISABLED)
+        Tooltip(self.roof_layers_entry, "")
         self.roof_layer_fatness_entry.config(state=tk.DISABLED)
+        Tooltip(self.roof_layer_fatness_entry, "")
         self.roof_voxel_size_entry.config(state=tk.DISABLED)
+        Tooltip(self.roof_voxel_size_entry, "")
         self.roof_angle_threshold_entry.config(state=tk.DISABLED)
+        Tooltip(self.roof_angle_threshold_entry, "")
         self.roof_merge_radius_entry.config(state=tk.DISABLED)
+        Tooltip(self.roof_merge_radius_entry, "")
         self.roof_division_button.config(state=tk.DISABLED, text="Verdeel dak")
+        Tooltip(self.roof_division_button, "")
         self.roof_division_result_label.config(text="Dak niet verdeeld.")
 
         self.wall_search_radius_entry.config(state=tk.DISABLED)
+        Tooltip(self.wall_search_radius_entry, "")
         self.wall_extraction_button.config(state=tk.DISABLED, text="Extraheer muren")
+        Tooltip(self.wall_extraction_button, "")
         self.wall_extraction_result_label.config(text="Muren niet geëxtraheerd.")
 
         self.wall_layer_amount_entry.config(state=tk.DISABLED)
+        Tooltip(self.wall_layer_amount_entry, "")
         self.wall_division_button.config(state=tk.DISABLED, text="Verdeel muren")
+        Tooltip(self.wall_division_button, "")
         self.wall_division_result_label.config(text="Muren niet verdeeld.")
 
         self.xy_tolerance_entry.config(state=tk.DISABLED)
+        Tooltip(self.xy_tolerance_entry, "")
         self.max_line_length_entry.config(state=tk.DISABLED)
+        Tooltip(self.max_line_length_entry, "")
         self.pcd_to_lineset_button.config(state=tk.DISABLED, text="Converteer naar\nLineset")
+        Tooltip(self.pcd_to_lineset_button, "")
         self.pcd_to_lineset_result_label.config(text="Lineset niet gemaakt.")
 
         self.lineset_to_mesh_button.config(state=tk.DISABLED, text="Converteer naar Mesh")
+        Tooltip(self.lineset_to_mesh_button, "")
         self.lineset_to_mesh_result_label.config(text="Mesh niet gemaakt.")
 
         self.repair_mesh_button.config(state=tk.DISABLED, text="Repareer Mesh")
+        Tooltip(self.repair_mesh_button, "")
         self.repair_mesh_result_label.config(text="Mesh niet gerepareerd.")
 
         self.cityjson_conversion_button.config(state=tk.DISABLED, text="Converteer naar CityJSON")
+        Tooltip(self.cityjson_conversion_button, "")
         self.cityjson_conversion_result_label.config(text="Niet geconverteerd naar CityJSON.")
 
         self.view_button.config(state=tk.DISABLED)
@@ -1407,62 +1562,183 @@ class App:
 
     def enable_point_density_section(self):
         self.points_per_cm_entry.config(state=tk.NORMAL)
+        Tooltip(self.points_per_cm_entry, "Het gewenste aantal punten per cm² in de puntenwolk.")
         self.point_density_button.config(state=tk.NORMAL)
+        Tooltip(
+            self.point_density_button,
+            "Pas de dichtheid van de puntenwolk aan op basis van het opgegeven aantal punten per cm²."
+        )
 
     def enable_preprocessing_section(self):
         self.neighbour_amount_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.neighbour_amount_entry,
+            "Het aantal naburige punten dat wordt gebruikt om te bepalen of een punt als ruis wordt beschouwd."
+        )
         self.std_ratio_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.std_ratio_entry,
+            "De standaarddeviatieverhouding die wordt gebruikt om ruispunten te identificeren."
+        )
         self.show_removed_points_checkbox.config(state=tk.NORMAL)
+        Tooltip(
+            self.show_removed_points_checkbox,
+            "Als ingeschakeld, worden de verwijderde ruispunten weergegeven in de visualisatie als rode punten."
+        )
         self.preprocessing_button.config(state=tk.NORMAL, text="Start voorbewerking")
+        Tooltip(
+            self.preprocessing_button,
+            "Start het voorbewerkingsproces om ruis te verwijderen en de puntenwolk te optimaliseren."
+        )
 
     def enable_heightmap_section(self):
         self.heightmap_button.config(state=tk.NORMAL, text="Maak hoogtekaart")
+        Tooltip(
+            self.heightmap_button,
+            "Maak een hoogtekaart op basis van de puntenwolk."
+        )
         self.visualize_heightmap_checkbox.config(state=tk.NORMAL)
+        Tooltip(
+            self.visualize_heightmap_checkbox,
+            "Visualiseer de gemaakte hoogtekaart."
+        )
 
     def enable_floor_detection_section(self):
         self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
+        Tooltip(
+            self.floor_detection_button,
+            "Detecteer de grens van de vloer in de puntenwolk."
+        )
         self.floor_alpha_value_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.floor_alpha_value_entry,
+            "De alpha-waarde die wordt gebruikt bij de vloergrensdetectie."
+        )
         self.floor_triangle_size_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.floor_triangle_size_entry,
+            "De grootte van de driehoeken die worden gebruikt bij de vloergrensdetectie."
+        )
         self.corner_distance_threshold_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.corner_distance_threshold_entry,
+            "De afstandsdrempel die wordt gebruikt om hoeken te identificeren bij de vloergrensdetectie."
+        )
 
     def enable_floor_to_cityjson_section(self):
         self.floor_to_cityjson_button.config(state=tk.NORMAL, text="Vloer naar 2D CityJSON")
+        Tooltip(
+            self.floor_to_cityjson_button,
+            "Converteer de gedetecteerde vloergrens naar een 2D CityJSON-bestand."
+        )
 
     def enable_roof_extraction_section(self):
         self.roof_extraction_button.config(state=tk.NORMAL, text="Extraheer dakpunten")
+        Tooltip(
+            self.roof_extraction_button,
+            "Extraheer dakpunten uit de puntenwolk op basis van de opgegeven snijlaaghoogte."
+        )
         self.slice_height_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.slice_height_entry,
+            "De hoogte van de snijlaag die wordt gebruikt om dakpunten te extraheren."
+        )
 
     def enable_roof_division_section(self):
         self.roof_division_button.config(state=tk.NORMAL, text="Verdeel dak")
+        Tooltip(
+            self.roof_division_button,
+            "Verdeel het dak in lagen op basis van de opgegeven parameters."
+        )
         self.roof_layers_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.roof_layers_entry,
+            "Het aantal lagen waarin het dak moet worden verdeeld."
+        )
         self.roof_layer_fatness_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.roof_layer_fatness_entry,
+            "De dikte van elke daklaag bij de verdeling."
+        )
         self.roof_voxel_size_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.roof_voxel_size_entry,
+            "De voxelgrootte die wordt gebruikt bij de dakverdeling."
+        )
         self.roof_angle_threshold_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.roof_angle_threshold_entry,
+            "De hoekdrempel die wordt gebruikt om dakvlakken te identificeren."
+        )
         self.roof_merge_radius_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.roof_merge_radius_entry,
+            "De koppelradius die wordt gebruikt om nabijgelegen dakvlakken samen te voegen."
+        )
 
     def enable_wall_extraction_section(self):
         self.wall_extraction_button.config(state=tk.NORMAL, text="Extraheer muren")
+        Tooltip(
+            self.wall_extraction_button,
+            "Extraheer muurpunten uit de puntenwolk op basis van de opgegeven zoekradius."
+        )
         self.wall_search_radius_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.wall_search_radius_entry,
+            "De zoekradius die wordt gebruikt om muurpunten te identificeren."
+        )
 
     def enable_wall_division_section(self):
         self.wall_division_button.config(state=tk.NORMAL, text="Verdeel muren")
+        Tooltip(
+            self.wall_division_button,
+            "Verdeel de muren in lagen op basis van het opgegeven aantal lagen."
+        )
         self.wall_layer_amount_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.wall_layer_amount_entry,
+            "Het aantal lagen waarin de muren moeten worden verdeeld."
+        )
 
     def enable_pcd_to_lineset_section(self):
         self.pcd_to_lineset_button.config(state=tk.NORMAL, text="Converteer naar Lineset")
+        Tooltip(
+            self.pcd_to_lineset_button,
+            "Converteer de puntenwolk naar een Lineset op basis van de opgegeven toleranties."
+        )
         self.xy_tolerance_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.xy_tolerance_entry,
+            "De XY-tolerantie die wordt gebruikt bij de conversie naar Lineset."
+        )
         self.max_line_length_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.max_line_length_entry,
+            "De maximale lijnlengte die wordt toegestaan bij de conversie naar Lineset."
+        )
 
     def enable_lineset_to_mesh_section(self):
         self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Converteer naar Mesh")
+        Tooltip(
+            self.lineset_to_mesh_button,
+            "Converteer de Lineset naar een 3D Mesh."
+        )
         self.lineset_to_mesh_result_label.config(text="Mesh niet gemaakt.")
 
     def enable_repair_mesh_section(self):
         self.repair_mesh_button.config(state=tk.NORMAL, text="Repareer Mesh")
+        Tooltip(
+            self.repair_mesh_button,
+            "Repareer de 3D Mesh om eventuele fouten of gaten te herstellen."
+        )
         self.repair_mesh_result_label.config(text="Mesh niet gerepareerd.")
 
     def enable_cityjson_conversion_section(self):
         self.cityjson_conversion_button.config(state=tk.NORMAL, text="Converteer naar CityJSON")
+        Tooltip(
+            self.cityjson_conversion_button,
+            "Converteer de 3D Mesh naar een CityJSON-bestand."
+        )
         self.cityjson_conversion_result_label.config(text="Niet geconverteerd naar CityJSON.")
 
     def enable_view_pointcloud(self, pointcloud):
