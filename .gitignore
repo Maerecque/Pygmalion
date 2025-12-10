@@ -12,3 +12,5 @@
 *.json
 # Diagram files
 *.drawio
+# Executable files
+*.exe
