@@ -874,7 +874,6 @@ class App:
         # while it's telling itself that the GLFW library is not initialized.
 
         # NOTE: This doesn't work when exporting to an executable with PyInstaller due to Open3D limitations.
-        # Does work when exporting with console
 
         # This will be called when the pointcloud is changed to a lineset
         if self.lineset_preview is True and self.total_lineset is not None:
