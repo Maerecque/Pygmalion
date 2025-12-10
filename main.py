@@ -45,7 +45,10 @@ from Source.pointCloudAltering import (  # noqa: F401
     merge_point_clouds as merge_pcds,
     alter_point_density
 )
-from Source.pointCloudEditor import open_point_cloud_editor as opce
+from Source.pointCloudEditor import (  # noqa: F401
+    open_point_cloud_editor as opce,
+    open_mesh_and_lineset_viewer as omalv
+)
 from Source.roofTools import slice_roof_up
 from Source.wallTools import (
     extract_wall_points,
@@ -869,19 +872,13 @@ class App:
             self.show_message("Fout", f"Opslaan van CityJSON-bestand mislukt: {str(e)}", "error")
 
     def view_pointcloud(self, pointcloud):
-        # NOTE: Jumping back and forth between steps of LineSet and/or Mesh can cause an infinite loop.
-        # It's caused by a what-looks-like Open3d bug where the draw function keeps calling itself when
-        # while it's telling itself that the GLFW library is not initialized.
-
-        # NOTE: This doesn't work when exporting to an executable with PyInstaller due to Open3D limitations.
-
         # This will be called when the pointcloud is changed to a lineset
         if self.lineset_preview is True and self.total_lineset is not None:
-            o3d.visualization.draw([self.total_lineset])
+            omalv(self.total_lineset)
 
         # This will be called when the Lineset is changed to a mesh
         elif self.mesh_preview is not None:
-            o3d.visualization.draw([self.mesh_preview])
+            omalv(self.mesh_preview)
 
         elif pointcloud is not None:
             opce(pointcloud, False)
