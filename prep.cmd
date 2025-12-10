@@ -1,3 +1,6 @@
-pyinstaller --noconfirm --onefile --console --icon "Source/support_files/logo.ico" --name "Pygmalion" --clean --add-data "Source;./Source" --add-data "presets.ini;." "main.py"
-move output\Pygmalion.exe .
-echo copied
+pyinstaller --noconfirm --onefile --windowed --icon "Source/support_files/logo.ico" --name "Pygmalion" --version-file "Source/support_files/version_info.txt" --clean --add-data "presets.ini;." "main.py"
+move dist\Pygmalion.exe .
+
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
+if exist Pygmalion.spec del /q Pygmalion.spec

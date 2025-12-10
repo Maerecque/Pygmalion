@@ -1,4 +1,4 @@
-[![Python 3.9.7](https://img.shields.io/badge/python-3.9.7-blue.svg)](https://www.python.org/downloads/release/python-397/) [![Python 3.7.9](https://img.shields.io/badge/python-3.7.9-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python 3.9.7](https://img.shields.io/badge/python-3.9.7-blue.svg)](https://www.python.org/downloads/release/python-397/) [![Python 3.7.9](https://img.shields.io/badge/python-3.7.9-blue.svg)](https://www.python.org/downloads/release/python-379/) ![version](https://img.shields.io/badge/version-1.0.0-g.svg)
 <p>
   <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" height="30" alt="CC">
   <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" height="30" alt="BY">
@@ -81,8 +81,12 @@ The script requires the following software and libraries:
 ---
 ### Usage as executable
 1. Run `prep.cmd`
-   - This step may take several minutes depending on your system.
+   - This step will take several minutes.
+   - There will be some console output during the process; please wait until it finishes.
+   - Your computer may prompt you to allow the program to make changes; please allow it.
+   - **The script can only run if Python and the required packages are installed.**
 2. After completion, a file named `Pygmalion.exe` will be generated.
+   - Please note that your settings for presets will be fixed in the generated executable. To change them, you will need to re-run `prep.cmd`.
 3. Launch `Pygmalion.exe` to start the application.
 ---
 
