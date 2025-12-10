@@ -11,6 +11,12 @@ import tkinter as tk
 from tkinter import messagebox
 from tqdm import tqdm
 
+# Fix for PyInstaller windowed mode - redirect stdout/stderr if they're None
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, 'w')
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, 'w')
+
 locale.setlocale(locale.LC_ALL, 'nl_NL.UTF-8')
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
@@ -866,6 +872,9 @@ class App:
         # NOTE: Jumping back and forth between steps of LineSet and/or Mesh can cause an infinite loop.
         # It's caused by a what-looks-like Open3d bug where the draw function keeps calling itself when
         # while it's telling itself that the GLFW library is not initialized.
+
+        # NOTE: This doesn't work when exporting to an executable with PyInstaller due to Open3D limitations.
+        # Does work when exporting with console
 
         # This will be called when the pointcloud is changed to a lineset
         if self.lineset_preview is True and self.total_lineset is not None:
