@@ -46,13 +46,11 @@ This application has been tested on Windows 10 and Windows 11 only.
 #### Minimum Specifications
 - CPU: Intel Core i7 (8th Gen) or AMD equivalent  
 - RAM: 8 GB  
-- Storage: 256 GB SSD  
 - GPU: Integrated graphics
 
 #### Recommended Specifications
 - CPU: Intel Core i7 (10th Gen) or AMD equivalent  
 - RAM: 16 GB or more  
-- Storage: 512 GB SSD or larger  
 - GPU: Dedicated GPU with at least 6 GB VRAM
 
 ### Python Environment
