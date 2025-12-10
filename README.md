@@ -82,10 +82,9 @@ The script requires the following software and libraries:
    - This step will take several minutes.
    - There will be some console output during the process; please wait until it finishes.
    - Your computer may prompt you to allow the program to make changes; please allow it.
-   - **The script can only run if Python and the required packages are installed.**
 2. After completion, a file named `Pygmalion.exe` will be generated.
    - Please note that your settings for presets will be fixed in the generated executable. To change them, you will need to re-run `prep.cmd`.
-3. Launch `Pygmalion.exe` to start the application. The applicatinon window will open with a black command prompt in the background. This is normal behavior and should not be closed while using the application. You can ignore any output in the command prompt.
+3. Launch `Pygmalion.exe` to start the application.
 ---
 
 ## Contributing
