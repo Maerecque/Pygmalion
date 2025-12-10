@@ -216,7 +216,7 @@ class App:
         self.create_widgets()
 
         # Load presets
-        self.load_presets()  # DOESN'T WORK YET
+        self.load_presets()
 
         # If point cloud data is provided, load it
         if self.point_cloud_data is not None and self.point_cloud_path is not None:
@@ -246,16 +246,6 @@ class App:
         tooltip = Tooltip(widget, text)
         self.tooltips.append(tooltip)
         return tooltip
-
-        # Load presets
-        self.load_presets()  # DOESN'T WORK YET
-
-        # If point cloud data is provided, load it
-        if self.point_cloud_data is not None and self.point_cloud_path is not None:
-            self.load_point_cloud_data()
-
-        # Schedule periodic internal validation
-        self._schedule_integrity_check()
 
     def _schedule_integrity_check(self):
         """Schedules a randomized integrity and UI status check."""
