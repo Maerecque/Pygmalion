@@ -250,6 +250,13 @@ class App:
                 self.file_label.config(text=f"Geselecteerd bestand: {os.path.basename(file_path)}")
                 self.point_amount_label.config(text=f"Punten: {len(self.point_cloud_data.points):n}")
 
+            else:
+                # User cancelled file selection
+                self.show_message("Info", "Bestand selectie geannuleerd.", "info")
+                self.file_select_button.config(text="Bestand selecteren")
+                self.file_label.config(text="Geen bestand geselecteerd.")
+                self.point_amount_label.config(text="")
+
         except Exception as e:
             # Bring back the file select button text
             self.file_select_button.config(text="Bestand selecteren")
