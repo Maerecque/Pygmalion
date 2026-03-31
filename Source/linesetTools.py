@@ -208,6 +208,7 @@ def lineset_to_trianglemesh(lineset, contour_points):
     Note:
         - Projects all points to the XY plane for triangulation.
         - Only triangles whose centroid is inside or on the boundary of the contour are kept.
+        - Duplicates each triangle with reversed winding so both sides render as solid surfaces.
         - Raises ValueError if there are fewer than 3 points to form a mesh.
     """
     points = np.asarray(lineset.points)
@@ -232,9 +233,21 @@ def lineset_to_trianglemesh(lineset, contour_points):
         if polygon.contains(ShapelyPoint(centroid)) or polygon.covers(ShapelyPoint(centroid)):
             filtered_triangles.append(simplex)
 
+    filtered_triangles = np.asarray(filtered_triangles, dtype=np.int32).reshape(-1, 3)
+
     mesh = o3d.geometry.TriangleMesh()
-    mesh.vertices = o3d.utility.Vector3dVector(points)
-    mesh.triangles = o3d.utility.Vector3iVector(np.array(filtered_triangles))
+    if len(filtered_triangles) == 0:
+        mesh.vertices = o3d.utility.Vector3dVector(points)
+        mesh.triangles = o3d.utility.Vector3iVector(filtered_triangles)
+        return mesh
+
+    backface_offset = len(points)
+    backface_vertices = points.copy()
+    backface_triangles = filtered_triangles[:, ::-1] + backface_offset
+
+    mesh.vertices = o3d.utility.Vector3dVector(np.vstack([points, backface_vertices]))
+    mesh.triangles = o3d.utility.Vector3iVector(np.vstack([filtered_triangles, backface_triangles]))
+    mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
     return mesh
 
