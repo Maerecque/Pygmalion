@@ -14,6 +14,9 @@ from Source.pointCloudEditor import (  # noqa: F401
 from Source.pointCloudAltering import merge_point_clouds as merge_pcds
 
 
+class ZeroExpansionError(Exception): pass   # noqa: E701
+
+
 def expand_boundary(
     mesh: o3d.geometry.TriangleMesh,
     expand_distance: float = 0.0,
@@ -28,12 +31,15 @@ def expand_boundary(
     Args:
         mesh (o3d.geometry.TriangleMesh): The input Open3D mesh.
         expand_distance (float): The distance by which to expand the boundary. This has to be a positive value.
-            This value is expressed in the same units as the mesh's vertices.
+            This value is expressed in the same units as the mesh's vertices. Defaults to 0.0.
         point_visualization (bool): Whether to visualize the original and expanded points together. Defaults to False.
 
     Returns:
         o3d.geometry.TriangleMesh: A new Open3D mesh with the expanded boundary.
     """
+    if expand_distance <= 0:
+        raise ZeroExpansionError("The expansion distance must be a value greater than 0.")
+
     # Show amount of points in the original mesh (for debugging purposes)
     original_vertices = np.asarray(mesh.vertices)
     print("Number of original vertices:", len(original_vertices))

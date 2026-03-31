@@ -55,7 +55,8 @@ def contour_to_lineset(points: np.ndarray, max_line_length: float = 0) -> o3d.ge
     Parameters:
         points (np.ndarray): Array of shape (N, 3) containing ordered 3D coordinates of the contour.
         max_line_length (float): Maximum allowed length for each line segment. Lines longer than this will be removed.
-        The length is expressed in the same units as the coordinates in `points`. If set to None or 0, no filtering is applied.
+            The length is expressed in the same units as the coordinates in `points`.
+            If set to None or 0, no filtering is applied. Defaults to 0.
 
     Returns:
         o3d.geometry.LineSet: Open3D LineSet object representing the closed contour.
