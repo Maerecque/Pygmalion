@@ -15,6 +15,7 @@ from Source.pointCloudAltering import merge_point_clouds as merge_pcds
 
 
 class ZeroExpansionError(Exception): pass   # noqa: E701
+class NonFlatMeshError(Exception): pass  # noqa: E701
 
 
 def expand_boundary(
@@ -39,6 +40,12 @@ def expand_boundary(
     """
     if expand_distance <= 0:
         raise ZeroExpansionError("The expansion distance must be a value greater than 0.")
+
+    # Check if the polygon is a 2d polygon by checking if all z-values of the vertices are the same
+    vertices = np.asarray(mesh.vertices)
+    z_values = vertices[:, 2]
+    if not np.all(np.isclose(z_values, z_values[0])):
+        raise NonFlatMeshError("The mesh is not flat. All vertices must have the same z-value for this function to work.")
 
     # Show amount of points in the original mesh (for debugging purposes)
     original_vertices = np.asarray(mesh.vertices)
@@ -79,7 +86,9 @@ def expand_boundary(
         cm_value = None  # Clear the cm_value variable to free up memory
 
     expanded_lineset = contour_to_lineset(expanded_3d_coords)
+    omalv(expanded_lineset)
     expanded_mesh = lineset_to_trianglemesh(expanded_lineset, expanded_3d_coords)
+    omalv(expanded_mesh)
     expanded_pcd.clear()  # Clear the point cloud to free up memory
     expanded_lineset.clear()  # Clear the lineset to free up memory
 
