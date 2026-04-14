@@ -47,6 +47,10 @@ def expand_boundary(
     if not np.all(np.isclose(z_values, z_values[0])):
         raise NonFlatMeshError("The mesh is not flat. All vertices must have the same z-value for this function to work.")
 
+    # Empty vertices and z_values to free up memory
+    vertices = None
+    z_values = None
+
     # Show amount of points in the original mesh (for debugging purposes)
     original_vertices = np.asarray(mesh.vertices)
     print("Number of original vertices:", len(original_vertices))
