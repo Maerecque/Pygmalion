@@ -4,6 +4,7 @@ import sys
 import os
 from shapely.geometry import Polygon
 from shapely import BufferJoinStyle
+from typing import Union
 
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.linesetTools import contour_to_lineset, lineset_to_trianglemesh
@@ -19,8 +20,8 @@ class NonFlatMeshError(Exception): pass  # noqa: E701
 
 
 def expand_boundary(
-    mesh: o3d.geometry.TriangleMesh,
-    expand_distance: float = 0.0,
+    input: Union[o3d.geometry.TriangleMesh, o3d.geometry.PointCloud, o3d.geometry.LineSet],
+    expansion_size: float = 0.0,
     point_visualization: bool = False
 ):
     """A function to expand the boundary of a mesh by a specified distance.
@@ -30,16 +31,26 @@ def expand_boundary(
     NOTE: This function is currently only suitable for a flat 3D mesh.
 
     Args:
-        mesh (o3d.geometry.TriangleMesh): The input Open3D mesh.
-        expand_distance (float): The distance by which to expand the boundary. This has to be a positive value.
+        input (Union[o3d.geometry.TriangleMesh, o3d.geometry.PointCloud, o3d.geometry.LineSet]): The input Open3D mesh, pointcloud, or line set.  # noqa: E501
+        expansion_size (float): The distance by which to expand the boundary. This has to be a positive value.
             This value is expressed in the same units as the mesh's vertices. Defaults to 0.0.
         point_visualization (bool): Whether to visualize the original and expanded points together. Defaults to False.
 
     Returns:
-        o3d.geometry.TriangleMesh: A new Open3D mesh with the expanded boundary.
+        o3d.geometry.PointCloud: A new Open3D point cloud with the expanded boundary.
     """
-    if expand_distance <= 0:
+    if expansion_size <= 0:
         raise ZeroExpansionError("The expansion distance must be a value greater than 0.")
+
+    if isinstance(input, o3d.geometry.TriangleMesh):
+        mesh = input
+    elif isinstance(input, o3d.geometry.LineSet):
+        input_points = np.asarray(input.points)
+        mesh = lineset_to_trianglemesh(input, input_points)
+    elif isinstance(input, o3d.geometry.PointCloud):
+        input_points = np.asarray(input.points)
+        input_lineset = contour_to_lineset(input_points)
+        mesh = lineset_to_trianglemesh(input_lineset, input_points)
 
     # Check if the polygon is a 2d polygon by checking if all z-values of the vertices are the same
     vertices = np.asarray(mesh.vertices)
@@ -51,6 +62,9 @@ def expand_boundary(
     vertices = None
     z_values = None
 
+    # convert expansion_size to the same units as the mesh's vertices (assuming the mesh is in meters, we convert to centimeters)
+    expansion_size /= 100
+
     # Show amount of points in the original mesh (for debugging purposes)
     original_vertices = np.asarray(mesh.vertices)
     print("Number of original vertices:", len(original_vertices))
@@ -61,7 +75,7 @@ def expand_boundary(
 
     polygon = Polygon(twodee_coords)
     expanded_polygon = polygon.buffer(
-        expand_distance,
+        expansion_size,
         join_style=BufferJoinStyle.mitre,
     )
     expanded_2d_coords = list(expanded_polygon.exterior.coords)
@@ -70,13 +84,15 @@ def expand_boundary(
     # Transform the expanded 3D coordinates back into an Open3D point cloud
     expanded_pcd = o3d.geometry.PointCloud()
     expanded_pcd.points = o3d.utility.Vector3dVector(expanded_3d_coords)
+    expanded_lineset = contour_to_lineset(expanded_3d_coords)
+    expanded_mesh = lineset_to_trianglemesh(expanded_lineset, expanded_3d_coords)
 
     if point_visualization:
         # Make a temporary point cloud of the original vertices for visualization purposes
         original_pcd = o3d.geometry.PointCloud()
         original_pcd.points = o3d.utility.Vector3dVector(original_vertices)
 
-        cm_value = expand_distance * 100  # Convert to centimeters
+        cm_value = expansion_size * 100  # Convert to centimeters
 
         if np.isclose(cm_value, round(cm_value)):
             print(f"Uitbreidingsafstand: {int(round(cm_value))} cm")
@@ -89,14 +105,19 @@ def expand_boundary(
         original_pcd.clear()
         cm_value = None  # Clear the cm_value variable to free up memory
 
-    expanded_lineset = contour_to_lineset(expanded_3d_coords)
-    omalv(expanded_lineset)
-    expanded_mesh = lineset_to_trianglemesh(expanded_lineset, expanded_3d_coords)
-    omalv(expanded_mesh)
-    expanded_pcd.clear()  # Clear the point cloud to free up memory
-    expanded_lineset.clear()  # Clear the lineset to free up memory
+    input.clear()  # Clear the input geometry to free up memory
 
-    return expanded_mesh
+    if type(input) is o3d.geometry.PointCloud:
+        return expanded_pcd
+
+    if type(input) is o3d.geometry.LineSet:
+        expanded_pcd.clear()  # Clear the point cloud to free up memory
+        return expanded_lineset
+
+    if type(input) is o3d.geometry.TriangleMesh:
+        expanded_pcd.clear()  # Clear the point cloud to free up memory
+        expanded_lineset.clear()  # Clear the lineset to free up memory
+        return expanded_mesh
 
 
 def temp_READOUT_FUNCTION(file_path):
@@ -107,9 +128,8 @@ def temp_READOUT_FUNCTION(file_path):
 
 if __name__ == "__main__":
     pcd = temp_READOUT_FUNCTION("C:/Users/marcz/3D Objects/Werfkelders/vloergrens.ply")
-    pcd_points = np.asarray(pcd.points)
-    pcd_lineset = contour_to_lineset(pcd_points)
-    mesh = lineset_to_trianglemesh(pcd_lineset, pcd_points)
 
     # Expand the boundary of the mesh
-    expanded_mesh = expand_boundary(mesh, expand_distance=0.3, point_visualization=True)  # Example expansion distance
+    expanded_mesh = expand_boundary(pcd, expansion_size=20, point_visualization=True)  # Example expansion distance
+
+    opce(expanded_mesh, show_help=False)
