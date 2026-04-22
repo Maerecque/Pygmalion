@@ -1,6 +1,7 @@
 import configparser
 import json
 import locale
+import numpy as np
 import os
 import open3d as o3d
 from random import randint as KernelMan
@@ -22,6 +23,8 @@ locale.setlocale(locale.LC_ALL, 'nl_NL.UTF-8')
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 
+
+from Source.boundaryScript import expand_boundary
 from Source.fileHandler import (  # noqa: F401
     get_file_path,
     readout_LAS_file,
@@ -426,6 +429,12 @@ class App:
         self.floor_detection_result_label.config(text="Vloer detecteren, even geduld...")
         threading.Thread(target=self.floor_detection_step).start()
 
+    def start_floor_expansion_thread(self):
+        self.root.config(cursor="watch")
+        self.disable_section(self.floor_expansion_button, "Vloer uitbreiden...")
+        self.floor_detection_result_label.config(text="Vloer uitbreiden, even geduld...")
+        threading.Thread(target=self.floor_expansion_step).start()
+
     def start_floor_2_lineset_2_cityjson_thread(self):
         self.root.config(cursor="watch")
         self.disable_section(self.floor_to_cityjson_button, "Vloer naar 2D CityJSON")
@@ -593,12 +602,44 @@ class App:
             )
             self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
             self.update_view_pointcloud(create_point_cloud(self.floor_corners, color=[1, 0, 0]))
+            self.enable_floor_expansion_section()
             self.enable_floor_to_cityjson_section()
             self.enable_roof_extraction_section()
             self.root.config(cursor="")
         except Exception as e:
             self.floor_detection_result_label.config(text=f"Fout: {str(e)}")
             self.floor_detection_button.config(state=tk.NORMAL, text="Detecteer vloergrens")
+            self.root.config(cursor="")
+
+    def floor_expansion_step(self):
+        # NOTE: optional functionality
+        # NOTE: Maybe make field grey to give a visual indication that it's optional?
+        self.lineset_preview = None
+        self.mesh_preview = None
+
+        try:
+            self.validate_empty_field(self.expansion_value_entry)
+
+            expanded_pointcloud = expand_boundary(
+                create_point_cloud(self.floor_corners, color=[1, 0, 0]),
+                expansion_size=float(self.expansion_value_entry.get()),
+                point_visualization=False
+            )
+
+            print(type(expanded_pointcloud))
+
+            # clear the original floor corners point cloud to free up memory
+            self.floor_corners = None
+            # Turn the expanded point cloud back into a numpy array of points
+            self.floor_corners = np.asarray(expanded_pointcloud.points)
+
+            self.floor_detection_result_label.config(text="Vloergrens succesvol uitgebreid.")
+            self.floor_expansion_button.config(state=tk.NORMAL, text="Vloer uitbreiden")
+            self.update_view_pointcloud(create_point_cloud(self.floor_corners, color=[1, 0, 0]))
+            self.root.config(cursor="")
+        except Exception as e:
+            self.floor_detection_result_label.config(text=f"Fout: {str(e)}")
+            self.floor_expansion_button.config(state=tk.NORMAL, text="Vloer uitbreiden")
             self.root.config(cursor="")
 
     def floor_2_lineset_2_cityjson_step(self):
@@ -1152,6 +1193,24 @@ class App:
         )
         self.floor_detection_button.grid(row=0, column=2, rowspan=3, padx=5, pady=5, sticky="nsew")
 
+        tk.Label(floor_detection_frame, text="Vergrootingswaarde in cm (BGT/BAG)", anchor="w").grid(row=3, column=0, padx=5, pady=5, sticky="ew")  # noqa: E501
+        self.expansion_value_entry = tk.Entry(
+            floor_detection_frame,
+            validate="key",
+            validatecommand=(self.validate_flt, '%P'),
+            state=tk.DISABLED
+        )
+        self.expansion_value_entry.grid(row=3, column=1, padx=5, pady=5, sticky="ew")
+
+        self.floor_expansion_button = tk.Button(
+            floor_detection_frame,
+            text="Vergroot vloergrens",
+            state=tk.DISABLED,
+            command=self.start_floor_expansion_thread,
+            width=30
+        )
+        self.floor_expansion_button.grid(row=3, column=2, padx=5, pady=5, sticky="nsew")
+
         self.floor_to_cityjson_button = tk.Button(
             floor_detection_frame,
             text="Vloer naar 2D CityJSON",
@@ -1159,10 +1218,10 @@ class App:
             command=self.start_floor_2_lineset_2_cityjson_thread,
             width=30
         )
-        self.floor_to_cityjson_button.grid(row=3, column=2, padx=5, pady=5, sticky="nsew")
+        self.floor_to_cityjson_button.grid(row=4, column=2, padx=5, pady=5, sticky="nsew")
 
         self.floor_detection_result_label = tk.Label(floor_detection_frame, text="Vloergrens niet gedetecteerd.", anchor="w")
-        self.floor_detection_result_label.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.floor_detection_result_label.grid(row=4, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Roof Extraction Frame
         roof_extraction_frame = tk.LabelFrame(left_column, text="Dakextractie")
@@ -1618,6 +1677,18 @@ class App:
         Tooltip(
             self.corner_distance_threshold_entry,
             "De afstandsdrempel die wordt gebruikt om hoeken te identificeren bij de vloergrensdetectie."
+        )
+
+    def enable_floor_expansion_section(self):
+        self.expansion_value_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.expansion_value_entry,
+            "De waarde in centimeters waarmee de gedetecteerde vloergrens wordt vergroot."
+        )
+        self.floor_expansion_button.config(state=tk.NORMAL, text="Vergroot vloergrens")
+        Tooltip(
+            self.floor_expansion_button,
+            "Vergroot de gedetecteerde vloergrens met de opgegeven waarde."
         )
 
     def enable_floor_to_cityjson_section(self):

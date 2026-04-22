@@ -1,7 +1,7 @@
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 0, 0, 0),
-    prodvers=(1, 0, 0, 0),
+    filevers=(1, 0, 1, 0),
+    prodvers=(1, 0, 1, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -16,9 +16,9 @@ VSVersionInfo(
         [
           StringStruct('CompanyName', 'VNG and Municipality of Utrecht'),
           StringStruct('FileDescription', 'Pygmalion'),
-          StringStruct('FileVersion', '1.0.0'),
+          StringStruct('FileVersion', '1.0.1'),
           StringStruct('ProductName', 'Pygmalion'),
-          StringStruct('ProductVersion', '1.0.0'),
+          StringStruct('ProductVersion', '1.0.1'),
           StringStruct(
             'LegalCopyright',
             'CC BY-NC-SA 4.0'
