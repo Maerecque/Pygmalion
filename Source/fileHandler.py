@@ -153,6 +153,9 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
     except FileFormatError:
         print("The chosen LAS/LAZ file is not in the correct format or correct version. This file will not be used.")
         exit()
+    except MemoryError:
+        print("The chosen LAS/LAZ file is too large to be loaded into memory. This file will not be used. And the script will be closed.")  # noqa: E501
+        exit()
     except Exception as e:
         print("An unforeseen error occurred. See below for details.")
         print(type(e))
