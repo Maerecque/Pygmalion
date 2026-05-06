@@ -22,6 +22,8 @@ This application uses LAS/LAZ files as input and process them through various po
   - Data repair
   - Coordinate transformation
 - Export to a standardized 3D format suitable for long-term use
+  - 2D format
+  - 3D format
 - Optional visualization of intermediate and final results
 
 ---
