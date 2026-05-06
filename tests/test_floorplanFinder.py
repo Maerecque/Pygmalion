@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import sys
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from Source.floorplanFinder import alpha_shape, sort_points_in_hull, find_corners, find_boundary_from_floor
@@ -153,6 +153,8 @@ class TestFindBoundaryFromFloor:
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(pts)
 
-        with patch("Source.floorplanFinder.cKDTree", wraps=__import__("scipy.spatial", fromlist=["cKDTree"]).cKDTree) as mock_tree_cls:
+        cKDTree_path = "Source.floorplanFinder.cKDTree"
+        cKDTree_real = __import__("scipy.spatial", fromlist=["cKDTree"]).cKDTree
+        with patch(cKDTree_path, wraps=cKDTree_real) as mock_tree_cls:
             find_boundary_from_floor(pcd, alpha=0.5)
             mock_tree_cls.assert_called_once()

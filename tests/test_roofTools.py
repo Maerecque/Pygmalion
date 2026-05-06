@@ -3,7 +3,7 @@ import sys
 import os
 import numpy as np
 import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import open3d as o3d
@@ -83,8 +83,8 @@ class TestSliceRoofUp:
                    return_value=mock_result) as mock_gs, \
              patch("Source.roofTools.find_corners",
                    return_value=np.random.rand(4, 3)):
-            result = slice_roof_up(pcd, slices_amount=3, slab_fatness=2.0,
-                                   visualize=False)
+            slice_roof_up(pcd, slices_amount=3, slab_fatness=2.0,
+                          visualize=False)
             assert mock_gs.call_count == 3
 
     def test_find_corners_called_per_slice(self):

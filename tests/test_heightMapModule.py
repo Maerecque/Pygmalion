@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import sys
 import os
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from Source.heightMapModule import project_vertices_to_plane, create_grid, generate_height_map, create_point_cloud

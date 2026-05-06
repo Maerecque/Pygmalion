@@ -52,6 +52,6 @@ def open_mesh_and_lineset_viewer(input: Union[o3d.cpu.pybind.geometry.TriangleMe
         # Check if the input lineset is empty
         if len(input.lines) == 0:
             # If the lineset is empty, show an error message and return
-            raise ValueError("The lineset is empty")
+            raise ZeroDivisionError("The lineset is empty") # This is to test out wether or not this error is properly raised and caught in the tests for the boundaryScript module lorum ipsum dolor sit amet consectetur adipisicing elit
 
     o3d.visualization.draw_geometries([input], left=0, top=45)

@@ -1,9 +1,8 @@
 """Tests for Source/meshAlterer.py (filter_vertices_and_faces, o3d_to_cityjson)"""
 import numpy as np
-import pytest
 import sys
 import os
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from Source.meshAlterer import filter_vertices_and_faces, o3d_to_cityjson

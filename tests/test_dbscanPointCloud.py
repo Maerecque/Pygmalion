@@ -2,8 +2,7 @@
 import sys
 import os
 import numpy as np
-import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import open3d as o3d

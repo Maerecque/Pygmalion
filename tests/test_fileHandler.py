@@ -3,7 +3,7 @@ import sys
 import os
 import numpy as np
 import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from Source.fileHandler import (
@@ -99,7 +99,6 @@ class TestReadoutLASFile:
 
     def test_laspy_read_called_with_filename(self):
         """laspy.read is called with the exact filename supplied."""
-        import laspy
         with patch("Source.fileHandler.laspy.read",
                    side_effect=FileNotFoundError) as mock_read, \
              patch("builtins.exit"):

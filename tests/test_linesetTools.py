@@ -1,9 +1,8 @@
 """Tests for Source/linesetTools.py (contour_to_lineset and merge_lineset)"""
 import numpy as np
-import pytest
 import sys
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from Source.linesetTools import contour_to_lineset, merge_lineset
