@@ -1,4 +1,4 @@
-[![Python 3.9.7](https://img.shields.io/badge/python-3.9.7-blue.svg)](https://www.python.org/downloads/release/python-397/) [![Python 3.7.9](https://img.shields.io/badge/python-3.7.9-blue.svg)](https://www.python.org/downloads/release/python-379/) ![version](https://img.shields.io/badge/version-1.0.0-g.svg)
+[![Python 3.9.7](https://img.shields.io/badge/python-3.9.7-blue.svg)](https://www.python.org/downloads/release/python-397/) [![Python 3.7.9](https://img.shields.io/badge/python-3.7.9-blue.svg)](https://www.python.org/downloads/release/python-379/) ![version](https://img.shields.io/badge/version-1.0.1-g.svg)
 <p>
   <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" height="30" alt="CC">
   <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" height="30" alt="BY">
