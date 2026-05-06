@@ -77,6 +77,7 @@ def expand_boundary(
     expanded_polygon = polygon.buffer(
         expansion_size,
         join_style=BufferJoinStyle.mitre,
+        mitre_limit=100,
     )
     expanded_2d_coords = list(expanded_polygon.exterior.coords)
     expanded_3d_coords = np.array([(x, y, z_value) for x, y in expanded_2d_coords])
