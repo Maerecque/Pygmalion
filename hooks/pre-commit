@@ -13,4 +13,16 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "All tests passed."
+
+echo "Running flake8..."
+py -m flake8 Source tests --ignore=E266,E402,E701,E712,W504,W605 --max-line-length=130
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Flake8 failed. Commit aborted."
+    echo "Fix the flake8 errors before committing."
+    exit 1
+fi
+
+echo "Flake8 passed."
 exit 0
