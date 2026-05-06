@@ -8,6 +8,7 @@
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
+from typing import Union
 import os, sys  # noqa: E401
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 import Source.fileHandler as fh
@@ -19,7 +20,7 @@ def divide_pointcloud_into_grid(
     grid_size: float,
     overlap: int,
     give_grid_size: bool = False
-) -> dict:
+) -> Union[dict, tuple]:
     """A function to divide a pointcloud into a 3d grid.
 
     Args:
@@ -38,7 +39,7 @@ def divide_pointcloud_into_grid(
     num_cells = np.ceil((max_bound - min_bound) / grid_size).astype(int)
 
     # Create an empty grid dictionary to store the divided point indices
-    grid = {}
+    grid: dict = {}
 
     print("Dividing pointcloud into a grid...")
 
@@ -260,5 +261,6 @@ if __name__ == "__main__":
 
     # Divide the pointcloud into a 3d grid
     grid = divide_pointcloud_into_grid(pointcloud, 1, 0)
+    assert isinstance(grid, dict)
 
     plane_pointcloud = walk_through_grid(pointcloud, grid)

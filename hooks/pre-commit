@@ -1,0 +1,40 @@
+#!/bin/sh
+# Pre-commit hook: run pytest and block the commit if any test fails.
+# Install: git config core.hooksPath hooks
+
+echo "Running tests before commit..."
+py -m pytest tests/ -q --tb=short
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Tests failed. Commit aborted."
+    echo "Fix the failing tests before committing."
+    exit 1
+fi
+
+echo "All tests passed."
+
+echo "Running flake8..."
+py -m flake8 Source tests --ignore=E266,E402,E701,E712,W504,W605 --max-line-length=130
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Flake8 failed. Commit aborted."
+    echo "Fix the flake8 errors before committing."
+    exit 1
+fi
+
+echo "Flake8 passed."
+
+echo "Running mypy..."
+py -m mypy Source/ --ignore-missing-imports --no-strict-optional
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Mypy type check failed. Commit aborted."
+    echo "Fix the type errors before committing."
+    exit 1
+fi
+
+echo "Mypy passed."
+exit 0

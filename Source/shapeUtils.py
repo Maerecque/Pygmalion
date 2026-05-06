@@ -80,6 +80,7 @@ def merge_list_of_pointclouds(pcd_list: list) -> o3d.cpu.pybind.geometry.PointCl
         if i == 0:
             # If it's the first point cloud, just copy it
             pcd = copy.deepcopy(pcd_list[i])
+            continue
         pcd = merge_pcd(pcd, pcd_list[i])
 
     print("Merging point clouds done.")
