@@ -370,7 +370,7 @@ def generate_city_json_from_building(
     offsets = np.cumsum([0] + [len(p) for p in all_points[:-1]])
     boundaries = []
     semantics = []
-    for i, (ring, pts, name) in zip(rings, all_points, surface_names):
+    for i, (ring, pts, name) in enumerate(zip(rings, all_points, surface_names)):
         if len(ring) == 0 or len(pts) == 0:
             print(f"Warning: {name} is empty and will be skipped.")
             continue

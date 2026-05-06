@@ -25,3 +25,4 @@ def normalize_array(input_array: np.ndarray, is_colour: bool = False) -> np.ndar
         return normalized_array
     except TypeError:
         print("Given value is not the correct type; not a NumPy ndarray.")
+        return None

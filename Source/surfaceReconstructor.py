@@ -139,7 +139,7 @@ def _find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
     """
     # collect edges -> count
     triangles = np.asarray(mesh.triangles, dtype=int)
-    edges = {}
+    edges: dict = {}
     for tri in triangles:
         for a, b in [(tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0])]:
             if a > b:
@@ -152,7 +152,7 @@ def _find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
         return []
 
     # adjacency for boundary edges
-    adj = {}
+    adj: dict = {}
     for a, b in boundary_edges:
         adj.setdefault(a, []).append(b)
         adj.setdefault(b, []).append(a)
@@ -253,7 +253,7 @@ def _fill_hole_by_triangulation(
         return 0
 
     tri_polys = shapely_triangulate(poly)
-    new_vertices = []  # noqa: F841
+    new_vertices: list = []  # noqa: F841
     new_triangles = []
 
     # Prepare contour polygon if provided (2D in same projected frame)

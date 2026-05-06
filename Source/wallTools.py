@@ -112,7 +112,7 @@ def extract_wall_points(
     if print_bool:
         print(f"Selected {kept_points.shape[0]} TBP points above the contour (union over all floor points).")
 
-    result_pcd = create_point_cloud(kept_points, [0, 1, 0])
+    result_pcd = create_point_cloud(kept_points, (0, 1, 0))
     return result_pcd
 
 
@@ -276,7 +276,7 @@ def connect_vertically_aligned_points2(
     for lvl in upper_level_points:
         all_points.append(np.asarray(lvl))
 
-    all_points = np.vstack(all_points)
+    all_points_arr = np.vstack(all_points)
 
     # For each base point, check levels in order until match is found
     for i, xy in enumerate(base_level_points[:, :2]):
@@ -304,7 +304,7 @@ def connect_vertically_aligned_points2(
 
     # Build LineSet
     lineset = o3d.geometry.LineSet()
-    lineset.points = o3d.utility.Vector3dVector(all_points)
+    lineset.points = o3d.utility.Vector3dVector(all_points_arr)
     lineset.lines = o3d.utility.Vector2iVector(lines)
 
     return lineset

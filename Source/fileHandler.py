@@ -1,5 +1,6 @@
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+from typing import Any, Optional
 
 import laspy
 import numpy as np
@@ -16,7 +17,7 @@ class NoSaveLocationGivenError(Exception): pass  # noqa: E701
 class NoPointCloudGivenError(Exception): pass  # noqa: E701
 
 
-def get_file_path(description: str, fileformat: any, print_output: bool = True) -> str:
+def get_file_path(description: str, fileformat: Any, print_output: bool = True) -> Optional[str]:
     """A function to get the filepath of a selected file.
 
     Args:
@@ -44,10 +45,10 @@ def get_file_path(description: str, fileformat: any, print_output: bool = True) 
             print("The following file was selected: \n" + filename)
         return filename
 
-    return
+    return None
 
 
-def get_save_file_path(description: str, fileformat: any, default_name: str) -> str:
+def get_save_file_path(description: str, fileformat: Any, default_name: str) -> Optional[str]:
     """A function to get the filepath of a selected file to save.
 
     Args:
@@ -75,7 +76,7 @@ def get_save_file_path(description: str, fileformat: any, default_name: str) -> 
         print("The following file was selected: \n" + filename)
         return filename
 
-    return
+    return None
 
 
 def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.geometry.PointCloud:

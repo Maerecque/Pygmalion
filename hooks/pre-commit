@@ -25,4 +25,16 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Flake8 passed."
+
+echo "Running mypy..."
+py -m mypy Source/ --ignore-missing-imports --no-strict-optional
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Mypy type check failed. Commit aborted."
+    echo "Fix the type errors before committing."
+    exit 1
+fi
+
+echo "Mypy passed."
 exit 0

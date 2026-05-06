@@ -140,7 +140,7 @@ def generate_wall_points(
     # Dictionary lookup for ceiling edges keyed by (row, col)
     ceiling_lookup = {(int(edge[0]), int(edge[1])): edge for edge in ceiling_edges}
 
-    wall_points = []
+    wall_points: list = []
 
     for fr, fc in tqdm(floor_edges[:, :2], desc="Creating walls"):
         key = (int(fr), int(fc))
@@ -298,7 +298,7 @@ def transform_mesh_to_height_map(
         print(f"x range: {x.min()} to {x.max()}, y range: {y.min()} to {y.max()}, z range: {z.min()} to {z.max()}")
 
     # Create a grid for contour mapping
-    (X, Y), x_grid, y_grid = create_grid((x.min(), x.max()), (y.min(), y.max()), grid_size)
+    (X, Y), x_grid, y_grid = create_grid((x.min(), x.max()), (y.min(), y.max()), grid_size, grid_size)
 
     # Generate a height map
     height_map = generate_height_map(x, y, z, x_grid, y_grid)
