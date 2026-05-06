@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest mypy flake8
+
+      - name: Run tests
+        run: python -m pytest tests/ -q --tb=short
+
+      - name: Run flake8 lint check
+        run: python -m flake8 Source/ tests/
+
+      - name: Run mypy type check
+        run: python -m mypy Source/ --ignore-missing-imports --no-strict-optional

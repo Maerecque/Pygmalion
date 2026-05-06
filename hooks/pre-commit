@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pre-commit hook: run pytest and block the commit if any test fails.
+# Install: git config core.hooksPath hooks
+
+echo "Running tests before commit..."
+py -m pytest tests/ -q --tb=short
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Tests failed. Commit aborted."
+    echo "Fix the failing tests before committing."
+    exit 1
+fi
+
+echo "All tests passed."
+exit 0
