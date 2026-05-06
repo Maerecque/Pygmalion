@@ -23,7 +23,7 @@ def get_file_path(description: str, fileformat: any, print_output: bool = True) 
         description (str): Description of the to be selected file format.
 
         fileformat (any): Either a string of one specified file format or a list of file formats. e.g.
-            "\*.txt" or ["\*.txt", "\*.docx"].
+            "*.txt" or ["*.txt", "*.docx"].
 
         print_output (bool): Whether to print the selected file path to the console.
 
