@@ -1,9 +1,9 @@
 #!/bin/sh
 # Pre-commit hook: run pytest and block the commit if any test fails.
-# Install: git config core.hooksPath Hooks
+# Install: git config core.hooksPath hooks
 
 echo "Running tests before commit..."
-py -m pytest Tests/ -q --tb=short
+py -m pytest tests/ -q --tb=short
 
 if [ $? -ne 0 ]; then
     echo ""
@@ -15,7 +15,7 @@ fi
 echo "All tests passed."
 
 echo "Running flake8..."
-py -m flake8 Source Tests --ignore=E266,E402,E701,E712,W504,W605 --max-line-length=130
+py -m flake8 Source tests --ignore=E266,E402,E701,E712,W504,W605 --max-line-length=130
 
 if [ $? -ne 0 ]; then
     echo ""
