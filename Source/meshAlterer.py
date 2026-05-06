@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import open3d as o3d
 import pyvista as pv
