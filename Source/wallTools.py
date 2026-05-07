@@ -36,7 +36,10 @@ import open3d as o3d
 import numpy as np
 from typing import Union, List
 from scipy.spatial import cKDTree
+import sys
+import os
 
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.heightMapModule import create_point_cloud
 from tqdm import tqdm
 
