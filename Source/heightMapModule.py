@@ -31,9 +31,22 @@ def create_grid(x_range: tuple, y_range: tuple, nx: int, ny: int) -> tuple:
     Returns:
         tuple: Meshgrid of x and y coordinates, and arrays of x_grid and y_grid.
     """
-    x_grid = np.linspace(x_range[0], x_range[1], nx)
-    y_grid = np.linspace(y_range[0], y_range[1], ny)
-    return np.meshgrid(x_grid, y_grid), x_grid, y_grid
+    try:
+        # If any of the parameters are invalid, or empty, raise an error
+        if not x_range or not y_range or nx is None or ny is None:
+            raise ValueError("Invalid grid parameters: x_range, y_range, nx, and ny must be provided.")
+
+        # Ensure that the grid dimensions are greater than 1 to avoid issues with linspace
+        if nx <= 1 or ny <= 1:
+            raise ValueError("Grid dimensions must be greater than 1.")
+
+        x_grid = np.linspace(x_range[0], x_range[1], nx)
+        y_grid = np.linspace(y_range[0], y_range[1], ny)
+        return np.meshgrid(x_grid, y_grid), x_grid, y_grid
+
+    except Exception as e:
+        print(f"Error creating grid: {e}")
+        return None, None, None
 
 
 def generate_height_map(x: np.ndarray, y: np.ndarray, z: np.ndarray, x_grid: np.ndarray, y_grid: np.ndarray) -> np.ndarray:
@@ -49,6 +62,10 @@ def generate_height_map(x: np.ndarray, y: np.ndarray, z: np.ndarray, x_grid: np.
     Returns:
         numpy.ndarray: 2D array representing the height map.
     """
+    # Add check to ensure that x_grid and y_grid are not empty to avoid issues with height_map initialization
+    if x_grid is None or y_grid is None or len(x_grid) == 0 or len(y_grid) == 0:
+        raise ValueError("x_grid and y_grid must be non-empty arrays to generate height map.")
+
     height_map = np.full((len(x_grid), len(y_grid)), -np.inf)
 
     # Precompute scaling factors for direct index mapping

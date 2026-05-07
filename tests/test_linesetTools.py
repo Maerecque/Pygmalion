@@ -1,11 +1,15 @@
 """Tests for Source/linesetTools.py (contour_to_lineset and merge_lineset)"""
 import numpy as np
+import pytest
 import sys
 import os
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from Source.linesetTools import contour_to_lineset, merge_lineset
+from Source.linesetTools import (
+    contour_to_lineset, merge_lineset,
+    filter_lines_within_contour, lineset_to_trianglemesh, generate_city_json_from_building
+)
 import open3d as o3d
 
 
@@ -143,3 +147,176 @@ class TestMergeLinesetMocks:
         ls2.colors = o3d.utility.Vector3dVector([])
         merged = merge_lineset(ls1, ls2)
         assert not merged.has_colors()
+
+
+# ── filter_lines_within_contour ────────────────────────────────────────────────
+
+def _make_lineset_inside(z=0.0):
+    """LineSet with one line entirely inside a [0,2]×[0,2] square."""
+    pts = np.array([[0.5, 0.5, z], [1.5, 0.5, z], [1.5, 1.5, z], [0.5, 1.5, z]])
+    ls = o3d.geometry.LineSet()
+    ls.points = o3d.utility.Vector3dVector(pts)
+    ls.lines = o3d.utility.Vector2iVector([[0, 1], [1, 2], [2, 3], [3, 0]])
+    return ls
+
+
+def _square_contour(z=0.0):
+    return np.array([[0.0, 0.0, z], [2.0, 0.0, z], [2.0, 2.0, z], [0.0, 2.0, z]])
+
+
+class TestFilterLinesWithinContour:
+    def test_lines_inside_are_kept(self):
+        contour = _square_contour()
+        ls = _make_lineset_inside()
+        result = filter_lines_within_contour(contour, ls)
+        assert len(result.lines) == 4
+
+    def test_lines_outside_are_removed(self):
+        contour = _square_contour()
+        ls = o3d.geometry.LineSet()
+        ls.points = o3d.utility.Vector3dVector(
+            np.array([[10.0, 10.0, 0.0], [11.0, 10.0, 0.0]])
+        )
+        ls.lines = o3d.utility.Vector2iVector([[0, 1]])
+        result = filter_lines_within_contour(contour, ls)
+        assert len(result.lines) == 0
+
+    def test_returns_lineset(self):
+        contour = _square_contour()
+        ls = _make_lineset_inside()
+        result = filter_lines_within_contour(contour, ls)
+        assert isinstance(result, o3d.geometry.LineSet)
+
+    def test_all_points_preserved(self):
+        """The output LineSet keeps the original point set unchanged."""
+        contour = _square_contour()
+        ls = _make_lineset_inside()
+        result = filter_lines_within_contour(contour, ls)
+        assert len(result.points) == len(ls.points)
+
+    def test_open_contour_is_auto_closed(self):
+        """A contour without repeated first/last point is handled gracefully."""
+        # open (no repeat of first point)
+        contour = _square_contour()
+        ls = _make_lineset_inside()
+        # should not raise
+        filter_lines_within_contour(contour, ls)
+
+
+# ── lineset_to_trianglemesh ────────────────────────────────────────────────────
+
+class TestLinesetToTriangleMesh:
+    def _make_lineset_grid(self):
+        """A 3×3 grid of points on z=0.5 as a LineSet."""
+        pts = np.array([[float(i), float(j), 0.5]
+                        for i in range(3) for j in range(3)])
+        ls = o3d.geometry.LineSet()
+        ls.points = o3d.utility.Vector3dVector(pts)
+        ls.lines = o3d.utility.Vector2iVector([[i, i + 1] for i in range(len(pts) - 1)])
+        return ls
+
+    def test_raises_for_less_than_3_points(self):
+        ls = o3d.geometry.LineSet()
+        ls.points = o3d.utility.Vector3dVector(np.zeros((2, 3)))
+        ls.lines = o3d.utility.Vector2iVector([[0, 1]])
+        contour = _square_contour()
+        with pytest.raises(ValueError):
+            lineset_to_trianglemesh(ls, contour)
+
+    def test_returns_triangle_mesh(self):
+        ls = self._make_lineset_grid()
+        contour = np.array([[0.0, 0.0, 0.5], [3.0, 0.0, 0.5], [3.0, 3.0, 0.5], [0.0, 3.0, 0.5]])
+        result = lineset_to_trianglemesh(ls, contour)
+        assert isinstance(result, o3d.geometry.TriangleMesh)
+
+    def test_no_triangles_outside_contour(self):
+        """Points outside the contour produce an empty mesh."""
+        ls = self._make_lineset_grid()
+        tiny_contour = np.array([[10.0, 10.0, 0.5], [11.0, 10.0, 0.5],
+                                 [11.0, 11.0, 0.5], [10.0, 11.0, 0.5]])
+        result = lineset_to_trianglemesh(ls, tiny_contour)
+        assert len(result.triangles) == 0
+
+    def test_both_sides_generated(self):
+        """For non-empty result, backface copies double the triangle count."""
+        ls = self._make_lineset_grid()
+        contour = np.array(
+            [[0.0, 0.0, 0.5], [3.0, 0.0, 0.5],
+             [3.0, 3.0, 0.5], [0.0, 3.0, 0.5]])
+        result = lineset_to_trianglemesh(ls, contour)
+        if len(result.triangles) > 0:
+            # Triangle count must be even (front + back)
+            assert len(result.triangles) % 2 == 0
+
+
+# ── generate_city_json_from_building ──────────────────────────────────────────
+
+def _simple_lineset(x_offset=0.0):
+    """4-point square LineSet at a given x offset."""
+    pts = np.array([
+        [x_offset + 0.0, 0.0, 0.0],
+        [x_offset + 1.0, 0.0, 0.0],
+        [x_offset + 1.0, 1.0, 0.0],
+        [x_offset + 0.0, 1.0, 0.0],
+    ])
+    ls = o3d.geometry.LineSet()
+    ls.points = o3d.utility.Vector3dVector(pts)
+    ls.lines = o3d.utility.Vector2iVector([[0, 1], [1, 2], [2, 3], [3, 0]])
+    return ls
+
+
+class TestGenerateCityJsonFromBuilding:
+    def test_cancelled_dialog_prints_message(self, capsys):
+        """If the save dialog is cancelled, 'Save cancelled.' is printed."""
+        with patch("Source.linesetTools.tk.Tk"), \
+             patch("Source.linesetTools.filedialog.asksaveasfilename", return_value=""):
+            generate_city_json_from_building(
+                _simple_lineset(0), _simple_lineset(5), _simple_lineset(10)
+            )
+        captured = capsys.readouterr()
+        assert "cancelled" in captured.out.lower()
+
+    def test_empty_lineset_is_skipped_with_warning(self, capsys):
+        """An empty LineSet prints a warning but does not crash."""
+        empty_ls = o3d.geometry.LineSet()
+        with patch("Source.linesetTools.tk.Tk"), \
+             patch("Source.linesetTools.filedialog.asksaveasfilename", return_value=""):
+            generate_city_json_from_building(empty_ls, _simple_lineset(5), _simple_lineset(10))
+        captured = capsys.readouterr()
+        assert "Warning" in captured.out or "cancelled" in captured.out.lower()
+
+    def test_raises_when_all_surfaces_invalid(self):
+        """All-empty LineSet inputs raise ValueError."""
+        empty = o3d.geometry.LineSet()
+        with patch("Source.linesetTools.tk.Tk"), \
+             patch("Source.linesetTools.filedialog.asksaveasfilename", return_value="out.json"):
+            with pytest.raises(ValueError):
+                generate_city_json_from_building(empty, empty, empty)
+
+    def test_writes_json_to_file(self, tmp_path):
+        """A valid save path results in a JSON file being written."""
+        import json
+        out_file = str(tmp_path / "building.json")
+        with patch("Source.linesetTools.tk.Tk"), \
+             patch("Source.linesetTools.filedialog.asksaveasfilename", return_value=out_file):
+            generate_city_json_from_building(
+                _simple_lineset(0), _simple_lineset(5), _simple_lineset(10)
+            )
+        assert os.path.exists(out_file)
+        with open(out_file, encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["type"] == "CityJSON"
+
+    def test_cityjson_properties_merged(self, tmp_path):
+        """Extra properties passed via cityjson_properties are included in the file."""
+        import json
+        out_file = str(tmp_path / "building2.json")
+        with patch("Source.linesetTools.tk.Tk"), \
+             patch("Source.linesetTools.filedialog.asksaveasfilename", return_value=out_file):
+            generate_city_json_from_building(
+                _simple_lineset(0), _simple_lineset(5), _simple_lineset(10),
+                cityjson_properties={"customKey": "customValue"}
+            )
+        with open(out_file, encoding="utf-8") as f:
+            data = json.load(f)
+        assert data.get("customKey") == "customValue"

@@ -6,7 +6,11 @@ import os
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from Source.shapeUtils import merge_pcd, merge_list_of_pointclouds
+from Source.shapeUtils import (
+    merge_pcd, merge_list_of_pointclouds,
+    segment_plane, find_plane_module_manual,
+    repair_point_cloud_module, transform_mesh_to_pcd,
+)
 import open3d as o3d
 
 
@@ -149,3 +153,176 @@ class TestMergeListMocks:
         pcd_with_color = _make_colored_pcd(2, z=1.0)
         with pytest.raises(ValueError):
             merge_list_of_pointclouds([pcd_no_color, pcd_with_color])
+
+
+# ── segment_plane ──────────────────────────────────────────────────────────────
+
+def _make_plane_pcd(n=200):
+    """Dense flat point cloud in XY plane."""
+    np.random.seed(0)
+    pts = np.column_stack([np.random.rand(n), np.random.rand(n), np.zeros(n)])
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(pts)
+    return pcd
+
+
+class TestSegmentPlane:
+    def test_raises_for_empty_pcd(self):
+        with pytest.raises(ValueError):
+            segment_plane(o3d.geometry.PointCloud())
+
+    def test_returns_two_point_clouds(self):
+        pcd = _make_plane_pcd()
+        plane, leftovers = segment_plane(pcd)
+        assert isinstance(plane, o3d.geometry.PointCloud)
+        assert isinstance(leftovers, o3d.geometry.PointCloud)
+
+    def test_plane_plus_leftovers_equals_original(self):
+        pcd = _make_plane_pcd()
+        plane, leftovers = segment_plane(pcd)
+        assert len(plane.points) + len(leftovers.points) == len(pcd.points)
+
+    def test_plane_points_are_non_empty(self):
+        pcd = _make_plane_pcd()
+        plane, _ = segment_plane(pcd)
+        assert len(plane.points) > 0
+
+    def test_print_bool_outputs_text(self, capsys):
+        pcd = _make_plane_pcd()
+        segment_plane(pcd, print_bool=True)
+        captured = capsys.readouterr()
+        assert "Extracted" in captured.out
+
+    def test_visualize_plane_calls_draw(self):
+        pcd = _make_plane_pcd()
+        with patch("Source.shapeUtils.o3d.visualization.draw_geometries") as mock_draw:
+            segment_plane(pcd, visualize_plane=True)
+            mock_draw.assert_called_once()
+
+    def test_visualize_leftovers_calls_draw(self):
+        pcd = _make_plane_pcd()
+        with patch("Source.shapeUtils.o3d.visualization.draw_geometries") as mock_draw:
+            segment_plane(pcd, visualize_leftovers=True)
+            mock_draw.assert_called_once()
+
+
+# ── find_plane_module_manual ──────────────────────────────────────────────────
+
+class TestFindPlaneModuleManual:
+    def test_raises_for_empty_pcd(self):
+        with pytest.raises(ValueError):
+            find_plane_module_manual(o3d.geometry.PointCloud())
+
+    def test_returns_point_cloud_on_accept(self):
+        """User immediately accepts (any key other than e/u/p/r) → returns a PointCloud."""
+        pcd = _make_plane_pcd()
+        with patch("Source.shapeUtils.o3d.visualization.draw_geometries"), \
+             patch("builtins.input", return_value=""):
+            result = find_plane_module_manual(pcd)
+        assert isinstance(result, o3d.geometry.PointCloud)
+
+    def test_returns_point_cloud_on_expand_then_accept(self):
+        """User expands once then accepts → still returns a PointCloud."""
+        pcd = _make_plane_pcd()
+        half = _make_plane_pcd(50)
+        with patch("Source.shapeUtils.o3d.visualization.draw_geometries"), \
+             patch("Source.shapeUtils.segment_plane", return_value=(half, half)), \
+             patch("Source.shapeUtils.merge_pcd", return_value=half), \
+             patch("builtins.input", side_effect=["e", ""]):
+            result = find_plane_module_manual(pcd)
+        assert isinstance(result, o3d.geometry.PointCloud)
+
+    def test_export_previous_returns_none_safely(self):
+        """'p' on first iteration (no previous plane) returns None without crashing."""
+        pcd = _make_plane_pcd()
+        with patch("Source.shapeUtils.o3d.visualization.draw_geometries"), \
+             patch("builtins.input", return_value="p"):
+            result = find_plane_module_manual(pcd)
+        # previous_plane is None on first iteration, so result is None
+        assert result is None
+
+
+# ── repair_point_cloud_module ─────────────────────────────────────────────────
+
+class TestRepairPointCloudModule:
+    def test_raises_for_empty_pcd(self):
+        with pytest.raises(ValueError):
+            repair_point_cloud_module(o3d.geometry.PointCloud())
+
+    def test_raises_for_invalid_quantile(self):
+        pcd = _make_plane_pcd()
+        with pytest.raises(ValueError):
+            repair_point_cloud_module(pcd, quantile_value=1.5)
+
+    def test_raises_for_negative_quantile(self):
+        pcd = _make_plane_pcd()
+        with pytest.raises(ValueError):
+            repair_point_cloud_module(pcd, quantile_value=-0.1)
+
+    def test_returns_triangle_mesh(self):
+        pcd = _make_plane_pcd(n=500)
+        # Use a very simple config to keep it fast
+        result = repair_point_cloud_module(pcd, depth=4, quantile_value=0.0)
+        assert isinstance(result, o3d.geometry.TriangleMesh)
+
+    def test_poisson_called(self):
+        """create_from_point_cloud_poisson is invoked during reconstruction."""
+        pcd = _make_plane_pcd(n=50)
+        # Use a real mesh so remove_vertices_by_mask receives a correctly-sized mask.
+        mock_mesh = o3d.geometry.TriangleMesh.create_sphere()
+        n_verts = len(np.asarray(mock_mesh.vertices))
+        with patch("Source.shapeUtils.o3d.geometry.TriangleMesh.create_from_point_cloud_poisson",
+                   return_value=(mock_mesh, np.ones(n_verts))) as mock_poisson:
+            repair_point_cloud_module(pcd, depth=4, quantile_value=0.0)
+            mock_poisson.assert_called_once()
+
+    def test_visualize_calls_draw(self):
+        pcd = _make_plane_pcd(n=500)
+        with patch("Source.shapeUtils.o3d.visualization.draw_geometries") as mock_draw:
+            repair_point_cloud_module(pcd, depth=4, quantile_value=0.0, visualize=True)
+            mock_draw.assert_called_once()
+
+
+# ── transform_mesh_to_pcd ─────────────────────────────────────────────────────
+
+class TestTransformMeshToPcd:
+    def _make_mesh(self):
+        mesh = o3d.geometry.TriangleMesh.create_sphere(radius=1.0)
+        return mesh
+
+    def _make_3d_pcd(self, n=100):
+        """Non-flat 3D point cloud so compute_mahalanobis_distance is well-defined."""
+        np.random.seed(42)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(np.random.rand(n, 3))
+        return pcd
+
+    def test_raises_for_empty_mesh(self):
+        with pytest.raises(ValueError):
+            transform_mesh_to_pcd(o3d.geometry.TriangleMesh(), self._make_3d_pcd())
+
+    def test_raises_for_empty_pcd(self):
+        mesh = self._make_mesh()
+        with pytest.raises(ValueError):
+            transform_mesh_to_pcd(mesh, o3d.geometry.PointCloud())
+
+    def test_returns_point_cloud(self):
+        mesh = self._make_mesh()
+        pcd = self._make_3d_pcd()
+        result = transform_mesh_to_pcd(mesh, pcd)
+        assert isinstance(result, o3d.geometry.PointCloud)
+
+    def test_result_is_non_empty(self):
+        mesh = self._make_mesh()
+        pcd = self._make_3d_pcd()
+        result = transform_mesh_to_pcd(mesh, pcd)
+        assert len(result.points) > 0
+
+    def test_sample_points_uniformly_called(self):
+        """sample_points_uniformly is called to convert mesh to pcd."""
+        mesh = self._make_mesh()
+        pcd = self._make_3d_pcd()
+        with patch.object(o3d.geometry.TriangleMesh, "sample_points_uniformly",
+                          wraps=mesh.sample_points_uniformly) as mock_sample:
+            transform_mesh_to_pcd(mesh, pcd)
+            mock_sample.assert_called_once()

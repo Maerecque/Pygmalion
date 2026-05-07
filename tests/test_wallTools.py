@@ -11,6 +11,8 @@ from Source.wallTools import (
     extract_wall_points,
     define_min_height_roof,
     connect_vertically_aligned_points,
+    connect_vertically_aligned_points2,
+    divide_wall_into_layers,
 )
 
 
@@ -230,3 +232,123 @@ class TestConnectVerticallyAlignedPoints:
                    wraps=o3d.geometry.LineSet) as mock_ls:
             connect_vertically_aligned_points(floor, wall, xy_tol=0.1)
             mock_ls.assert_called_once()
+
+
+# ── connect_vertically_aligned_points2 ──────────────────────────────────────────────
+
+class TestConnectVerticallyAlignedPoints2:
+    def test_returns_lineset(self):
+        base = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 0.0]])
+        upper = np.array([[0.0, 0.0, 3.0], [1.0, 1.0, 3.0]])
+        result = connect_vertically_aligned_points2(base, upper, xy_tol=0.05)
+        assert isinstance(result, o3d.geometry.LineSet)
+
+    def test_single_upper_array_creates_lines(self):
+        base = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 0.0]])
+        upper = np.array([[0.0, 0.0, 3.0], [1.0, 1.0, 3.0]])
+        ls = connect_vertically_aligned_points2(base, upper, xy_tol=0.05)
+        assert len(ls.lines) == 2
+
+    def test_list_of_upper_levels(self):
+        """Accepts a list of upper-level arrays and connects each base point to the first match."""
+        base = np.array([[0.0, 0.0, 0.0]])
+        upper1 = np.array([[0.0, 0.0, 1.0]])
+        upper2 = np.array([[0.0, 0.0, 2.0]])
+        ls = connect_vertically_aligned_points2(base, [upper1, upper2], xy_tol=0.05)
+        # Should connect to upper1 (first match) only
+        assert len(ls.lines) == 1
+
+    def test_non_matching_creates_no_lines(self):
+        base = np.array([[0.0, 0.0, 0.0]])
+        upper = np.array([[99.0, 99.0, 3.0]])
+        ls = connect_vertically_aligned_points2(base, upper, xy_tol=0.01)
+        assert len(ls.lines) == 0
+
+    def test_all_points_in_result(self):
+        """All base and upper points appear in the returned LineSet."""
+        base = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+        upper = np.array([[0.0, 0.0, 2.0], [1.0, 0.0, 2.0]])
+        ls = connect_vertically_aligned_points2(base, upper, xy_tol=0.05)
+        assert len(ls.points) == len(base) + len(upper)
+
+    def test_each_base_point_matched_at_most_once(self):
+        """Each base point stops at the first matching level."""
+        base = np.array([[0.0, 0.0, 0.0]])
+        upper1 = np.array([[0.0, 0.0, 1.0]])
+        upper2 = np.array([[0.0, 0.0, 2.0]])
+        ls = connect_vertically_aligned_points2(base, [upper1, upper2], xy_tol=0.1)
+        assert len(ls.lines) == 1  # stops at upper1, not both
+
+    # ── Mock tests ───────────────────────────────────────────────────────────
+
+    def test_ckdtree_called_per_level(self):
+        """cKDTree is built once per upper level that is actually checked."""
+        base = np.array([[0.0, 0.0, 0.0]])
+        upper1 = np.array([[99.0, 99.0, 1.0]])  # far away → no match, moves to upper2
+        upper2 = np.array([[0.0, 0.0, 2.0]])    # matches
+        with patch("Source.wallTools.cKDTree",
+                   wraps=__import__("scipy.spatial", fromlist=["cKDTree"]).cKDTree
+                   ) as mock_tree:
+            connect_vertically_aligned_points2(base, [upper1, upper2], xy_tol=0.1)
+            assert mock_tree.call_count == 2  # one per level
+
+    def test_lineset_constructed_once(self):
+        base = np.array([[0.0, 0.0, 0.0]])
+        upper = np.array([[0.0, 0.0, 3.0]])
+        with patch("Source.wallTools.o3d.geometry.LineSet",
+                   wraps=o3d.geometry.LineSet) as mock_ls:
+            connect_vertically_aligned_points2(base, upper, xy_tol=0.1)
+            mock_ls.assert_called_once()
+
+
+# ── divide_wall_into_layers ────────────────────────────────────────────────────────
+
+class TestDivideWallIntoLayers:
+    def _make_wall_pcd(self):
+        pts = np.array([[0.0, 0.0, float(z)] for z in range(20)], dtype=float)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(pts)
+        return pcd
+
+    def test_wrong_type_raises_type_error(self):
+        with pytest.raises(TypeError):
+            divide_wall_into_layers("not a pcd")
+
+    def test_empty_pcd_raises_value_error(self):
+        with pytest.raises(ValueError):
+            divide_wall_into_layers(o3d.geometry.PointCloud())
+
+    def test_non_positive_layer_amount_raises(self):
+        with pytest.raises(ValueError):
+            divide_wall_into_layers(self._make_wall_pcd(), layer_amount=0)
+
+    def test_returns_list(self):
+        result = divide_wall_into_layers(self._make_wall_pcd(), layer_amount=5)
+        assert isinstance(result, list)
+
+    def test_each_element_is_ndarray(self):
+        result = divide_wall_into_layers(self._make_wall_pcd(), layer_amount=5)
+        for item in result:
+            assert isinstance(item, np.ndarray)
+
+    def test_layer_count_at_most_layer_amount(self):
+        """Cannot produce more layers than requested (empty layers are skipped)."""
+        result = divide_wall_into_layers(self._make_wall_pcd(), layer_amount=5)
+        assert len(result) <= 5
+
+    def test_single_layer_contains_all_points(self):
+        """With a flat wall (all points at same z), layer_amount=1 produces 1 layer."""
+        # All 5 points at z=0 -> single slice at z=0, all 5 pass the +-0.01 mask
+        flat_pts = np.array([[float(i), 0.0, 0.0] for i in range(5)], dtype=float)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(flat_pts)
+        result = divide_wall_into_layers(pcd, layer_amount=1)
+        assert len(result) == 1
+
+    # ── Mock tests ───────────────────────────────────────────────────────────
+
+    def test_tqdm_called_for_slice_iteration(self):
+        """tqdm wraps the slice-height iteration."""
+        with patch("Source.wallTools.tqdm", side_effect=lambda it, **kw: it) as mock_tqdm:
+            divide_wall_into_layers(self._make_wall_pcd(), layer_amount=3)
+            mock_tqdm.assert_called_once()

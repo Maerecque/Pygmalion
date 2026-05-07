@@ -1,11 +1,20 @@
-"""Tests for Source/meshAlterer.py (filter_vertices_and_faces, o3d_to_cityjson)"""
+"""Tests for Source/meshAlterer.py"""
 import numpy as np
+import pytest
 import sys
 import os
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from Source.meshAlterer import filter_vertices_and_faces, o3d_to_cityjson
+from Source.meshAlterer import (
+    filter_vertices_and_faces,
+    o3d_to_cityjson,
+    compute_distances_to_point_cloud,
+    mesh_simple_downsample,
+    repair_mesh,
+    combine_meshes,
+    transform_pcd_to_mesh,
+)
 import open3d as o3d
 
 
@@ -162,3 +171,241 @@ class TestO3dToCityJsonMocks:
             result = o3d_to_cityjson(mesh)
         assert result["type"] == "CityJSON"
         assert "obj1" in result["CityObjects"]
+
+
+# ── compute_distances_to_point_cloud ──────────────────────────────────────────
+
+def _make_simple_pcd() -> o3d.geometry.PointCloud:
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(
+        np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 1.0, 0.0], [0.5, 0.5, 1.0]])
+    )
+    return pcd
+
+
+class TestComputeDistancesToPointCloud:
+    def test_returns_ndarray(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        result = compute_distances_to_point_cloud(mesh, pcd)
+        assert isinstance(result, np.ndarray)
+
+    def test_length_matches_vertex_count(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        result = compute_distances_to_point_cloud(mesh, pcd)
+        assert len(result) == len(mesh.vertices)
+
+    def test_distances_are_non_negative(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        result = compute_distances_to_point_cloud(mesh, pcd)
+        assert np.all(result >= 0)
+
+    def test_identical_mesh_and_pcd_have_zero_distances(self):
+        """When mesh vertices == pcd points, all distances should be ~0."""
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        result = compute_distances_to_point_cloud(mesh, pcd)
+        assert np.allclose(result, 0.0, atol=1e-6)
+
+    # ── Mock tests ───────────────────────────────────────────────────────────
+
+    def test_tqdm_wraps_vertex_iteration(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        with patch("Source.meshAlterer.tqdm", side_effect=lambda it, **kw: it) as mock_tqdm:
+            compute_distances_to_point_cloud(mesh, pcd)
+            mock_tqdm.assert_called_once()
+
+    def test_kdtreeflann_constructed_once(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        with patch("Source.meshAlterer.o3d.geometry.KDTreeFlann",
+                   wraps=o3d.geometry.KDTreeFlann) as mock_kd:
+            compute_distances_to_point_cloud(mesh, pcd)
+            mock_kd.assert_called_once_with(pcd)
+
+
+# ── mesh_simple_downsample ────────────────────────────────────────────────────
+
+class TestMeshSimpleDownsample:
+    def test_raises_on_empty_mesh(self):
+        """Falsy-checked empty mesh raises ValueError."""
+        with pytest.raises((ValueError, RuntimeError)):
+            mesh_simple_downsample(None, _make_simple_pcd())  # type: ignore
+
+    def test_raises_on_empty_pcd(self):
+        """Empty point cloud causes an error during KD-tree construction."""
+        with pytest.raises((ValueError, RuntimeError)):
+            mesh_simple_downsample(_make_simple_mesh(), o3d.geometry.PointCloud())
+
+    def test_returns_triangle_mesh(self):
+        result = mesh_simple_downsample(_make_simple_mesh(), _make_simple_pcd(), distance_threshold=10.0)
+        assert isinstance(result, o3d.geometry.TriangleMesh)
+
+    def test_high_threshold_keeps_all_vertices(self):
+        """Very high threshold keeps everything."""
+        mesh = _make_simple_mesh()
+        result = mesh_simple_downsample(mesh, _make_simple_pcd(), distance_threshold=1000.0)
+        assert len(result.vertices) > 0
+
+    def test_zero_threshold_removes_all_triangles(self):
+        """Threshold of 0 removes all vertices that are not exactly on the cloud."""
+        mesh = _make_simple_mesh()
+        # Point cloud is offset so all mesh vertex distances > 0
+        offset_pcd = o3d.geometry.PointCloud()
+        offset_pcd.points = o3d.utility.Vector3dVector(
+            np.asarray(mesh.vertices) + np.array([100.0, 0.0, 0.0])
+        )
+        result = mesh_simple_downsample(mesh, offset_pcd, distance_threshold=0.0)
+        assert len(result.triangles) == 0
+
+    # ── Mock tests ───────────────────────────────────────────────────────────
+
+    def test_compute_distances_called(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        with patch("Source.meshAlterer.compute_distances_to_point_cloud",
+                   wraps=compute_distances_to_point_cloud) as mock_dist:
+            mesh_simple_downsample(mesh, pcd, distance_threshold=10.0)
+            mock_dist.assert_called_once()
+
+    def test_visualize_calls_draw_geometries(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        with patch("Source.meshAlterer.o3d.visualization.draw_geometries") as mock_draw:
+            mesh_simple_downsample(mesh, pcd, distance_threshold=10.0, visualize_mesh=True)
+            mock_draw.assert_called_once()
+
+    def test_no_visualize_does_not_call_draw(self):
+        mesh = _make_simple_mesh()
+        pcd = _make_simple_pcd()
+        with patch("Source.meshAlterer.o3d.visualization.draw_geometries") as mock_draw:
+            mesh_simple_downsample(mesh, pcd, distance_threshold=10.0, visualize_mesh=False)
+            mock_draw.assert_not_called()
+
+
+# ── repair_mesh ───────────────────────────────────────────────────────────────
+
+class TestRepairMesh:
+    def test_single_mesh_returns_triangle_mesh(self):
+        result = repair_mesh(_make_simple_mesh())
+        assert isinstance(result, o3d.geometry.TriangleMesh)
+
+    def test_list_of_meshes_returns_triangle_mesh(self):
+        result = repair_mesh([_make_simple_mesh(), _make_simple_mesh()])
+        assert isinstance(result, o3d.geometry.TriangleMesh)
+
+    def test_result_has_vertices(self):
+        result = repair_mesh(_make_simple_mesh())
+        assert len(result.vertices) > 0
+
+    def test_result_has_triangles(self):
+        result = repair_mesh(_make_simple_mesh())
+        assert len(result.triangles) > 0
+
+    def test_two_meshes_combined_have_more_vertices(self):
+        single = repair_mesh(_make_simple_mesh())
+        combined = repair_mesh([_make_simple_mesh(), _make_simple_mesh()])
+        assert len(combined.vertices) >= len(single.vertices)
+
+    # ── Mock tests ───────────────────────────────────────────────────────────
+
+    def test_fill_holes_called_if_not_watertight(self):
+        """fill_holes is called when the mesh has holes."""
+        import trimesh as tm
+        mesh = _make_simple_mesh()
+        with patch.object(tm.Trimesh, "fill_holes") as mock_fill:
+            with patch.object(tm.Trimesh, "is_watertight", new_callable=lambda: property(lambda self: False)):
+                repair_mesh(mesh)
+                mock_fill.assert_called_once()
+
+
+# ── combine_meshes ────────────────────────────────────────────────────────────
+
+class TestCombineMeshes:
+    def test_returns_triangle_mesh(self):
+        result = combine_meshes([_make_simple_mesh()])
+        assert isinstance(result, o3d.geometry.TriangleMesh)
+
+    def test_single_mesh_vertex_count_preserved(self):
+        mesh = _make_simple_mesh()
+        result = combine_meshes([mesh])
+        assert len(result.vertices) == len(mesh.vertices)
+
+    def test_two_meshes_vertex_count_sum(self):
+        mesh = _make_simple_mesh()
+        result = combine_meshes([mesh, mesh])
+        assert len(result.vertices) == 2 * len(mesh.vertices)
+
+    def test_two_meshes_triangle_count_sum(self):
+        mesh = _make_simple_mesh()
+        result = combine_meshes([mesh, mesh])
+        assert len(result.triangles) == 2 * len(mesh.triangles)
+
+    def test_empty_list_returns_empty_mesh(self):
+        result = combine_meshes([])
+        assert len(result.vertices) == 0
+
+    # ── Mock tests ───────────────────────────────────────────────────────────
+
+    def test_compute_vertex_normals_called(self):
+        """Normals are recomputed — result has vertex normals."""
+        result = combine_meshes([_make_simple_mesh()])
+        assert result.has_vertex_normals()
+
+
+# ── transform_pcd_to_mesh ─────────────────────────────────────────────────────
+
+class TestTransformPcdToMesh:
+    def _make_pcd(self):
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(
+            np.random.rand(20, 3).astype(float)
+        )
+        return pcd
+
+    def test_returns_unstructured_grid(self):
+        import pyvista as pv
+        result = transform_pcd_to_mesh(self._make_pcd())
+        assert isinstance(result, pv.UnstructuredGrid)
+
+    def test_calls_delaunay_3d_by_default(self):
+        """bool_3d_mesh=True (default) calls delaunay_3d."""
+        import pyvista as pv
+        mock_polydata = MagicMock(spec=pv.PolyData)
+        mock_polydata.delaunay_3d.return_value = MagicMock(spec=pv.UnstructuredGrid)
+        with patch("Source.meshAlterer.pv.PolyData", return_value=mock_polydata):
+            transform_pcd_to_mesh(self._make_pcd(), bool_3d_mesh=True)
+            mock_polydata.delaunay_3d.assert_called_once()
+
+    def test_calls_delaunay_2d_when_not_3d(self):
+        """bool_3d_mesh=False calls delaunay_2d."""
+        import pyvista as pv
+        mock_polydata = MagicMock(spec=pv.PolyData)
+        mock_polydata.delaunay_2d.return_value = MagicMock(spec=pv.UnstructuredGrid)
+        with patch("Source.meshAlterer.pv.PolyData", return_value=mock_polydata):
+            transform_pcd_to_mesh(self._make_pcd(), bool_3d_mesh=False)
+            mock_polydata.delaunay_2d.assert_called_once()
+
+    def test_visualize_calls_shell_plot(self):
+        """visualize_bool=True calls .plot() on the extracted geometry shell."""
+        import pyvista as pv
+        mock_volume = MagicMock(spec=pv.UnstructuredGrid)
+        mock_shell = MagicMock()
+        mock_volume.extract_geometry.return_value = mock_shell
+        mock_polydata = MagicMock(spec=pv.PolyData)
+        mock_polydata.delaunay_3d.return_value = mock_volume
+        with patch("Source.meshAlterer.pv.PolyData", return_value=mock_polydata):
+            transform_pcd_to_mesh(self._make_pcd(), visualize_bool=True)
+            mock_shell.plot.assert_called_once()
+
+    def test_no_visualize_does_not_call_plot(self):
+        import pyvista as pv
+        mock_volume = MagicMock(spec=pv.UnstructuredGrid)
+        mock_polydata = MagicMock(spec=pv.PolyData)
+        mock_polydata.delaunay_3d.return_value = mock_volume
+        with patch("Source.meshAlterer.pv.PolyData", return_value=mock_polydata):
+            transform_pcd_to_mesh(self._make_pcd(), visualize_bool=False)
+            mock_volume.extract_geometry.assert_not_called()
