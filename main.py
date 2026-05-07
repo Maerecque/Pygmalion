@@ -1554,6 +1554,8 @@ class App:
         Tooltip(self.corner_distance_threshold_entry, "")
         self.floor_detection_button.config(state=tk.DISABLED, text="Detecteer vloergrens")
         Tooltip(self.floor_detection_button, "")
+        self.expansion_value_entry.config(state=tk.DISABLED)
+        Tooltip(self.expansion_value_entry, "")
         self.floor_expansion_button.config(state=tk.DISABLED, text="Vergroot vloergrens")
         Tooltip(self.floor_expansion_button, "")
         self.floor_to_cityjson_button.config(state=tk.DISABLED, text="Vloer naar 2D CityJSON")

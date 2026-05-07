@@ -28,7 +28,10 @@ See individual function docstrings for details.
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
+import sys
+import os
 
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 from Source.floorplanFinder import find_corners
 from Source.pointCloudAltering import grid_subsampling, merge_point_clouds as merge_pcds
 from Source.pointCloudEditor import open_point_cloud_editor as opce
