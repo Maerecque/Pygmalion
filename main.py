@@ -20,6 +20,13 @@ if sys.stderr is None:
 
 locale.setlocale(locale.LC_ALL, 'nl_NL.UTF-8')
 
+
+def resource_path(relative_path):
+    """Return the absolute path to a resource, compatible with PyInstaller's --onefile mode."""
+    base = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
+    return os.path.join(base, relative_path)
+
+
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 
@@ -181,7 +188,7 @@ class App:
         self.root = root
         self.root.title("Pygmalion CityJSON Generator")
         self.root.resizable(False, False)
-        self.root.iconbitmap("Source\\support_files\\logo.ico")
+        self.root.iconbitmap(resource_path(os.path.join("Source", "support_files", "logo.ico")))
         self.root.geometry("+20+20")  # Open window in the top-left corner
 
         # Store the point cloud data and path
