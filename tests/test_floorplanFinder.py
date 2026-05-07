@@ -3,10 +3,10 @@ import numpy as np
 import pytest
 import sys
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from Source.floorplanFinder import alpha_shape, sort_points_in_hull, find_corners, find_boundary_from_floor
+from Source.floorplanFinder import alpha_shape, sort_points_in_hull, find_corners, find_boundary_from_floor, get_keypoints
 import open3d as o3d
 
 
@@ -158,3 +158,70 @@ class TestFindBoundaryFromFloor:
         with patch(cKDTree_path, wraps=cKDTree_real) as mock_tree_cls:
             find_boundary_from_floor(pcd, alpha=0.5)
             mock_tree_cls.assert_called_once()
+
+
+# ── get_keypoints ──────────────────────────────────────────────────────────────
+
+class TestGetKeypoints:
+    def _make_pcd(self, n=20):
+        pcd = o3d.geometry.PointCloud()
+        np.random.seed(0)
+        pcd.points = o3d.utility.Vector3dVector(np.random.rand(n, 3))
+        return pcd
+
+    def test_raises_type_error_for_non_pcd(self):
+        with pytest.raises(TypeError):
+            get_keypoints("not a pcd")
+
+    def test_raises_type_error_for_numpy_array(self):
+        with pytest.raises(TypeError):
+            get_keypoints(np.zeros((10, 3)))
+
+    def test_returns_point_cloud_when_keypoints_found(self):
+        pcd = self._make_pcd()
+        mock_kp = o3d.geometry.PointCloud()
+        mock_kp.points = o3d.utility.Vector3dVector(np.random.rand(3, 3))
+        with patch("open3d.geometry.keypoint.compute_iss_keypoints", return_value=mock_kp):
+            result = get_keypoints(pcd)
+        assert isinstance(result, o3d.geometry.PointCloud)
+
+    def test_returns_original_pcd_when_no_keypoints_found(self, capsys):
+        """If no keypoints are found, the original pcd is returned and a message is printed."""
+        # An empty o3d.PointCloud is truthy; return None to trigger `if not keypoints:`.
+        pcd = self._make_pcd()
+        with patch("open3d.geometry.keypoint.compute_iss_keypoints", return_value=None):
+            result = get_keypoints(pcd)
+        assert result is pcd
+        captured = capsys.readouterr()
+        assert "No keypoints" in captured.out
+
+    def test_print_stats_outputs_info(self, capsys):
+        """With print_stats=True, detection counts are printed."""
+        pcd = self._make_pcd()
+        mock_kp = o3d.geometry.PointCloud()
+        mock_kp.points = o3d.utility.Vector3dVector(np.random.rand(3, 3))
+        with patch("open3d.geometry.keypoint.compute_iss_keypoints", return_value=mock_kp):
+            get_keypoints(pcd, print_stats=True)
+        captured = capsys.readouterr()
+        assert "keypoints" in captured.out
+
+    def test_compute_iss_keypoints_called_once(self):
+        pcd = self._make_pcd()
+        mock_kp = MagicMock()
+        mock_kp.__bool__ = lambda self: True
+        with patch("open3d.geometry.keypoint.compute_iss_keypoints",
+                   return_value=mock_kp) as mock_fn:
+            get_keypoints(pcd)
+            mock_fn.assert_called_once()
+
+    def test_custom_params_passed_through(self):
+        pcd = self._make_pcd()
+        mock_kp = MagicMock()
+        mock_kp.__bool__ = lambda self: True
+        with patch("open3d.geometry.keypoint.compute_iss_keypoints",
+                   return_value=mock_kp) as mock_fn:
+            get_keypoints(pcd, salient_radius=0.05, non_max_radius=0.025, min_neighbors=3)
+            _, kwargs = mock_fn.call_args
+            assert kwargs["salient_radius"] == 0.05
+            assert kwargs["non_max_radius"] == 0.025
+            assert kwargs["min_neighbors"] == 3
