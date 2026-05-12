@@ -29,3 +29,6 @@ jobs:
 
       - name: Run mypy type check
         run: python -m mypy Source/ --ignore-missing-imports --no-strict-optional
+
+      - name: Run bfIntegrity check
+        run: python Source/bfIntegrity.py
