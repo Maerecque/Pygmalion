@@ -13,6 +13,7 @@ import os, sys  # noqa: E401
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 import Source.fileHandler as fh
 import Source.shapeUtils as su
+import Source.bfValidators as bfv
 
 
 def divide_pointcloud_into_grid(
@@ -31,6 +32,11 @@ def divide_pointcloud_into_grid(
     Returns:
         dict : Dictionary containing the indices of the points in each cell.
     """
+    if not bfv.validate_cell_size(grid_size):
+        raise ValueError("Grid cell size must be a positive value.")
+    if not bfv.validate_overlap(overlap):
+        raise ValueError("Grid overlap must be a non-negative integer.")
+
     # Get the minimum and maximum coordinates of the pointcloud
     min_bound = pointcloud.get_min_bound()
     max_bound = pointcloud.get_max_bound()
@@ -141,6 +147,9 @@ def ransac_plane_finder(
     Returns:
         open3d.geometry.PointCloud: The extracted plane equation.
     """
+    if not bfv.validate_ransac_sample(ransac_n):
+        raise ValueError("RANSAC sample size must be at least 3.")
+
     pcd = point_cloud
 
     # Initialize variables

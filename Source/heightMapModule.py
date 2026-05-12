@@ -1,9 +1,15 @@
+import os
+import sys
+
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
 from scipy.ndimage import binary_dilation, binary_erosion
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
+
+sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
+import Source.bfValidators as bfv
 
 
 def project_vertices_to_plane(vertices: np.ndarray) -> tuple:
@@ -37,7 +43,7 @@ def create_grid(x_range: tuple, y_range: tuple, nx: int, ny: int) -> tuple:
             raise ValueError("Invalid grid parameters: x_range, y_range, nx, and ny must be provided.")
 
         # Ensure that the grid dimensions are greater than 1 to avoid issues with linspace
-        if nx <= 1 or ny <= 1:
+        if not bfv.validate_grid_dims(nx, ny):
             raise ValueError("Grid dimensions must be greater than 1.")
 
         x_grid = np.linspace(x_range[0], x_range[1], nx)
