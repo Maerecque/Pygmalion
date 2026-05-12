@@ -104,6 +104,6 @@ def _run() -> bool:
 
 if __name__ == "__main__":
     print("BF validator integrity checks")
-    print("─" * 48)
+    print("-" * 48)
     ok = _run()
     sys.exit(0 if ok else 1)
