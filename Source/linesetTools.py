@@ -86,7 +86,11 @@ def contour_to_lineset(points: np.ndarray, max_line_length: float = 0) -> o3d.ge
     return lineset
 
 
-def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
+def filter_lines_within_contour(
+    contour_points: np.ndarray,
+    lineset: o3d.geometry.LineSet,
+    contour_buffer: float = 0.0
+) -> o3d.geometry.LineSet:
     """
     Filters lines in a LineSet, keeping only those that are completely within a given 2D contour.
 
@@ -96,9 +100,12 @@ def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometr
     Parameters:
         contour_points (np.ndarray): Array of shape (N, 3) representing ordered 3D coordinates of the 2D contour (XY plane).
         lineset (o3d.geometry.LineSet): Open3D LineSet containing lines to be filtered.
+        contour_buffer (float): Distance to expand the contour polygon outward before testing containment.
+            Use a positive value (e.g. 0.5) to keep wall lines that lie on or just outside the floor
+            boundary due to scan noise. Defaults to 0.0 (no expansion).
 
     Returns:
-        o3d.geometry.LineSet: Filtered LineSet containing only lines within the contour.
+        o3d.geometry.LineSet: Filtered LineSet containing only lines within the (optionally buffered) contour.
 
     Example:
         >>> contour = np.array([[0, 0, 0], [2, 0, 0], [2, 2, 0], [0, 2, 0]])
@@ -108,7 +115,7 @@ def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometr
 
     Note:
         - The contour is treated as a closed polygon in the XY plane.
-        - Lines are retained only if fully inside or on the boundary of the polygon.
+        - Lines are retained only if fully inside or on the boundary of the (buffered) polygon.
         - All original points are preserved in the output LineSet.
     """
     # Ensure contour is closed (first point == last point)
@@ -116,6 +123,8 @@ def filter_lines_within_contour(contour_points: np.ndarray, lineset: o3d.geometr
         contour_points = np.vstack([contour_points, contour_points[0]])
 
     polygon = Polygon(contour_points[:, :2])
+    if contour_buffer > 0:
+        polygon = polygon.buffer(contour_buffer)
 
     # Copy points and lines from lineset
     line_points = np.asarray(lineset.points)
@@ -188,16 +197,21 @@ def merge_lineset(*linesets: o3d.geometry.LineSet) -> o3d.geometry.LineSet:
     return merged
 
 
-def lineset_to_trianglemesh(lineset, contour_points):
+def lineset_to_trianglemesh(lineset, contour_points, contour_buffer: float = 0.0):
     """
     Converts a LineSet to a TriangleMesh, keeping only triangles within a supplied 2D contour.
 
     Parameters:
         lineset (o3d.geometry.LineSet): The input LineSet containing 3D points and lines.
         contour_points (np.ndarray): Array of shape (N, 3) representing the 2D contour in the XY plane.
+        contour_buffer (float): Distance to expand the contour polygon outward before testing triangle
+            containment. Use a positive value (e.g. 0.5) when wall scan points lie on or just outside
+            the floor boundary and bridging triangles are incorrectly excluded. Defaults to 0.0 (no
+            expansion) to preserve the correct building footprint.
 
     Returns:
-        o3d.geometry.TriangleMesh: Open3D TriangleMesh object containing triangles whose centroids are inside the contour.
+        o3d.geometry.TriangleMesh: Open3D TriangleMesh object containing triangles whose centroids are inside
+        the (optionally buffered) contour.
 
     Example:
         >>> contour = np.array([[0, 0, 0], [2, 0, 0], [2, 2, 0], [0, 2, 0]])
@@ -207,7 +221,7 @@ def lineset_to_trianglemesh(lineset, contour_points):
 
     Note:
         - Projects all points to the XY plane for triangulation.
-        - Only triangles whose centroid is inside or on the boundary of the contour are kept.
+        - Only triangles whose centroid is inside or on the boundary of the (buffered) contour are kept.
         - Duplicates each triangle with reversed winding so both sides render as solid surfaces.
         - Raises ValueError if there are fewer than 3 points to form a mesh.
     """
@@ -224,16 +238,18 @@ def lineset_to_trianglemesh(lineset, contour_points):
     if not np.allclose(contour_points[0], contour_points[-1]):
         contour_points = np.vstack([contour_points, contour_points[0]])
     polygon = Polygon(contour_points[:, :2])
+    if contour_buffer > 0:
+        polygon = polygon.buffer(contour_buffer)
 
-    # Filter triangles: keep only those whose centroid is inside the polygon
-    filtered_triangles = []
+    # Filter triangles: keep only those whose centroid is inside the (buffered) polygon
+    kept: list = []
     for simplex in tqdm(triangles, desc="Filtering triangles"):
         tri_pts = points_2d[simplex]
         centroid = np.mean(tri_pts, axis=0)
         if polygon.contains(ShapelyPoint(centroid)) or polygon.covers(ShapelyPoint(centroid)):
-            filtered_triangles.append(simplex)
+            kept.append(simplex)
 
-    filtered_triangles = np.asarray(filtered_triangles, dtype=np.int32).reshape(-1, 3)
+    filtered_triangles: np.ndarray = np.asarray(kept, dtype=np.int32).reshape(-1, 3)
 
     mesh = o3d.geometry.TriangleMesh()
     if len(filtered_triangles) == 0:

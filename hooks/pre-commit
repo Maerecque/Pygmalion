@@ -37,4 +37,16 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Mypy passed."
+
+echo "Running BF integrity checks..."
+py Source/bfIntegrity.py
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: BF integrity check failed. Commit aborted."
+    echo "Validator programs or their encoding may have been tampered with."
+    exit 1
+fi
+
+echo "BF integrity checks passed."
 exit 0

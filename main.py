@@ -849,8 +849,9 @@ class App:
 
     def lineset_to_mesh_step(self):
         try:
+            contour_buffer = float(self.contour_buffer_entry.get()) if self.contour_buffer_entry.get() else 0.007
             self.floor_mesh = lineset_to_trianglemesh(self.floor_lineset, self.floor_corners)
-            self.roof_wall_mesh = lineset_to_trianglemesh(self.total_lineset, self.floor_corners)
+            self.roof_wall_mesh = lineset_to_trianglemesh(self.total_lineset, self.floor_corners, contour_buffer=contour_buffer)
 
             self.lineset_preview = False
             self.mesh_preview = combine_meshes([self.floor_mesh, self.roof_wall_mesh])
@@ -978,6 +979,7 @@ class App:
         self.wall_layer_amount_entry.delete(0, tk.END)
         self.xy_tolerance_entry.delete(0, tk.END)
         self.max_line_length_entry.delete(0, tk.END)
+        self.contour_buffer_entry.delete(0.007, tk.END)
 
         # Reset all sections
         self.disable_all_sections()
@@ -1424,6 +1426,15 @@ class App:
         for i in range(3):
             lineset_to_mesh_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
+        tk.Label(lineset_to_mesh_frame, text="Contour buffer", anchor="w").grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        self.contour_buffer_entry = tk.Entry(
+            lineset_to_mesh_frame,
+            validate="key",
+            validatecommand=(self.validate_flt, '%P'),
+            state=tk.DISABLED
+        )
+        self.contour_buffer_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
         self.lineset_to_mesh_button = tk.Button(
             lineset_to_mesh_frame,
             text="Converteer naar Mesh",
@@ -1433,7 +1444,7 @@ class App:
         self.lineset_to_mesh_button.grid(row=0, column=2, rowspan=2, padx=5, pady=5, sticky="nsew")
 
         self.lineset_to_mesh_result_label = tk.Label(lineset_to_mesh_frame, text="Mesh niet gemaakt.", anchor="w")
-        self.lineset_to_mesh_result_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.lineset_to_mesh_result_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Repair Mesh Frame
         repair_mesh_frame = tk.LabelFrame(right_column, text="Mesh reparatie")
@@ -1609,6 +1620,8 @@ class App:
         Tooltip(self.pcd_to_lineset_button, "")
         self.pcd_to_lineset_result_label.config(text="Lineset niet gemaakt.")
 
+        self.contour_buffer_entry.config(state=tk.DISABLED)
+        Tooltip(self.contour_buffer_entry, "")
         self.lineset_to_mesh_button.config(state=tk.DISABLED, text="Converteer naar Mesh")
         Tooltip(self.lineset_to_mesh_button, "")
         self.lineset_to_mesh_result_label.config(text="Mesh niet gemaakt.")
@@ -1796,6 +1809,12 @@ class App:
         )
 
     def enable_lineset_to_mesh_section(self):
+        self.contour_buffer_entry.config(state=tk.NORMAL)
+        Tooltip(
+            self.contour_buffer_entry,
+            "Vergroot de contourgrens met deze waarde (in meters) bij het filteren van wanddriehoeken. "
+            "Gebruik een positieve waarde (bv. 0.1) als er gaten in de wandmesh verschijnen."
+        )
         self.lineset_to_mesh_button.config(state=tk.NORMAL, text="Converteer naar Mesh")
         Tooltip(
             self.lineset_to_mesh_button,
@@ -1871,7 +1890,8 @@ class App:
                 (self.wall_search_radius_entry, 'wall_search_radius'),
                 (self.wall_layer_amount_entry, 'wall_layer_amount'),
                 (self.xy_tolerance_entry, 'xy_tolerance'),
-                (self.max_line_length_entry, 'max_line_length')
+                (self.max_line_length_entry, 'max_line_length'),
+                (self.contour_buffer_entry, 'contour_buffer')
             ]
 
             for entry, key in entries_and_keys:

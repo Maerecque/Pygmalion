@@ -202,6 +202,22 @@ class TestFilterLinesWithinContour:
         # should not raise
         filter_lines_within_contour(contour, ls)
 
+    def test_buffer_keeps_line_just_outside_contour(self):
+        """A line just outside the contour boundary is kept when buffer > 0."""
+        # contour is [0,0]-[2,2]; line is just outside at y=-0.2 (south of boundary)
+        contour = _square_contour()
+        ls = o3d.geometry.LineSet()
+        ls.points = o3d.utility.Vector3dVector(
+            np.array([[0.5, -0.2, 0.0], [1.5, -0.2, 0.0]])
+        )
+        ls.lines = o3d.utility.Vector2iVector([[0, 1]])
+        # Without buffer: line is outside → removed
+        result_no_buf = filter_lines_within_contour(contour, ls, contour_buffer=0.0)
+        assert len(result_no_buf.lines) == 0
+        # With buffer of 0.5: line is inside buffered polygon → kept
+        result_buf = filter_lines_within_contour(contour, ls, contour_buffer=0.5)
+        assert len(result_buf.lines) == 1
+
 
 # ── lineset_to_trianglemesh ────────────────────────────────────────────────────
 
@@ -247,6 +263,30 @@ class TestLinesetToTriangleMesh:
         if len(result.triangles) > 0:
             # Triangle count must be even (front + back)
             assert len(result.triangles) % 2 == 0
+
+    def test_buffer_includes_points_outside_contour(self):
+        """Points just outside the contour produce more triangles when buffer > 0."""
+        # 2x2 grid of non-collinear points, all shifted just south of the contour (y=-0.3)
+        pts = np.array([
+            [0.0, -0.3, 0.5], [1.5, -0.3, 0.5],
+            [0.0, 0.3, 0.5], [1.5, 0.3, 0.5],
+        ])
+        ls = o3d.geometry.LineSet()
+        ls.points = o3d.utility.Vector3dVector(pts)
+        ls.lines = o3d.utility.Vector2iVector([[0, 1], [0, 2], [1, 3], [2, 3]])
+        # Contour: [0,0]-[3,0]-[3,3]-[0,3] — the y=-0.3 row is just outside
+        contour = np.array([[0.0, 0.0, 0.5], [3.0, 0.0, 0.5], [3.0, 3.0, 0.5], [0.0, 3.0, 0.5]])
+        result_no_buf = lineset_to_trianglemesh(ls, contour, contour_buffer=0.0)
+        result_buf = lineset_to_trianglemesh(ls, contour, contour_buffer=0.5)
+        # With buffer the triangles near the boundary are included
+        assert len(result_buf.triangles) >= len(result_no_buf.triangles)
+
+    def test_zero_buffer_default_unchanged(self):
+        """Explicitly passing contour_buffer=0 gives same result as no buffer."""
+        ls = self._make_lineset_grid()
+        contour = np.array([[0.0, 0.0, 0.5], [3.0, 0.0, 0.5], [3.0, 3.0, 0.5], [0.0, 3.0, 0.5]])
+        result_explicit = lineset_to_trianglemesh(ls, contour, contour_buffer=0.0)
+        assert isinstance(result_explicit, o3d.geometry.TriangleMesh)
 
 
 # ── generate_city_json_from_building ──────────────────────────────────────────
