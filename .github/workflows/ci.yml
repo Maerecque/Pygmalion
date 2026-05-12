@@ -32,3 +32,5 @@ jobs:
 
       - name: Run bfIntegrity check
         run: python Source/bfIntegrity.py
+        env:
+          PYTHONIOENCODING: utf-8
