@@ -979,7 +979,7 @@ class App:
         self.wall_layer_amount_entry.delete(0, tk.END)
         self.xy_tolerance_entry.delete(0, tk.END)
         self.max_line_length_entry.delete(0, tk.END)
-        self.contour_buffer_entry.delete(0.007, tk.END)
+        self.contour_buffer_entry.delete(0, tk.END)
 
         # Reset all sections
         self.disable_all_sections()
