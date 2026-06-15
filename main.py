@@ -1052,7 +1052,7 @@ class App:
             win.transient(self.root)
 
             status_msg = (
-                f"C:\\>{chr(sum(range(ord(min(str(not()))))))}"
+                f"C:\\>{chr(sum(range(ord(min(str(not()))))))}"  # noqa: E275
             )
 
             label = tk.Label(
