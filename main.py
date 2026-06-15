@@ -1488,6 +1488,13 @@ class App:
             self.roof_division_result_label.configure(
                 text=f"Dak verdeeld in {len(self.roof_layer_list)} lagen.", bootstyle="success"
             )
+
+            # Temporary pcd for visualization of roof layers
+            self.roof_layers_pcd_preview = o3d.geometry.PointCloud()
+            for layer in self.roof_layer_list:
+                self.roof_layers_pcd_preview = merge_pcds([self.roof_layers_pcd_preview, layer])
+            self.update_view_pointcloud(self.roof_layers_pcd_preview)
+
             self.roof_division_button.configure(state="normal", text="Verdeel dak")
             self._update_sidebar_step(9, COMPLETE)
             self.enable_wall_extraction_section()
@@ -1503,6 +1510,7 @@ class App:
     def wall_extraction_step(self):
         self.lineset_preview = None
         self.mesh_preview = None
+        self.roof_layers_pcd_preview = None
         try:
             self.validate_empty_field(self.wall_search_radius_entry)
             temp_wall_pcd_merged = merge_pcds([self.new_pcd_tuple[2], self.temp_wall_pcd])
@@ -1539,6 +1547,13 @@ class App:
             self.wall_division_result_label.configure(
                 text=f"Muren verdeeld in {len(self.wall_layer_list)} lagen.", bootstyle="success"
             )
+
+            # Temporary pcd for visualization of wall layers
+            self.wall_layers_pcd_preview = o3d.geometry.PointCloud()
+            for layer in self.wall_layer_list:
+                self.wall_layers_pcd_preview = merge_pcds([self.wall_layers_pcd_preview, layer])
+            self.update_view_pointcloud(self.wall_layers_pcd_preview)
+
             self.wall_division_button.configure(state="normal", text="Verdeel muren")
             self._update_sidebar_step(11, COMPLETE)
             self.enable_pcd_to_lineset_section()
@@ -1553,6 +1568,7 @@ class App:
 
     def pcd_to_lineset_step(self):
         self.mesh_preview = None
+        self.roof_layers_pcd_preview = None
         try:
             self.validate_empty_field(self.xy_tolerance_entry)
             self.validate_empty_field(self.max_line_length_entry)
