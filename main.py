@@ -1279,7 +1279,7 @@ class App:
             self._update_sidebar_step(2, COMPLETE)
             self.enable_preprocessing_section()
             self.root.config(cursor="")
-            self._stop_spinner("Puntdichtheid aangepast", success=True)
+            self._stop_spinner(f"Puntdichtheid aangepast van {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten.", success=True)  # noqa: E501
         except Exception as e:
             self.point_density_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
@@ -1304,7 +1304,7 @@ class App:
             amount_removed = len(self.resized_point_cloud_data.points) - len(pcd.points)
             self.processed_pcd = pcd
             self.preprocessing_result_label.configure(
-                text=f"{amount_removed} punten verwijderd, {len(pcd.points):n} punten over.",
+                text=f"{amount_removed:n} punten verwijderd, {len(pcd.points):n} punten over.",
                 bootstyle="success"
             )
             self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
@@ -1312,7 +1312,7 @@ class App:
             self._update_sidebar_step(3, COMPLETE)
             self.enable_heightmap_section()
             self.root.config(cursor="")
-            self._stop_spinner("Voorbewerking gereed", success=True)
+            self._stop_spinner(f"Voorbewerking gereed. {amount_removed:n} punten verwijderd, {len(pcd.points):n} punten over.", success=True)  # noqa: E501
         except Exception as e:
             self.preprocessing_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
@@ -1738,19 +1738,19 @@ class App:
 
     def enable_point_density_section(self):
         self._update_sidebar_step(2, ACTIVE)
-        self.show_step(2)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(2)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_preprocessing_section(self):
         self._update_sidebar_step(3, ACTIVE)
-        self.show_step(3)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(2)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_heightmap_section(self):
         self._update_sidebar_step(4, ACTIVE)
-        self.show_step(4)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(4)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_floor_detection_section(self):
         self._update_sidebar_step(5, ACTIVE)
-        self.show_step(5)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(5)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_floor_expansion_section(self):
         self._update_sidebar_step(6, ACTIVE)
@@ -1768,35 +1768,35 @@ class App:
 
     def enable_roof_extraction_section(self):
         self._update_sidebar_step(8, ACTIVE)
-        self.show_step(8)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(8)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_roof_division_section(self):
         self._update_sidebar_step(9, ACTIVE)
-        self.show_step(9)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(9)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_wall_extraction_section(self):
         self._update_sidebar_step(10, ACTIVE)
-        self.show_step(10)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(10)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_wall_division_section(self):
         self._update_sidebar_step(11, ACTIVE)
-        self.show_step(11)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(11)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_pcd_to_lineset_section(self):
         self._update_sidebar_step(12, ACTIVE)
-        self.show_step(12)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(12)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_lineset_to_mesh_section(self):
         self._update_sidebar_step(13, ACTIVE)
-        self.show_step(13)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(13)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_repair_mesh_section(self):
         self._update_sidebar_step(14, ACTIVE)
-        self.show_step(14)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(14)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_cityjson_conversion_section(self):
         self._update_sidebar_step(15, ACTIVE)
-        self.show_step(15)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(15)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_view_pointcloud(self, pointcloud):
         self.view_button.configure(
