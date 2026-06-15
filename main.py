@@ -1462,7 +1462,7 @@ class App:
             self._update_sidebar_step(8, COMPLETE)
             self.enable_roof_division_section()
             self.root.config(cursor="")
-            self._stop_spinner("Dak geëxtraheerd")
+            self._stop_spinner("Dak geëxtraheerd", success=True)
         except Exception as e:
             self.roof_extraction_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.roof_extraction_button.configure(state="normal", text="Extraheer dakpunten")
@@ -1529,7 +1529,7 @@ class App:
             self._update_sidebar_step(10, COMPLETE)
             self.enable_wall_division_section()
             self.root.config(cursor="")
-            self._stop_spinner("Muren geëxtraheerd")
+            self._stop_spinner("Muren geëxtraheerd", success=True)
         except Exception as e:
             self.wall_extraction_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.wall_extraction_button.configure(state="normal", text="Extraheer muren")
