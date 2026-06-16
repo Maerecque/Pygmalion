@@ -5,6 +5,7 @@ from typing import Any, Optional
 import laspy
 import numpy as np
 import open3d as o3d
+import pye57
 from plyfile import PlyData
 import os, sys  # noqa: E401
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
@@ -162,6 +163,57 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
         print(type(e))
         print(e)
         exit()
+
+
+def readout_e57_file(file_path: str) -> o3d.geometry.PointCloud:
+    """Reads an E57 file and converts it into an Open3D PointCloud.
+
+    Args:
+        file_path (str): The path to the E57 file to be read.
+
+    Returns:
+        o3d.geometry.PointCloud: An Open3D point cloud containing the contents of the E57 file.
+    """
+    if not file_path:
+        raise NoFileGivenError("No file was selected.")
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"The file at {file_path} does not exist.")
+
+    if file_path.lower().endswith('.e57') is False:
+        raise FileFormatError("The selected file is not in E57 format.")
+
+    try:
+        e57 = pye57.E57(file_path)
+
+        scan_data = e57.read_scan(0)
+
+    except Exception as e:
+        raise RuntimeError(
+            f"An error occurred while opening/parsing '{file_path}': {e}"
+        ) from e
+
+    required_keys = ["cartesianX", "cartesianY", "cartesianZ"]
+    missing_keys = [key for key in required_keys if key not in scan_data]
+    if missing_keys:
+        raise KeyError(f"The E57 scan data is missing required keys: {', '.join(missing_keys)}")
+
+    points = np.stack(
+        [
+            scan_data["cartesianX"],
+            scan_data["cartesianY"],
+            scan_data["cartesianZ"]
+        ],
+        axis=-1,
+    )
+
+    if points.shape[0] == 0:
+        raise ValueError("The E57 file contains no point data.")
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+
+    return pcd
 
 
 def convert_ply_to_las(input_las_path: str = None):

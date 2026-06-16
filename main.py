@@ -36,6 +36,7 @@ from Source.boundaryScript import expand_boundary
 from Source.fileHandler import (  # noqa: F401
     get_file_path,
     readout_LAS_file,
+    readout_e57_file,
     get_save_file_path
 )
 from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull
@@ -626,7 +627,7 @@ class App:
     def _build_step_1_panel(self):
         card = self._step_card(1, "Bestand selecteren")
 
-        ttk.Label(card, text="Selecteer een .las of .laz puntenwolkbestand.").grid(
+        ttk.Label(card, text="Selecteer een .las, .laz of .e57 puntenwolkbestand.").grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 10)
         )
 
@@ -635,7 +636,7 @@ class App:
             bootstyle="primary", command=self.select_file, width=32
         )
         self.file_select_button.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 8))
-        self.add_tooltip(self.file_select_button, "Selecteer een .las of .laz puntenwolkbestand om te beginnen.")
+        self.add_tooltip(self.file_select_button, "Selecteer een .las, .laz of .e57 puntenwolkbestand om te beginnen.")
 
         self.file_label = ttk.Label(card, text="Geen bestand geselecteerd",
                                     bootstyle="secondary", wraplength=550, justify="left")
@@ -1107,7 +1108,7 @@ class App:
             self.file_select_button.configure(text="Bestand laden...", state="disabled")
             self._start_spinner("Bestand laden...")
 
-            file_path = get_file_path("Puntenwolk bestanden", ["*.las", "*.laz"], False)
+            file_path = get_file_path("Puntenwolk bestanden", ["*.las", "*.laz", "*.e57"], False)
 
             if file_path:
                 self.point_cloud_path = file_path
@@ -1126,7 +1127,15 @@ class App:
     def _select_file_worker(self, file_path):
         """Runs entirely in a background thread to parse heavy point clouds without blocking the GUI loop."""
         try:
-            self.point_cloud_data = readout_LAS_file(file_path, False)
+            if file_path.lower().endswith('.e57'):
+                self.point_cloud_data = readout_e57_file(file_path)
+                self.show_message(
+                    title="Opmerking",
+                    message="e57-bestandsfunctionaliteit is vrij nieuw en kan onbetrouwbaar zijn. Controleer de resultaten zorgvuldig.\nGraag feedback geven bij eventuele problemen. Bij voorbaat dank!",  # noqa: E501
+                    message_type="warning"
+                )
+            else:
+                self.point_cloud_data = readout_LAS_file(file_path, False)
 
             if hasattr(self, 'file_select_button') and self.file_select_button.winfo_exists():
                 self.file_select_button.configure(text="📂  Bestand wijzigen", state="normal")
