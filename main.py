@@ -1111,20 +1111,9 @@ class App:
 
             if file_path:
                 self.point_cloud_path = file_path
-                self.point_cloud_data = readout_LAS_file(file_path, False)
+                self.root.config(cursor="watch")
 
-                self.file_select_button.configure(text="📂  Bestand wijzigen", state="normal")
-                self.file_label.configure(
-                    text=f"Geselecteerd: {os.path.basename(file_path)}",
-                    bootstyle="default"
-                )
-                self.point_amount_label.configure(
-                    text=f"Punten: {len(self.point_cloud_data.points):n}"
-                )
-                self._stop_spinner("Bestand geladen", success=True)
-                self._update_sidebar_step(1, COMPLETE)
-                self.enable_point_density_section()
-                self.enable_view_pointcloud(self.point_cloud_data)
+                threading.Thread(target=self._select_file_worker, args=(file_path,), daemon=True).start()
             else:
                 self.show_message("Info", "Bestand selectie geannuleerd.", "info")
                 self.file_select_button.configure(text="📂  Selecteer puntenwolkbestand", state="normal")
@@ -1132,20 +1121,48 @@ class App:
                 self.point_amount_label.configure(text="")
                 self._stop_spinner("Gereed")
         except Exception as e:
+            self._handle_select_file_error(e, None)
+
+    def _select_file_worker(self, file_path):
+        """Runs entirely in a background thread to parse heavy point clouds without blocking the GUI loop."""
+        try:
+            self.point_cloud_data = readout_LAS_file(file_path, False)
+
             if hasattr(self, 'file_select_button') and self.file_select_button.winfo_exists():
-                self.file_select_button.configure(text="📂  Selecteer puntenwolkbestand", state="normal")
+                self.file_select_button.configure(text="📂  Bestand wijzigen", state="normal")
+            if hasattr(self, 'file_label') and self.file_label.winfo_exists():
+                self.file_label.configure(
+                    text=f"Geselecteerd: {os.path.basename(file_path)}",
+                    bootstyle="default"
+                )
             if hasattr(self, 'point_amount_label') and self.point_amount_label.winfo_exists():
-                self.point_amount_label.configure(text="")
-            self._stop_spinner("Fout bij laden")
-            self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
-            try:
-                if hasattr(self, 'file_label') and self.file_label.winfo_exists():
-                    self.file_label.configure(
-                        text=f"Fout bij laden: {os.path.basename(file_path)}",
-                        bootstyle="danger"
-                    )
-            except Exception:
-                pass
+                self.point_amount_label.configure(
+                    text=f"Punten: {len(self.point_cloud_data.points):n}"
+                )
+            self._stop_spinner("Bestand geladen", success=True)
+            self._update_sidebar_step(1, COMPLETE)
+            self.enable_point_density_section()
+            self.enable_view_pointcloud(self.point_cloud_data)
+            self.root.config(cursor="")
+        except Exception as e:
+            self._handle_select_file_error(e, file_path)
+
+    def _handle_select_file_error(self, e, file_path):
+        if hasattr(self, 'file_select_button') and self.file_select_button.winfo_exists():
+            self.file_select_button.configure(text="📂  Selecteer puntenwolkbestand", state="normal")
+        if hasattr(self, 'point_amount_label') and self.point_amount_label.winfo_exists():
+            self.point_amount_label.configure(text="")
+        self._stop_spinner("Fout bij laden")
+        self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
+        self.root.config(cursor="")
+        try:
+            if file_path and hasattr(self, 'file_label') and self.file_label.winfo_exists():
+                self.file_label.configure(
+                    text=f"Fout bij laden: {os.path.basename(file_path)}",
+                    bootstyle="danger"
+                )
+        except Exception:
+            pass
 
     def load_point_cloud_data(self):
         if self.point_cloud_path and os.path.exists(self.point_cloud_path):
@@ -1160,19 +1177,49 @@ class App:
         if not self.point_cloud_data:
             self.show_message("Waarschuwing", "Selecteer eerst een puntenwolkbestand.", "warning")
             return
+
+        try:
+            self.validate_empty_field(self.points_per_cm_entry)
+            points_per_cm = float(self.points_per_cm_entry.get())
+        except Exception as e:
+            self.point_density_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
+            return
+
         self.root.config(cursor="watch")
         self._start_spinner("Puntdichtheid aanpassen...")
         self.disable_section(self.point_density_button, "Bezig...")
-        threading.Thread(target=self.alter_point_density_step).start()
+        self.root.update()
+        self.root.after(100, lambda: threading.Thread(
+            target=self.alter_point_density_step,
+            args=(points_per_cm,),
+            daemon=True
+        ).start())
 
     def start_preprocessing_thread(self):
         if not self.resized_point_cloud_data:
             self.show_message("Waarschuwing", "Voltooi eerst de stap puntdichtheid.", "warning")
             return
+
+        try:
+            self.validate_empty_field(self.neighbour_amount_entry)
+            self.validate_empty_field(self.std_ratio_entry)
+        except Exception as e:
+            self.preprocessing_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
+            return
+
         self.root.config(cursor="watch")
         self._start_spinner("Ruis verwijderen...")
         self.disable_section(self.preprocessing_button, "Bezig...")
-        threading.Thread(target=self.preprocessing_step).start()
+        self.root.update()
+        self.root.after(100, lambda: threading.Thread(
+            target=self.preprocessing_step,
+            args=(
+                int(self.neighbour_amount_entry.get()),
+                float(self.std_ratio_entry.get()),
+                bool(self.show_removed_points_var.get())
+            ),
+            daemon=True
+        ).start())
 
     def start_heightmap_thread(self):
         self.root.config(cursor="watch")
@@ -1260,65 +1307,88 @@ class App:
 
     # ── Processing steps (unchanged logic) ───────────────────────────────────
 
-    def alter_point_density_step(self):
-        self.lineset_preview = None
-        self.mesh_preview = None
+    def alter_point_density_step(self, points_per_cm):
         try:
-            self.validate_empty_field(self.points_per_cm_entry)
             resized_pcd = alter_point_density(
                 self.point_cloud_data,
-                points_per_cm=float(self.points_per_cm_entry.get())
+                points_per_cm=points_per_cm
             )
-            self.point_density_result_label.configure(
-                text=f"Puntdichtheid aangepast van {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten.",
-                bootstyle="success"
-            )
-            self.resized_point_cloud_data = resized_pcd
-            self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
-            self.update_view_pointcloud(resized_pcd)
-            self._update_sidebar_step(2, COMPLETE)
-            self.enable_preprocessing_section()
-            self.root.config(cursor="")
-            self._stop_spinner(f"Puntdichtheid aangepast van {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten.", success=True)  # noqa: E501
-        except Exception as e:
-            self.point_density_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
-            self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
-            self._update_sidebar_step(2, ERROR)
-            self.root.config(cursor="")
-            self._stop_spinner("Fout")
+            self.root.after(0, self._alter_point_density_success, resized_pcd)
 
-    def preprocessing_step(self):
+        except Exception as e:
+            self.root.after(0, self._alter_point_density_error, str(e))
+
+    def _alter_point_density_success(self, resized_pcd):
         self.lineset_preview = None
         self.mesh_preview = None
+
+        self.point_density_result_label.configure(
+            text=f"Puntdichtheid aangepast van {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten.",
+            bootstyle="success"
+        )
+        self.resized_point_cloud_data = resized_pcd
+        self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
+
+        self.update_view_pointcloud(resized_pcd)
+
+        self._update_sidebar_step(2, COMPLETE)
+        self.enable_preprocessing_section()
+        self.root.config(cursor="")
+        msg = f"Puntdichtheid succesvol aangepast: {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten."
+        self._stop_spinner(msg)
+
+    def _alter_point_density_error(self, error_msg):
+        self.point_density_result_label.configure(text=f"Fout: {error_msg}", bootstyle="danger")
+        self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
+        self._update_sidebar_step(2, ERROR)
+        self.root.config(cursor="")
+        self._stop_spinner("Fout")
+
+    def preprocessing_step(self, nb_neighbors, std_ratio, show_removed_points):
         try:
             pcd = self.resized_point_cloud_data
-            self.validate_empty_field(self.neighbour_amount_entry)
-            self.validate_empty_field(self.std_ratio_entry)
-            if self.neighbour_amount_entry.get() and self.std_ratio_entry.get():
-                pcd = remove_noise_statistical(
-                    pcd,
-                    nb_neighbors=int(self.neighbour_amount_entry.get()),
-                    std_ratio=float(self.std_ratio_entry.get()),
-                    show_removed_points=self.show_removed_points_var.get()
-                )
-            amount_removed = len(self.resized_point_cloud_data.points) - len(pcd.points)
-            self.processed_pcd = pcd
-            self.preprocessing_result_label.configure(
-                text=f"{amount_removed:n} punten verwijderd, {len(pcd.points):n} punten over.",
-                bootstyle="success"
+
+            processed_pcd = remove_noise_statistical(
+                pcd,
+                nb_neighbors=nb_neighbors,
+                std_ratio=std_ratio,
+                show_removed_points=show_removed_points
             )
-            self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
-            self.update_view_pointcloud(pcd)
-            self._update_sidebar_step(3, COMPLETE)
-            self.enable_heightmap_section()
-            self.root.config(cursor="")
-            self._stop_spinner(f"Voorbewerking gereed. {amount_removed:n} punten verwijderd, {len(pcd.points):n} punten over.", success=True)  # noqa: E501
+
+            amount_removed = len(pcd.points) - len(processed_pcd.points)
+
+            self.root.after(0, self._preprocessing_success, processed_pcd, amount_removed)
+
         except Exception as e:
-            self.preprocessing_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
-            self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
-            self._update_sidebar_step(3, ERROR)
-            self.root.config(cursor="")
-            self._stop_spinner("Fout")
+            self.root.after(0, self._preprocessing_error, str(e))
+
+    def _preprocessing_success(self, processed_pcd, amount_removed):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
+        self.processed_pcd = processed_pcd
+
+        self.preprocessing_result_label.configure(
+            text=f"{amount_removed:n} punten verwijderd, {len(processed_pcd.points):n} punten over.",
+            bootstyle="success"
+        )
+        self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
+
+        self.update_view_pointcloud(processed_pcd)
+
+        self._update_sidebar_step(3, COMPLETE)
+        self.enable_heightmap_section()
+        self.root.config(cursor="")
+
+        msg = f"Voorbewerking gereed. {amount_removed:n} punten verwijderd, {len(processed_pcd.points):n} punten over."
+        self._stop_spinner(msg, success=True)
+
+    def _preprocessing_error(self, error_msg):
+        self.preprocessing_result_label.configure(text=f"Fout: {error_msg}", bootstyle="danger")
+        self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
+        self._update_sidebar_step(3, ERROR)
+        self.root.config(cursor="")
+        self._stop_spinner("Fout")
 
     def heightmap_step(self):
         self.lineset_preview = None
