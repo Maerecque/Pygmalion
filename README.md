@@ -1,4 +1,4 @@
-[![Python 3.7.9 - 3.12.10](https://img.shields.io/badge/python-3.7.9%20--%203.12.10-blue.svg)](https://www.python.org/downloads/) ![version](https://img.shields.io/badge/version-1.0.3-g.svg) [![Platform: Windows](https://img.shields.io/badge/platform-windows-lightgrey)](https://www.microsoft.com/windows)<br>
+[![Python 3.7.9 - 3.12.10](https://img.shields.io/badge/python-3.7.9%20--%203.12.10-blue.svg)](https://www.python.org/downloads/) ![version](https://img.shields.io/badge/version-1.1.2-g.svg) [![Platform: Windows](https://img.shields.io/badge/platform-windows-lightgrey)](https://www.microsoft.com/windows)<br>
 [![Tests](https://github.com/Maerecque/Pygmalion/actions/workflows/ci.yml/badge.svg?label=Tests)](https://github.com/Maerecque/Pygmalion/actions/workflows/ci.yml) [![flake8](https://img.shields.io/badge/code%20style-flake8-blue)](https://flake8.pycqa.org/) [![mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](https://mypy.readthedocs.io/) [![License: CC BY-NC-SA](https://img.shields.io/badge/License-CC%20BY--NC--SA-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 <p>
   <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" height="30" alt="CC">
@@ -12,10 +12,10 @@ Pygmalion is a point cloud processing application developed for the Association 
 
 This standardized output is intended to support future urban planning, inspection, and maintenance workflows for municipal infrastructure.
 
-This application uses LAS/LAZ files as input and process them through various point cloud manipulation techniques such as downsampling, noise removal, plane extraction, repairing and transformation. The processed point cloud data can then be exported in a standardized format for further use.
+This application uses LAS/LAZ/E57 files as input and process them through various point cloud manipulation techniques such as downsampling, noise removal, plane extraction, repairing and transformation. The processed point cloud data can then be exported in a standardized format for further use.
 
 ## Key Features
-- Input support for LAS/LAZ point cloud formats
+- Input support for LAS/LAZ/E57 point cloud formats
 - Point cloud processing operations, including:
   - Downsampling
   - Noise removal
@@ -77,7 +77,7 @@ The script requires the following software and libraries:
    ```bash
    python main.py
    ```
-3. Select an LAS or LAZ file when prompted.
+3. Select an LAS, LAZ, or E57 file when prompted.
 4. The application will execute a sequence of point cloud processing steps.
 5. Intermediate results can optionally be visualized using an external viewer.
 ---

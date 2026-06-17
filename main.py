@@ -5,6 +5,7 @@ import numpy as np
 import os
 from random import randint as KernelMan
 import sys
+import re
 import threading
 import time
 import tkinter as tk
@@ -28,6 +29,22 @@ def resource_path(relative_path):
     return os.path.join(base, relative_path)
 
 
+def get_application_version():
+    """Read the application version from the version_info.txt file."""
+    version_file_path = resource_path(os.path.join("Source", "support_files", "version_info.txt"))
+    try:
+        if not os.path.exists(version_file_path):
+            return "Unknown"
+        with open(version_file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            # Zoek naar StringStruct('FileVersion', 'X.X.X')
+            match = re.search(r"StringStruct\(\s*'FileVersion'\s*,\s*'([^']+)'\s*\)", content)
+            if match:
+                return match.group(1)
+    except Exception:
+        return "Unknown"
+
+
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 
@@ -36,6 +53,7 @@ from Source.boundaryScript import expand_boundary
 from Source.fileHandler import (  # noqa: F401
     get_file_path,
     readout_LAS_file,
+    readout_e57_file,
     get_save_file_path
 )
 from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull
@@ -96,6 +114,7 @@ PENDING  = "pending"   # noqa: E221
 ACTIVE   = "active"    # noqa: E221
 COMPLETE = "complete"  # noqa: E221
 ERROR    = "error"     # noqa: E221
+OPTIONAL = "info"  # noqa: E221
 
 
 # ── Tooltip ───────────────────────────────────────────────────────────────────
@@ -131,7 +150,7 @@ class Tooltip:
     def schedule_show(self):
         self.cancel_timer()
         try:
-            self.timer_id = self.widget.after(1500, self.show_tooltip)
+            self.timer_id = self.widget.after(500, self.show_tooltip)
         except Exception:
             pass
 
@@ -225,7 +244,8 @@ class Tooltip:
 class App:
     def __init__(self, root: ttk.Window, point_cloud_data=None, point_cloud_path=None):
         self.root = root
-        self.root.title("Pygmalion CityJSON Generator")
+        current_version = get_application_version()
+        self.root.title(f"Pygmalion - v{current_version}")
         self.root.resizable(True, True)
         self.root.minsize(860, 645)
 
@@ -279,6 +299,9 @@ class App:
         # Build UI
         self._build_ui()
 
+        # Setup button cursors
+        self._setup_button_cursors()
+
         # Auto-size window to fit content, then center on screen
         self.root.update_idletasks()
         req_w = self.root.winfo_reqwidth()
@@ -305,9 +328,6 @@ class App:
         # Periodic internal validation
         self._schedule_integrity_check()
 
-        # Periodic tooltip reset
-        self._schedule_tooltip_reset()
-
     # ── UI builders ──────────────────────────────────────────────────────────
 
     def _build_ui(self):
@@ -317,6 +337,19 @@ class App:
         self._build_header()
         self._build_body()
         self._build_status_bar()
+
+    def _setup_button_cursors(self):
+        def on_btn_enter(event):
+            try:
+                btn = event.widget
+                if str(btn.cget("state")) == "disabled":
+                    btn.configure(cursor="arrow")
+                else:
+                    btn.configure(cursor="hand2")
+            except Exception:
+                pass
+
+        self.root.bind_class("TButton", "<Enter>", on_btn_enter, add="+")
 
     def _build_header(self):
         hdr = ttk.Frame(self.root, padding=(12, 8), bootstyle="dark")
@@ -367,7 +400,7 @@ class App:
         self._build_content(body)
 
     def _build_sidebar(self, parent):
-        sidebar_outer = ttk.Frame(parent, bootstyle="dark", width=210)
+        sidebar_outer = ttk.Frame(parent, bootstyle="dark", width=275)
         sidebar_outer.grid(row=0, column=0, sticky="ns")
         sidebar_outer.pack_propagate(False)
         sidebar_outer.grid_propagate(False)
@@ -468,19 +501,55 @@ class App:
         )
         icon_lbl.pack(side="right")
 
-        # Click to navigate
+        # Local function for Hover ON (changes styles to indicate hover)
+        def on_enter(e):
+            # retrieve current cursor style based on step state; only allow pointer if actionable
+            cursor_style = "hand2"
+            state = self._step_states[step_num - 1]
+            if state not in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+                cursor_style = "arrow"
+            frame.configure(bootstyle="secondary", cursor=cursor_style)
+            for lbl in (num_lbl, name_lbl, icon_lbl):
+                lbl.configure(bootstyle="inverse-secondary", cursor=cursor_style)
+
+        # Local function for Hover OFF (restores the correct styles based on the status)
+        def on_leave(e):
+            state = self._step_states[step_num - 1]
+
+            # Determine the frame color (Note: change "info" to "secondary" if it better matches _update_sidebar_step)
+            f_style = {
+                PENDING: "dark",
+                ACTIVE: "primary",
+                COMPLETE: "success",
+                ERROR: "danger",
+                OPTIONAL: "info"
+            }.get(state, "dark")
+
+            # Determine the text/label color
+            l_style = {
+                PENDING: "inverse-dark",
+                ACTIVE: "inverse-primary",
+                COMPLETE: "inverse-success",
+                ERROR: "inverse-danger",
+                OPTIONAL: "inverse-info"
+            }.get(state, "inverse-dark")
+
+            frame.configure(bootstyle=f_style)
+            for lbl in (num_lbl, name_lbl, icon_lbl):
+                lbl.configure(bootstyle=l_style)
+
+        # Click navigation and hover functionality binding to all widgets
         for widget in (frame, num_lbl, name_lbl, icon_lbl):
+            widget.configure(cursor="hand2")
             widget.bind("<Button-1>", lambda e, n=step_num: self._sidebar_click(n))
-            widget.bind("<Enter>", lambda e, f=frame: f.configure(bootstyle="secondary"))
-            widget.bind("<Leave>", lambda e, f=frame, n=step_num: f.configure(
-                bootstyle="primary" if self._step_states[n - 1] == ACTIVE else "dark"
-            ))
+            widget.bind("<Enter>", on_enter)
+            widget.bind("<Leave>", on_leave)
 
         return {"frame": frame, "num_lbl": num_lbl, "name_lbl": name_lbl, "icon_lbl": icon_lbl}
 
     def _sidebar_click(self, step_num: int):
         state = self._step_states[step_num - 1]
-        if state in (ACTIVE, COMPLETE, ERROR):
+        if state in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.show_step(step_num)
 
     def _build_content(self, parent):
@@ -502,7 +571,7 @@ class App:
         inner = ttk.Frame(f)
         inner.grid(row=0, column=0)
 
-        ttk.Label(inner, text="Pygmalion CityJSON Generator",
+        ttk.Label(inner, text="Bestandsselectie",
                   font=("Segoe UI", 18, "bold")).pack(pady=(0, 8))
         ttk.Label(inner,
                   text="Selecteer een puntenwolkbestand via stap 1 om te beginnen.",
@@ -626,7 +695,7 @@ class App:
     def _build_step_1_panel(self):
         card = self._step_card(1, "Bestand selecteren")
 
-        ttk.Label(card, text="Selecteer een .las of .laz puntenwolkbestand.").grid(
+        ttk.Label(card, text="Selecteer een .las, .laz of .e57 puntenwolkbestand.").grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 10)
         )
 
@@ -635,7 +704,7 @@ class App:
             bootstyle="primary", command=self.select_file, width=32
         )
         self.file_select_button.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 8))
-        self.add_tooltip(self.file_select_button, "Selecteer een .las of .laz puntenwolkbestand om te beginnen.")
+        self.add_tooltip(self.file_select_button, "Selecteer een .las, .laz of .e57 puntenwolkbestand om te beginnen.")
 
         self.file_label = ttk.Label(card, text="Geen bestand geselecteerd",
                                     bootstyle="secondary", wraplength=550, justify="left")
@@ -659,14 +728,17 @@ class App:
     # ── Step 2 — Puntdichtheid ───────────────────────────────────────────────
     def _build_step_2_panel(self):
         card = self._step_card(2, "Puntdichtheid aanpassen")
-        self._field(card, 0, "Punten per cm²", "points_per_cm_entry",
-                    (self.validate_flt, '%P'),
-                    "Het gewenste aantal punten per cm² in de puntenwolk.")
-        self._action_btn(card, "Pas puntdichtheid aan", "point_density_button",
-                         self.start_alter_point_density_thread,
-                         tooltip="Pas de dichtheid van de puntenwolk aan.")
+        self._field(
+            card, 0, "Punten per cm²", "points_per_cm_entry", (self.validate_flt, '%P'),
+            "Het gewenste aantal punten per cm² in de puntenwolk."
+        )
+        self._action_btn(
+            card, "Pas puntdichtheid aan", "point_density_button",
+            self.start_alter_point_density_thread,
+            tooltip="Pas de dichtheid van de puntenwolk aan."
+        )
         self._result_label(card, "point_density_result_label")
-        if self._step_states[1] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[1] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.points_per_cm_entry.configure(state="normal")
             self.point_density_button.configure(state="normal")
             self._load_preset_into("points_per_cm_entry", "points_per_cm")
@@ -674,12 +746,14 @@ class App:
     # ── Step 3 — Ruis verwijderen ────────────────────────────────────────────
     def _build_step_3_panel(self):
         card = self._step_card(3, "Ruis verwijderen")
-        self._field(card, 0, "Aantal buren", "neighbour_amount_entry",
-                    (self.validate_int, '%P'),
-                    "Aantal naburige punten voor ruisbeoordeling.")
-        self._field(card, 1, "Std ratio", "std_ratio_entry",
-                    (self.validate_flt, '%P'),
-                    "Standaarddeviatieverhouding voor ruisidentificatie.")
+        self._field(
+            card, 0, "Aantal buren", "neighbour_amount_entry", (self.validate_int, '%P'),
+            "Aantal naburige punten voor ruisbeoordeling. \n Hoe meer buren, hoe grondiger de beoordeling, maar ook hoe langer het proces duurt."  # noqa: E501
+        )
+        self._field(
+            card, 1, "Std ratio", "std_ratio_entry", (self.validate_flt, '%P'),
+            "Standaarddeviatieverhouding voor ruisidentificatie."
+        )
 
         self.show_removed_points_var = tk.BooleanVar()
         self.show_removed_points_checkbox = ttk.Checkbutton(
@@ -695,7 +769,7 @@ class App:
                          self.start_preprocessing_thread,
                          tooltip="Verwijder ruis uit de puntenwolk.")
         self._result_label(card, "preprocessing_result_label")
-        if self._step_states[2] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[2] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.neighbour_amount_entry.configure(state="normal")
             self.std_ratio_entry.configure(state="normal")
             self.show_removed_points_checkbox.configure(state="normal")
@@ -730,11 +804,17 @@ class App:
     def _build_step_5_panel(self):
         card = self._step_card(5, "Vloergrens detectie")
         self._field(card, 0, "Alpha waarde", "floor_alpha_value_entry",
-                    (self.validate_flt, '%P'), "Alpha-waarde voor vloergrensdetectie.")
+                    (self.validate_flt, '%P'),
+                    "Alpha-waarde voor vloergrensdetectie. \n Lagere waarden resulteren in een strakkere, meer gedetailleerde grens, \n terwijl hogere waarden een lossere, meer gegeneraliseerde grens opleveren."  # noqa: E501
+                    )
         self._field(card, 1, "Driehoekgrootte", "floor_triangle_size_entry",
-                    (self.validate_flt, '%P'), "Grootte van driehoeken voor vloergrensdetectie.")
+                    (self.validate_flt, '%P'),
+                    "Grootte van driehoeken voor vloergrensdetectie. \n Deze driehoeken worden gebruikt in het Delaunay-triangulatieproces om de vloergrens te bepalen. \n Kleinere waarden kunnen leiden tot een meer gedetailleerde grens, maar kunnen ook meer ruis veroorzaken, \n terwijl grotere waarden een gladdere grens opleveren, maar mogelijk minder nauwkeurig zijn."  # noqa: E501
+                    )
         self._field(card, 2, "Afstandsdrempel", "corner_distance_threshold_entry",
-                    (self.validate_flt, '%P'), "Afstandsdrempel voor hoekidentificatie.")
+                    (self.validate_flt, '%P'),
+                    "Afstandsdrempel voor hoekidentificatie. \n Deze waarde wordt gebruikt om te bepalen of een punt als een hoek van de vloergrens wordt beschouwd op basis van de afstand tot aangrenzende punten. \n Kleinere waarden resulteren in striktere hoekdetectie, terwijl grotere waarden meer punten als hoeken kunnen classificeren, \n wat kan leiden tot een meer hoekige vloergrens."  # noqa: E501
+                    )
 
         self._action_btn(card, "Detecteer vloergrens", "floor_detection_button",
                          self.start_floor_detection_thread,
@@ -747,8 +827,10 @@ class App:
             row=11, column=0, sticky="w", pady=5, padx=(0, 12))
         self.expansion_value_entry = ttk.Entry(card, width=18, state="disabled")
         self.expansion_value_entry.grid(row=11, column=1, sticky="ew", pady=5)
-        self.add_tooltip(self.expansion_value_entry,
-                         "Waarde in cm waarmee de vloergrens wordt vergroot.")
+        self.add_tooltip(
+            self.expansion_value_entry,
+            "Waarde in cm waarmee de vloergrens wordt vergroot. \n Let op na deze functie werkt de rest van de pipeline mogelijk niet correct vanwege de gewijzigde geometrie, \n gebruik alleen als je specifiek een vergrote vloergrens nodig hebt."  # noqa: E501
+        )
 
         self.floor_expansion_button = ttk.Button(
             card, text="Vergroot vloergrens",
@@ -780,7 +862,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.floor_detection_result_label.grid(row=15, column=0, columnspan=2, sticky="w", pady=(8, 0))
-        if self._step_states[4] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[4] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.floor_detection_button.configure(state="normal")
             self.floor_alpha_value_entry.configure(state="normal")
             self.floor_triangle_size_entry.configure(state="normal")
@@ -820,7 +902,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.roof_extraction_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[7] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[7] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.roof_extraction_button.configure(state="normal")
             self.slice_height_entry.configure(state="normal")
             self._load_preset_into("slice_height_entry", "slice_height")
@@ -842,7 +924,7 @@ class App:
                          self.start_roof_division_thread,
                          tooltip="Verdeel het dak in lagen.")
         self._result_label(card, "roof_division_result_label", "Dak niet verdeeld.")
-        if self._step_states[8] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[8] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.roof_division_button.configure(state="normal")
             self.roof_layers_entry.configure(state="normal")
             self.roof_layer_fatness_entry.configure(state="normal")
@@ -878,7 +960,7 @@ class App:
                          self.start_wall_division_thread,
                          tooltip="Verdeel de muren in lagen.")
         self._result_label(card, "wall_division_result_label", "Muren niet verdeeld.")
-        if self._step_states[10] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[10] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.wall_division_button.configure(state="normal")
             self.wall_layer_amount_entry.configure(state="normal")
             self._load_preset_into("wall_layer_amount_entry", "wall_layer_amount")
@@ -894,7 +976,7 @@ class App:
                          self.start_pcd_to_lineset_thread,
                          tooltip="Converteer de puntenwolk naar een Lineset.")
         self._result_label(card, "pcd_to_lineset_result_label", "Lineset niet gemaakt.")
-        if self._step_states[11] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[11] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.pcd_to_lineset_button.configure(state="normal")
             self.xy_tolerance_entry.configure(state="normal")
             self.max_line_length_entry.configure(state="normal")
@@ -915,7 +997,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.lineset_to_mesh_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[12] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[12] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.contour_buffer_entry.configure(state="normal")
             self.lineset_to_mesh_button.configure(state="normal")
             self._load_preset_into("contour_buffer_entry", "contour_buffer")
@@ -934,7 +1016,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.repair_mesh_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[13] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[13] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.repair_mesh_button.configure(state="normal")
 
     # ── Step 15 — CityJSON conversie ──────────────────────────────────────────
@@ -951,7 +1033,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.cityjson_conversion_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[14] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[14] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.cityjson_conversion_button.configure(state="normal")
 
     # ── Sidebar state management ─────────────────────────────────────────────
@@ -960,11 +1042,10 @@ class App:
         """Update the visual state of sidebar step row (1-based)."""
         self._step_states[step_num - 1] = state
         row = self._step_rows[step_num - 1]
-        icons = {PENDING: "○", ACTIVE: "●", COMPLETE: "✓", ERROR: "✗"}
+        icons = {PENDING: "○", ACTIVE: "●", COMPLETE: "✓", ERROR: "✗", OPTIONAL: "⨀"}
         styles = {PENDING: "inverse-dark", ACTIVE: "inverse-primary",
-                  COMPLETE: "inverse-success", ERROR: "inverse-danger"}
-        frame_styles = {PENDING: "dark", ACTIVE: "primary", COMPLETE: "dark", ERROR: "dark"}
-
+                  COMPLETE: "inverse-success", ERROR: "inverse-danger", OPTIONAL: "inverse-info"}
+        frame_styles = {PENDING: "dark", ACTIVE: "primary", COMPLETE: "success", ERROR: "danger", OPTIONAL: "info"}
         icon = icons.get(state, "○")
         style = styles.get(state, "inverse-dark")
 
@@ -1052,7 +1133,7 @@ class App:
             win.transient(self.root)
 
             status_msg = (
-                f"C:\\>{chr(sum(range(ord(min(str(not()))))))}"
+                f"C:\\>{chr(sum(range(ord(min(str(not()))))))}"  # noqa: E275
             )
 
             label = tk.Label(
@@ -1107,24 +1188,13 @@ class App:
             self.file_select_button.configure(text="Bestand laden...", state="disabled")
             self._start_spinner("Bestand laden...")
 
-            file_path = get_file_path("Puntenwolk bestanden", ["*.las", "*.laz"], False)
+            file_path = get_file_path("Puntenwolk bestanden", ["*.las", "*.laz", "*.e57"], False)
 
             if file_path:
                 self.point_cloud_path = file_path
-                self.point_cloud_data = readout_LAS_file(file_path, False)
+                self.root.config(cursor="watch")
 
-                self.file_select_button.configure(text="📂  Bestand wijzigen", state="normal")
-                self.file_label.configure(
-                    text=f"Geselecteerd: {os.path.basename(file_path)}",
-                    bootstyle="default"
-                )
-                self.point_amount_label.configure(
-                    text=f"Punten: {len(self.point_cloud_data.points):n}"
-                )
-                self._stop_spinner("Bestand geladen", success=True)
-                self._update_sidebar_step(1, COMPLETE)
-                self.enable_point_density_section()
-                self.enable_view_pointcloud(self.point_cloud_data)
+                threading.Thread(target=self._select_file_worker, args=(file_path,), daemon=True).start()
             else:
                 self.show_message("Info", "Bestand selectie geannuleerd.", "info")
                 self.file_select_button.configure(text="📂  Selecteer puntenwolkbestand", state="normal")
@@ -1132,20 +1202,56 @@ class App:
                 self.point_amount_label.configure(text="")
                 self._stop_spinner("Gereed")
         except Exception as e:
+            self._handle_select_file_error(e, None)
+
+    def _select_file_worker(self, file_path):
+        """Runs entirely in a background thread to parse heavy point clouds without blocking the GUI loop."""
+        try:
+            if file_path.lower().endswith('.e57'):
+                self.point_cloud_data = readout_e57_file(file_path)
+                self.show_message(
+                    title="Opmerking",
+                    message="e57-bestandsfunctionaliteit is vrij nieuw en kan onbetrouwbaar zijn. Controleer de resultaten zorgvuldig.\nGraag feedback geven bij eventuele problemen. Bij voorbaat dank!",  # noqa: E501
+                    message_type="warning"
+                )
+            else:
+                self.point_cloud_data = readout_LAS_file(file_path, False)
+
             if hasattr(self, 'file_select_button') and self.file_select_button.winfo_exists():
-                self.file_select_button.configure(text="📂  Selecteer puntenwolkbestand", state="normal")
+                self.file_select_button.configure(text="📂  Bestand wijzigen", state="normal")
+            if hasattr(self, 'file_label') and self.file_label.winfo_exists():
+                self.file_label.configure(
+                    text=f"Geselecteerd: {os.path.basename(file_path)}",
+                    bootstyle="default"
+                )
             if hasattr(self, 'point_amount_label') and self.point_amount_label.winfo_exists():
-                self.point_amount_label.configure(text="")
-            self._stop_spinner("Fout bij laden")
-            self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
-            try:
-                if hasattr(self, 'file_label') and self.file_label.winfo_exists():
-                    self.file_label.configure(
-                        text=f"Fout bij laden: {os.path.basename(file_path)}",
-                        bootstyle="danger"
-                    )
-            except Exception:
-                pass
+                self.point_amount_label.configure(
+                    text=f"Punten: {len(self.point_cloud_data.points):n}"
+                )
+            self._stop_spinner("Bestand geladen", success=True)
+            self._update_sidebar_step(1, COMPLETE)
+            self.enable_point_density_section()
+            self.enable_view_pointcloud(self.point_cloud_data)
+            self.root.config(cursor="")
+        except Exception as e:
+            self._handle_select_file_error(e, file_path)
+
+    def _handle_select_file_error(self, e, file_path):
+        if hasattr(self, 'file_select_button') and self.file_select_button.winfo_exists():
+            self.file_select_button.configure(text="📂  Selecteer puntenwolkbestand", state="normal")
+        if hasattr(self, 'point_amount_label') and self.point_amount_label.winfo_exists():
+            self.point_amount_label.configure(text="")
+        self._stop_spinner("Fout bij laden")
+        self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
+        self.root.config(cursor="")
+        try:
+            if file_path and hasattr(self, 'file_label') and self.file_label.winfo_exists():
+                self.file_label.configure(
+                    text=f"Fout bij laden: {os.path.basename(file_path)}",
+                    bootstyle="danger"
+                )
+        except Exception:
+            pass
 
     def load_point_cloud_data(self):
         if self.point_cloud_path and os.path.exists(self.point_cloud_path):
@@ -1160,19 +1266,49 @@ class App:
         if not self.point_cloud_data:
             self.show_message("Waarschuwing", "Selecteer eerst een puntenwolkbestand.", "warning")
             return
+
+        try:
+            self.validate_empty_field(self.points_per_cm_entry)
+            points_per_cm = float(self.points_per_cm_entry.get())
+        except Exception as e:
+            self.point_density_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
+            return
+
         self.root.config(cursor="watch")
         self._start_spinner("Puntdichtheid aanpassen...")
         self.disable_section(self.point_density_button, "Bezig...")
-        threading.Thread(target=self.alter_point_density_step).start()
+        self.root.update()
+        self.root.after(100, lambda: threading.Thread(
+            target=self.alter_point_density_step,
+            args=(points_per_cm,),
+            daemon=True
+        ).start())
 
     def start_preprocessing_thread(self):
         if not self.resized_point_cloud_data:
             self.show_message("Waarschuwing", "Voltooi eerst de stap puntdichtheid.", "warning")
             return
+
+        try:
+            self.validate_empty_field(self.neighbour_amount_entry)
+            self.validate_empty_field(self.std_ratio_entry)
+        except Exception as e:
+            self.preprocessing_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
+            return
+
         self.root.config(cursor="watch")
         self._start_spinner("Ruis verwijderen...")
         self.disable_section(self.preprocessing_button, "Bezig...")
-        threading.Thread(target=self.preprocessing_step).start()
+        self.root.update()
+        self.root.after(100, lambda: threading.Thread(
+            target=self.preprocessing_step,
+            args=(
+                int(self.neighbour_amount_entry.get()),
+                float(self.std_ratio_entry.get()),
+                bool(self.show_removed_points_var.get())
+            ),
+            daemon=True
+        ).start())
 
     def start_heightmap_thread(self):
         self.root.config(cursor="watch")
@@ -1260,65 +1396,88 @@ class App:
 
     # ── Processing steps (unchanged logic) ───────────────────────────────────
 
-    def alter_point_density_step(self):
-        self.lineset_preview = None
-        self.mesh_preview = None
+    def alter_point_density_step(self, points_per_cm):
         try:
-            self.validate_empty_field(self.points_per_cm_entry)
             resized_pcd = alter_point_density(
                 self.point_cloud_data,
-                points_per_cm=float(self.points_per_cm_entry.get())
+                points_per_cm=points_per_cm
             )
-            self.point_density_result_label.configure(
-                text=f"Puntdichtheid aangepast van {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten.",
-                bootstyle="success"
-            )
-            self.resized_point_cloud_data = resized_pcd
-            self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
-            self.update_view_pointcloud(resized_pcd)
-            self._update_sidebar_step(2, COMPLETE)
-            self.enable_preprocessing_section()
-            self.root.config(cursor="")
-            self._stop_spinner("Puntdichtheid aangepast", success=True)
-        except Exception as e:
-            self.point_density_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
-            self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
-            self._update_sidebar_step(2, ERROR)
-            self.root.config(cursor="")
-            self._stop_spinner("Fout")
+            self.root.after(0, self._alter_point_density_success, resized_pcd)
 
-    def preprocessing_step(self):
+        except Exception as e:
+            self.root.after(0, self._alter_point_density_error, str(e))
+
+    def _alter_point_density_success(self, resized_pcd):
         self.lineset_preview = None
         self.mesh_preview = None
+
+        self.point_density_result_label.configure(
+            text=f"Puntdichtheid aangepast van {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten.",
+            bootstyle="success"
+        )
+        self.resized_point_cloud_data = resized_pcd
+        self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
+
+        self.update_view_pointcloud(resized_pcd)
+
+        self._update_sidebar_step(2, COMPLETE)
+        self.enable_preprocessing_section()
+        self.root.config(cursor="")
+        msg = f"Puntdichtheid succesvol aangepast: {len(self.point_cloud_data.points):n} → {len(resized_pcd.points):n} punten."
+        self._stop_spinner(msg)
+
+    def _alter_point_density_error(self, error_msg):
+        self.point_density_result_label.configure(text=f"Fout: {error_msg}", bootstyle="danger")
+        self.point_density_button.configure(state="normal", text="Pas puntdichtheid aan")
+        self._update_sidebar_step(2, ERROR)
+        self.root.config(cursor="")
+        self._stop_spinner("Fout")
+
+    def preprocessing_step(self, nb_neighbors, std_ratio, show_removed_points):
         try:
             pcd = self.resized_point_cloud_data
-            self.validate_empty_field(self.neighbour_amount_entry)
-            self.validate_empty_field(self.std_ratio_entry)
-            if self.neighbour_amount_entry.get() and self.std_ratio_entry.get():
-                pcd = remove_noise_statistical(
-                    pcd,
-                    nb_neighbors=int(self.neighbour_amount_entry.get()),
-                    std_ratio=float(self.std_ratio_entry.get()),
-                    show_removed_points=self.show_removed_points_var.get()
-                )
-            amount_removed = len(self.resized_point_cloud_data.points) - len(pcd.points)
-            self.processed_pcd = pcd
-            self.preprocessing_result_label.configure(
-                text=f"{amount_removed} punten verwijderd, {len(pcd.points):n} punten over.",
-                bootstyle="success"
+
+            processed_pcd = remove_noise_statistical(
+                pcd,
+                nb_neighbors=nb_neighbors,
+                std_ratio=std_ratio,
+                show_removed_points=show_removed_points
             )
-            self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
-            self.update_view_pointcloud(pcd)
-            self._update_sidebar_step(3, COMPLETE)
-            self.enable_heightmap_section()
-            self.root.config(cursor="")
-            self._stop_spinner("Voorbewerking gereed", success=True)
+
+            amount_removed = len(pcd.points) - len(processed_pcd.points)
+
+            self.root.after(0, self._preprocessing_success, processed_pcd, amount_removed)
+
         except Exception as e:
-            self.preprocessing_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
-            self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
-            self._update_sidebar_step(3, ERROR)
-            self.root.config(cursor="")
-            self._stop_spinner("Fout")
+            self.root.after(0, self._preprocessing_error, str(e))
+
+    def _preprocessing_success(self, processed_pcd, amount_removed):
+        self.lineset_preview = None
+        self.mesh_preview = None
+
+        self.processed_pcd = processed_pcd
+
+        self.preprocessing_result_label.configure(
+            text=f"{amount_removed:n} punten verwijderd, {len(processed_pcd.points):n} punten over.",
+            bootstyle="success"
+        )
+        self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
+
+        self.update_view_pointcloud(processed_pcd)
+
+        self._update_sidebar_step(3, COMPLETE)
+        self.enable_heightmap_section()
+        self.root.config(cursor="")
+
+        msg = f"Voorbewerking gereed. {amount_removed:n} punten verwijderd, {len(processed_pcd.points):n} punten over."
+        self._stop_spinner(msg, success=True)
+
+    def _preprocessing_error(self, error_msg):
+        self.preprocessing_result_label.configure(text=f"Fout: {error_msg}", bootstyle="danger")
+        self.preprocessing_button.configure(state="normal", text="Start voorbewerking")
+        self._update_sidebar_step(3, ERROR)
+        self.root.config(cursor="")
+        self._stop_spinner("Fout")
 
     def heightmap_step(self):
         self.lineset_preview = None
@@ -1385,16 +1544,27 @@ class App:
     def floor_expansion_step(self):
         self.lineset_preview = None
         self.mesh_preview = None
+
+        # When this step is done the rest of the pipeline cannot continue.
+        # so we disable everything past it.
+        for i in range(8, 16):
+            self._update_sidebar_step(i, PENDING)
+
         try:
             self.validate_empty_field(self.expansion_value_entry)
+
+            if not hasattr(self, 'original_floor_corners') or self.original_floor_corners is None:
+                self.original_floor_corners = np.copy(self.floor_corners)
+
             expanded_pointcloud = expand_boundary(
-                create_point_cloud(self.floor_corners, color=[1, 0, 0]),
+                create_point_cloud(self.original_floor_corners, color=[1, 0, 0]),
                 expansion_size=float(self.expansion_value_entry.get()),
                 point_visualization=False
             )
             print(type(expanded_pointcloud))
-            self.floor_corners = None
+
             self.floor_corners = np.asarray(expanded_pointcloud.points)
+
             self.floor_detection_result_label.configure(
                 text="Vloergrens succesvol uitgebreid.", bootstyle="success"
             )
@@ -1426,6 +1596,10 @@ class App:
                 obj_type="Building",
                 lod="1.0"
             )
+
+            # update view with the floor lineset
+            self.update_view_pointcloud(floor_lineset)
+
             self.floor_detection_result_label.configure(
                 text="Vloer succesvol geconverteerd naar CityJSON.", bootstyle="success"
             )
@@ -1462,7 +1636,7 @@ class App:
             self._update_sidebar_step(8, COMPLETE)
             self.enable_roof_division_section()
             self.root.config(cursor="")
-            self._stop_spinner("Dak geëxtraheerd")
+            self._stop_spinner("Dak geëxtraheerd", success=True)
         except Exception as e:
             self.roof_extraction_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.roof_extraction_button.configure(state="normal", text="Extraheer dakpunten")
@@ -1488,6 +1662,13 @@ class App:
             self.roof_division_result_label.configure(
                 text=f"Dak verdeeld in {len(self.roof_layer_list)} lagen.", bootstyle="success"
             )
+
+            # Temporary pcd for visualization of roof layers
+            self.roof_layers_pcd_preview = o3d.geometry.PointCloud()
+            for layer in self.roof_layer_list:
+                self.roof_layers_pcd_preview = merge_pcds([self.roof_layers_pcd_preview, layer])
+            self.update_view_pointcloud(self.roof_layers_pcd_preview)
+
             self.roof_division_button.configure(state="normal", text="Verdeel dak")
             self._update_sidebar_step(9, COMPLETE)
             self.enable_wall_extraction_section()
@@ -1503,6 +1684,7 @@ class App:
     def wall_extraction_step(self):
         self.lineset_preview = None
         self.mesh_preview = None
+        self.roof_layers_pcd_preview = None
         try:
             self.validate_empty_field(self.wall_search_radius_entry)
             temp_wall_pcd_merged = merge_pcds([self.new_pcd_tuple[2], self.temp_wall_pcd])
@@ -1521,7 +1703,7 @@ class App:
             self._update_sidebar_step(10, COMPLETE)
             self.enable_wall_division_section()
             self.root.config(cursor="")
-            self._stop_spinner("Muren geëxtraheerd")
+            self._stop_spinner("Muren geëxtraheerd", success=True)
         except Exception as e:
             self.wall_extraction_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.wall_extraction_button.configure(state="normal", text="Extraheer muren")
@@ -1539,6 +1721,13 @@ class App:
             self.wall_division_result_label.configure(
                 text=f"Muren verdeeld in {len(self.wall_layer_list)} lagen.", bootstyle="success"
             )
+
+            # Temporary pcd for visualization of wall layers
+            self.wall_layers_pcd_preview = o3d.geometry.PointCloud()
+            for layer in self.wall_layer_list:
+                self.wall_layers_pcd_preview = merge_pcds([self.wall_layers_pcd_preview, layer])
+            self.update_view_pointcloud(self.wall_layers_pcd_preview)
+
             self.wall_division_button.configure(state="normal", text="Verdeel muren")
             self._update_sidebar_step(11, COMPLETE)
             self.enable_pcd_to_lineset_section()
@@ -1553,6 +1742,7 @@ class App:
 
     def pcd_to_lineset_step(self):
         self.mesh_preview = None
+        self.roof_layers_pcd_preview = None
         try:
             self.validate_empty_field(self.xy_tolerance_entry)
             self.validate_empty_field(self.max_line_length_entry)
@@ -1681,7 +1871,9 @@ class App:
     # ── Viewer ───────────────────────────────────────────────────────────────
 
     def view_pointcloud(self, pointcloud):
-        if self.lineset_preview is True and self.total_lineset is not None:
+        if isinstance(pointcloud, o3d.geometry.LineSet) or isinstance(pointcloud, o3d.geometry.TriangleMesh):
+            omalv(pointcloud)
+        elif self.lineset_preview is True and self.total_lineset is not None:
             omalv(self.total_lineset)
         elif self.mesh_preview is not None:
             omalv(self.mesh_preview)
@@ -1738,29 +1930,29 @@ class App:
 
     def enable_point_density_section(self):
         self._update_sidebar_step(2, ACTIVE)
-        self.show_step(2)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(2)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_preprocessing_section(self):
         self._update_sidebar_step(3, ACTIVE)
-        self.show_step(3)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(2)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_heightmap_section(self):
         self._update_sidebar_step(4, ACTIVE)
-        self.show_step(4)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(4)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_floor_detection_section(self):
         self._update_sidebar_step(5, ACTIVE)
-        self.show_step(5)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(5)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_floor_expansion_section(self):
-        self._update_sidebar_step(6, ACTIVE)
+        self._update_sidebar_step(6, OPTIONAL)
         # Step 6 shares step 5's panel; widgets are already displayed
         self.expansion_value_entry.configure(state="normal")
         self.floor_expansion_button.configure(state="normal")
         self._load_preset_into("expansion_value_entry", "expansion_value")
 
     def enable_floor_to_cityjson_section(self):
-        self._update_sidebar_step(7, ACTIVE)
+        self._update_sidebar_step(7, OPTIONAL)
         # Step 7 shares step 5's panel; widgets are already displayed
         self.floor_to_cityjson_button.configure(state="normal")
         self.max_line_length_entry.configure(state="normal")
@@ -1768,35 +1960,35 @@ class App:
 
     def enable_roof_extraction_section(self):
         self._update_sidebar_step(8, ACTIVE)
-        self.show_step(8)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(8)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_roof_division_section(self):
         self._update_sidebar_step(9, ACTIVE)
-        self.show_step(9)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(9)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_wall_extraction_section(self):
         self._update_sidebar_step(10, ACTIVE)
-        self.show_step(10)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(10)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_wall_division_section(self):
         self._update_sidebar_step(11, ACTIVE)
-        self.show_step(11)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(11)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_pcd_to_lineset_section(self):
         self._update_sidebar_step(12, ACTIVE)
-        self.show_step(12)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(12)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_lineset_to_mesh_section(self):
         self._update_sidebar_step(13, ACTIVE)
-        self.show_step(13)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(13)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_repair_mesh_section(self):
         self._update_sidebar_step(14, ACTIVE)
-        self.show_step(14)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(14)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_cityjson_conversion_section(self):
         self._update_sidebar_step(15, ACTIVE)
-        self.show_step(15)  # panel builder enables widgets since state is now ACTIVE
+        # self.show_step(15)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_view_pointcloud(self, pointcloud):
         self.view_button.configure(

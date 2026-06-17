@@ -11,6 +11,7 @@ from Source.fileHandler import (
     NoFileGivenError,
     NoSaveLocationGivenError,
     readout_LAS_file,
+    readout_e57_file,
     get_file_path,
     get_save_file_path,
     convert_ply_to_las,
@@ -375,3 +376,88 @@ class TestLoadAndPreprocessPointcloud:
              patch("Source.fileHandler.readout_LAS_file", return_value=expected):
             result = load_and_preprocess_pointcloud()
         assert result is expected
+
+
+# ── readout_e57_file ────────────────────────────────────────────
+
+class TestReadoutE57File:
+
+    def test_no_file_selected_raises_error(self):
+        """If file_path is empty or None, NoFileGivenError is raised."""
+        with pytest.raises(NoFileGivenError, match="No file was selected."):
+            readout_e57_file("")
+
+    @patch("os.path.exists", return_value=False)
+    def test_file_does_not_exist_raises_error(self, mock_exists):
+        """If the file path doesn't point to a real file, FileNotFoundError is raised."""
+        with pytest.raises(FileNotFoundError, match="does not exist"):
+            readout_e57_file("missing_scan.e57")
+
+    @patch("os.path.exists", return_value=True)
+    def test_invalid_extension_raises_error(self, mock_exists):
+        """If the file exists but isn't an .e57 file, FileFormatError is raised."""
+        with pytest.raises(
+            FileFormatError, match="The selected file is not in E57 format."
+        ):
+            readout_e57_file("scan.txt")
+
+    @patch("os.path.exists", return_value=True)
+    @patch("pye57.E57")
+    def test_missing_required_keys_raises_error(
+        self, mock_e57_class, mock_exists
+    ):
+        """If scan data is missing Cartesian coordinates, KeyError is raised."""
+        mock_e57_instance = MagicMock()
+        mock_e57_instance.get_scan_count.return_value = 1
+        # Intentionally missing 'cartesianZ'
+        mock_e57_instance.read_scan.return_value = {
+            "cartesianX": np.array([1.0]),
+            "cartesianY": np.array([2.0]),
+        }
+        mock_e57_class.return_value = mock_e57_instance
+
+        with pytest.raises(KeyError, match="missing required keys: cartesianZ"):
+            readout_e57_file("scan.e57")
+
+    @patch("os.path.exists", return_value=True)
+    @patch("pye57.E57")
+    def test_empty_point_cloud_arrays_raises_error(
+        self, mock_e57_class, mock_exists
+    ):
+        """If coordinates exist but contain 0 points, ValueError is raised."""
+        mock_e57_instance = MagicMock()
+        mock_e57_instance.get_scan_count.return_value = 1
+        mock_e57_instance.read_scan.return_value = {
+            "cartesianX": np.array([]),
+            "cartesianY": np.array([]),
+            "cartesianZ": np.array([]),
+        }
+        mock_e57_class.return_value = mock_e57_instance
+
+        with pytest.raises(ValueError, match="contains no point data"):
+            readout_e57_file("scan.e57")
+
+    @patch("os.path.exists", return_value=True)
+    @patch("pye57.E57")
+    def test_successful_conversion(self, mock_e57_class, mock_exists):
+        """If all checks pass, returns a valid open3d PointCloud object."""
+        import open3d as o3d
+        mock_e57_instance = MagicMock()
+        mock_e57_instance.get_scan_count.return_value = 1
+        mock_e57_instance.read_scan.return_value = {
+            "cartesianX": np.array([1.0, 4.0]),
+            "cartesianY": np.array([2.0, 5.0]),
+            "cartesianZ": np.array([3.0, 6.0]),
+        }
+        mock_e57_class.return_value = mock_e57_instance
+
+        # Run the target function
+        result = readout_e57_file("scan.e57")
+
+        # Assertions
+        assert isinstance(result, o3d.geometry.PointCloud)
+        assert len(result.points) == 2
+        # Check that coordinates were stacked correctly [[1, 2, 3], [4, 5, 6]]
+        np.testing.assert_array_equal(
+            np.asarray(result.points), [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+        )
