@@ -552,7 +552,7 @@ class App:
         inner = ttk.Frame(f)
         inner.grid(row=0, column=0)
 
-        ttk.Label(inner, text="Pygmalion CityJSON Generator",
+        ttk.Label(inner, text="Bestandsselectie",
                   font=("Segoe UI", 18, "bold")).pack(pady=(0, 8))
         ttk.Label(inner,
                   text="Selecteer een puntenwolkbestand via stap 1 om te beginnen.",
