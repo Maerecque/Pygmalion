@@ -1531,16 +1531,27 @@ class App:
     def floor_expansion_step(self):
         self.lineset_preview = None
         self.mesh_preview = None
+
+        # When this step is done the rest of the pipeline cannot continue.
+        # so we disable everything past it.
+        for i in range(8, 16):
+            self._update_sidebar_step(i, PENDING)
+
         try:
             self.validate_empty_field(self.expansion_value_entry)
+
+            if not hasattr(self, 'original_floor_corners') or self.original_floor_corners is None:
+                self.original_floor_corners = np.copy(self.floor_corners)
+
             expanded_pointcloud = expand_boundary(
-                create_point_cloud(self.floor_corners, color=[1, 0, 0]),
+                create_point_cloud(self.original_floor_corners, color=[1, 0, 0]),
                 expansion_size=float(self.expansion_value_entry.get()),
                 point_visualization=False
             )
             print(type(expanded_pointcloud))
-            self.floor_corners = None
+
             self.floor_corners = np.asarray(expanded_pointcloud.points)
+
             self.floor_detection_result_label.configure(
                 text="Vloergrens succesvol uitgebreid.", bootstyle="success"
             )
@@ -1572,6 +1583,10 @@ class App:
                 obj_type="Building",
                 lod="1.0"
             )
+
+            # update view with the floor lineset
+            self.update_view_pointcloud(floor_lineset)
+
             self.floor_detection_result_label.configure(
                 text="Vloer succesvol geconverteerd naar CityJSON.", bootstyle="success"
             )
@@ -1843,7 +1858,9 @@ class App:
     # ── Viewer ───────────────────────────────────────────────────────────────
 
     def view_pointcloud(self, pointcloud):
-        if self.lineset_preview is True and self.total_lineset is not None:
+        if isinstance(pointcloud, o3d.geometry.LineSet) or isinstance(pointcloud, o3d.geometry.TriangleMesh):
+            omalv(pointcloud)
+        elif self.lineset_preview is True and self.total_lineset is not None:
             omalv(self.total_lineset)
         elif self.mesh_preview is not None:
             omalv(self.mesh_preview)
