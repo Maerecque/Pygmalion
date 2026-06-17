@@ -5,6 +5,7 @@ import numpy as np
 import os
 from random import randint as KernelMan
 import sys
+import re
 import threading
 import time
 import tkinter as tk
@@ -26,6 +27,22 @@ def resource_path(relative_path):
     """Return the absolute path to a resource, compatible with PyInstaller's --onefile mode."""
     base = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
     return os.path.join(base, relative_path)
+
+
+def get_application_version():
+    """Read the application version from the version_info.txt file."""
+    version_file_path = resource_path(os.path.join("Source", "support_files", "version_info.txt"))
+    try:
+        if not os.path.exists(version_file_path):
+            return "Unknown"
+        with open(version_file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            # Zoek naar StringStruct('FileVersion', 'X.X.X')
+            match = re.search(r"StringStruct\(\s*'FileVersion'\s*,\s*'([^']+)'\s*\)", content)
+            if match:
+                return match.group(1)
+    except Exception:
+        return "Unknown"
 
 
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
@@ -227,7 +244,8 @@ class Tooltip:
 class App:
     def __init__(self, root: ttk.Window, point_cloud_data=None, point_cloud_path=None):
         self.root = root
-        self.root.title("Pygmalion CityJSON Generator")
+        current_version = get_application_version()
+        self.root.title(f"Pygmalion - v{current_version}")
         self.root.resizable(True, True)
         self.root.minsize(860, 645)
 
