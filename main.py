@@ -150,7 +150,7 @@ class Tooltip:
     def schedule_show(self):
         self.cancel_timer()
         try:
-            self.timer_id = self.widget.after(1500, self.show_tooltip)
+            self.timer_id = self.widget.after(500, self.show_tooltip)
         except Exception:
             pass
 
