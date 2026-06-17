@@ -299,6 +299,9 @@ class App:
         # Build UI
         self._build_ui()
 
+        # Setup button cursors
+        self._setup_button_cursors()
+
         # Auto-size window to fit content, then center on screen
         self.root.update_idletasks()
         req_w = self.root.winfo_reqwidth()
@@ -325,9 +328,6 @@ class App:
         # Periodic internal validation
         self._schedule_integrity_check()
 
-        # Periodic tooltip reset
-        self._schedule_tooltip_reset()
-
     # ── UI builders ──────────────────────────────────────────────────────────
 
     def _build_ui(self):
@@ -337,6 +337,19 @@ class App:
         self._build_header()
         self._build_body()
         self._build_status_bar()
+
+    def _setup_button_cursors(self):
+        def on_btn_enter(event):
+            try:
+                btn = event.widget
+                if str(btn.cget("state")) == "disabled":
+                    btn.configure(cursor="arrow")
+                else:
+                    btn.configure(cursor="hand2")
+            except Exception:
+                pass
+
+        self.root.bind_class("TButton", "<Enter>", on_btn_enter, add="+")
 
     def _build_header(self):
         hdr = ttk.Frame(self.root, padding=(12, 8), bootstyle="dark")
@@ -490,9 +503,14 @@ class App:
 
         # Local function for Hover ON (changes styles to indicate hover)
         def on_enter(e):
-            frame.configure(bootstyle="secondary")
+            # retrieve current cursor style based on step state; only allow pointer if actionable
+            cursor_style = "hand2"
+            state = self._step_states[step_num - 1]
+            if state not in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+                cursor_style = "arrow"
+            frame.configure(bootstyle="secondary", cursor=cursor_style)
             for lbl in (num_lbl, name_lbl, icon_lbl):
-                lbl.configure(bootstyle="inverse-secondary")
+                lbl.configure(bootstyle="inverse-secondary", cursor=cursor_style)
 
         # Local function for Hover OFF (restores the correct styles based on the status)
         def on_leave(e):
@@ -522,6 +540,7 @@ class App:
 
         # Click navigation and hover functionality binding to all widgets
         for widget in (frame, num_lbl, name_lbl, icon_lbl):
+            widget.configure(cursor="hand2")
             widget.bind("<Button-1>", lambda e, n=step_num: self._sidebar_click(n))
             widget.bind("<Enter>", on_enter)
             widget.bind("<Leave>", on_leave)
