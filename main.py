@@ -97,6 +97,7 @@ PENDING  = "pending"   # noqa: E221
 ACTIVE   = "active"    # noqa: E221
 COMPLETE = "complete"  # noqa: E221
 ERROR    = "error"     # noqa: E221
+OPTIONAL = "info"  # noqa: E221
 
 
 # ── Tooltip ───────────────────────────────────────────────────────────────────
@@ -368,7 +369,7 @@ class App:
         self._build_content(body)
 
     def _build_sidebar(self, parent):
-        sidebar_outer = ttk.Frame(parent, bootstyle="dark", width=210)
+        sidebar_outer = ttk.Frame(parent, bootstyle="dark", width=275)
         sidebar_outer.grid(row=0, column=0, sticky="ns")
         sidebar_outer.pack_propagate(False)
         sidebar_outer.grid_propagate(False)
@@ -469,19 +470,49 @@ class App:
         )
         icon_lbl.pack(side="right")
 
-        # Click to navigate
+        # Local function for Hover ON (changes styles to indicate hover)
+        def on_enter(e):
+            frame.configure(bootstyle="secondary")
+            for lbl in (num_lbl, name_lbl, icon_lbl):
+                lbl.configure(bootstyle="inverse-secondary")
+
+        # Local function for Hover OFF (restores the correct styles based on the status)
+        def on_leave(e):
+            state = self._step_states[step_num - 1]
+
+            # Determine the frame color (Note: change "info" to "secondary" if it better matches _update_sidebar_step)
+            f_style = {
+                PENDING: "dark",
+                ACTIVE: "primary",
+                COMPLETE: "success",
+                ERROR: "danger",
+                OPTIONAL: "info"
+            }.get(state, "dark")
+
+            # Determine the text/label color
+            l_style = {
+                PENDING: "inverse-dark",
+                ACTIVE: "inverse-primary",
+                COMPLETE: "inverse-success",
+                ERROR: "inverse-danger",
+                OPTIONAL: "inverse-info"
+            }.get(state, "inverse-dark")
+
+            frame.configure(bootstyle=f_style)
+            for lbl in (num_lbl, name_lbl, icon_lbl):
+                lbl.configure(bootstyle=l_style)
+
+        # Click navigation and hover functionality binding to all widgets
         for widget in (frame, num_lbl, name_lbl, icon_lbl):
             widget.bind("<Button-1>", lambda e, n=step_num: self._sidebar_click(n))
-            widget.bind("<Enter>", lambda e, f=frame: f.configure(bootstyle="secondary"))
-            widget.bind("<Leave>", lambda e, f=frame, n=step_num: f.configure(
-                bootstyle="primary" if self._step_states[n - 1] == ACTIVE else "dark"
-            ))
+            widget.bind("<Enter>", on_enter)
+            widget.bind("<Leave>", on_leave)
 
         return {"frame": frame, "num_lbl": num_lbl, "name_lbl": name_lbl, "icon_lbl": icon_lbl}
 
     def _sidebar_click(self, step_num: int):
         state = self._step_states[step_num - 1]
-        if state in (ACTIVE, COMPLETE, ERROR):
+        if state in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.show_step(step_num)
 
     def _build_content(self, parent):
@@ -696,7 +727,7 @@ class App:
                          self.start_preprocessing_thread,
                          tooltip="Verwijder ruis uit de puntenwolk.")
         self._result_label(card, "preprocessing_result_label")
-        if self._step_states[2] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[2] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.neighbour_amount_entry.configure(state="normal")
             self.std_ratio_entry.configure(state="normal")
             self.show_removed_points_checkbox.configure(state="normal")
@@ -781,7 +812,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.floor_detection_result_label.grid(row=15, column=0, columnspan=2, sticky="w", pady=(8, 0))
-        if self._step_states[4] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[4] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.floor_detection_button.configure(state="normal")
             self.floor_alpha_value_entry.configure(state="normal")
             self.floor_triangle_size_entry.configure(state="normal")
@@ -821,7 +852,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.roof_extraction_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[7] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[7] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.roof_extraction_button.configure(state="normal")
             self.slice_height_entry.configure(state="normal")
             self._load_preset_into("slice_height_entry", "slice_height")
@@ -843,7 +874,7 @@ class App:
                          self.start_roof_division_thread,
                          tooltip="Verdeel het dak in lagen.")
         self._result_label(card, "roof_division_result_label", "Dak niet verdeeld.")
-        if self._step_states[8] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[8] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.roof_division_button.configure(state="normal")
             self.roof_layers_entry.configure(state="normal")
             self.roof_layer_fatness_entry.configure(state="normal")
@@ -879,7 +910,7 @@ class App:
                          self.start_wall_division_thread,
                          tooltip="Verdeel de muren in lagen.")
         self._result_label(card, "wall_division_result_label", "Muren niet verdeeld.")
-        if self._step_states[10] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[10] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.wall_division_button.configure(state="normal")
             self.wall_layer_amount_entry.configure(state="normal")
             self._load_preset_into("wall_layer_amount_entry", "wall_layer_amount")
@@ -895,7 +926,7 @@ class App:
                          self.start_pcd_to_lineset_thread,
                          tooltip="Converteer de puntenwolk naar een Lineset.")
         self._result_label(card, "pcd_to_lineset_result_label", "Lineset niet gemaakt.")
-        if self._step_states[11] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[11] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.pcd_to_lineset_button.configure(state="normal")
             self.xy_tolerance_entry.configure(state="normal")
             self.max_line_length_entry.configure(state="normal")
@@ -916,7 +947,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.lineset_to_mesh_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[12] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[12] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.contour_buffer_entry.configure(state="normal")
             self.lineset_to_mesh_button.configure(state="normal")
             self._load_preset_into("contour_buffer_entry", "contour_buffer")
@@ -935,7 +966,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.repair_mesh_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[13] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[13] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.repair_mesh_button.configure(state="normal")
 
     # ── Step 15 — CityJSON conversie ──────────────────────────────────────────
@@ -952,7 +983,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.cityjson_conversion_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[14] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[14] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.cityjson_conversion_button.configure(state="normal")
 
     # ── Sidebar state management ─────────────────────────────────────────────
@@ -961,11 +992,10 @@ class App:
         """Update the visual state of sidebar step row (1-based)."""
         self._step_states[step_num - 1] = state
         row = self._step_rows[step_num - 1]
-        icons = {PENDING: "○", ACTIVE: "●", COMPLETE: "✓", ERROR: "✗"}
+        icons = {PENDING: "○", ACTIVE: "●", COMPLETE: "✓", ERROR: "✗", OPTIONAL: "⨀"}
         styles = {PENDING: "inverse-dark", ACTIVE: "inverse-primary",
-                  COMPLETE: "inverse-success", ERROR: "inverse-danger"}
-        frame_styles = {PENDING: "dark", ACTIVE: "primary", COMPLETE: "dark", ERROR: "dark"}
-
+                  COMPLETE: "inverse-success", ERROR: "inverse-danger", OPTIONAL: "inverse-info"}
+        frame_styles = {PENDING: "dark", ACTIVE: "primary", COMPLETE: "success", ERROR: "danger", OPTIONAL: "info"}
         icon = icons.get(state, "○")
         style = styles.get(state, "inverse-dark")
 
@@ -1848,14 +1878,14 @@ class App:
         # self.show_step(5)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_floor_expansion_section(self):
-        self._update_sidebar_step(6, ACTIVE)
+        self._update_sidebar_step(6, OPTIONAL)
         # Step 6 shares step 5's panel; widgets are already displayed
         self.expansion_value_entry.configure(state="normal")
         self.floor_expansion_button.configure(state="normal")
         self._load_preset_into("expansion_value_entry", "expansion_value")
 
     def enable_floor_to_cityjson_section(self):
-        self._update_sidebar_step(7, ACTIVE)
+        self._update_sidebar_step(7, OPTIONAL)
         # Step 7 shares step 5's panel; widgets are already displayed
         self.floor_to_cityjson_button.configure(state="normal")
         self.max_line_length_entry.configure(state="normal")
