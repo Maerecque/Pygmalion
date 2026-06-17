@@ -728,14 +728,17 @@ class App:
     # ── Step 2 — Puntdichtheid ───────────────────────────────────────────────
     def _build_step_2_panel(self):
         card = self._step_card(2, "Puntdichtheid aanpassen")
-        self._field(card, 0, "Punten per cm²", "points_per_cm_entry",
-                    (self.validate_flt, '%P'),
-                    "Het gewenste aantal punten per cm² in de puntenwolk.")
-        self._action_btn(card, "Pas puntdichtheid aan", "point_density_button",
-                         self.start_alter_point_density_thread,
-                         tooltip="Pas de dichtheid van de puntenwolk aan.")
+        self._field(
+            card, 0, "Punten per cm²", "points_per_cm_entry", (self.validate_flt, '%P'),
+            "Het gewenste aantal punten per cm² in de puntenwolk."
+        )
+        self._action_btn(
+            card, "Pas puntdichtheid aan", "point_density_button",
+            self.start_alter_point_density_thread,
+            tooltip="Pas de dichtheid van de puntenwolk aan."
+        )
         self._result_label(card, "point_density_result_label")
-        if self._step_states[1] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[1] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.points_per_cm_entry.configure(state="normal")
             self.point_density_button.configure(state="normal")
             self._load_preset_into("points_per_cm_entry", "points_per_cm")
@@ -743,12 +746,14 @@ class App:
     # ── Step 3 — Ruis verwijderen ────────────────────────────────────────────
     def _build_step_3_panel(self):
         card = self._step_card(3, "Ruis verwijderen")
-        self._field(card, 0, "Aantal buren", "neighbour_amount_entry",
-                    (self.validate_int, '%P'),
-                    "Aantal naburige punten voor ruisbeoordeling.")
-        self._field(card, 1, "Std ratio", "std_ratio_entry",
-                    (self.validate_flt, '%P'),
-                    "Standaarddeviatieverhouding voor ruisidentificatie.")
+        self._field(
+            card, 0, "Aantal buren", "neighbour_amount_entry", (self.validate_int, '%P'),
+            "Aantal naburige punten voor ruisbeoordeling. \n Hoe meer buren, hoe grondiger de beoordeling, maar ook hoe langer het proces duurt."  # noqa: E501
+        )
+        self._field(
+            card, 1, "Std ratio", "std_ratio_entry", (self.validate_flt, '%P'),
+            "Standaarddeviatieverhouding voor ruisidentificatie."
+        )
 
         self.show_removed_points_var = tk.BooleanVar()
         self.show_removed_points_checkbox = ttk.Checkbutton(
@@ -799,11 +804,17 @@ class App:
     def _build_step_5_panel(self):
         card = self._step_card(5, "Vloergrens detectie")
         self._field(card, 0, "Alpha waarde", "floor_alpha_value_entry",
-                    (self.validate_flt, '%P'), "Alpha-waarde voor vloergrensdetectie.")
+                    (self.validate_flt, '%P'),
+                    "Alpha-waarde voor vloergrensdetectie. \n Lagere waarden resulteren in een strakkere, meer gedetailleerde grens, \n terwijl hogere waarden een lossere, meer gegeneraliseerde grens opleveren."  # noqa: E501
+                    )
         self._field(card, 1, "Driehoekgrootte", "floor_triangle_size_entry",
-                    (self.validate_flt, '%P'), "Grootte van driehoeken voor vloergrensdetectie.")
+                    (self.validate_flt, '%P'),
+                    "Grootte van driehoeken voor vloergrensdetectie. \n Deze driehoeken worden gebruikt in het Delaunay-triangulatieproces om de vloergrens te bepalen. \n Kleinere waarden kunnen leiden tot een meer gedetailleerde grens, maar kunnen ook meer ruis veroorzaken, \n terwijl grotere waarden een gladdere grens opleveren, maar mogelijk minder nauwkeurig zijn."  # noqa: E501
+                    )
         self._field(card, 2, "Afstandsdrempel", "corner_distance_threshold_entry",
-                    (self.validate_flt, '%P'), "Afstandsdrempel voor hoekidentificatie.")
+                    (self.validate_flt, '%P'),
+                    "Afstandsdrempel voor hoekidentificatie. \n Deze waarde wordt gebruikt om te bepalen of een punt als een hoek van de vloergrens wordt beschouwd op basis van de afstand tot aangrenzende punten. \n Kleinere waarden resulteren in striktere hoekdetectie, terwijl grotere waarden meer punten als hoeken kunnen classificeren, \n wat kan leiden tot een meer hoekige vloergrens."  # noqa: E501
+                    )
 
         self._action_btn(card, "Detecteer vloergrens", "floor_detection_button",
                          self.start_floor_detection_thread,
@@ -816,8 +827,10 @@ class App:
             row=11, column=0, sticky="w", pady=5, padx=(0, 12))
         self.expansion_value_entry = ttk.Entry(card, width=18, state="disabled")
         self.expansion_value_entry.grid(row=11, column=1, sticky="ew", pady=5)
-        self.add_tooltip(self.expansion_value_entry,
-                         "Waarde in cm waarmee de vloergrens wordt vergroot.")
+        self.add_tooltip(
+            self.expansion_value_entry,
+            "Waarde in cm waarmee de vloergrens wordt vergroot. \n Let op na deze functie werkt de rest van de pipeline mogelijk niet correct vanwege de gewijzigde geometrie, \n gebruik alleen als je specifiek een vergrote vloergrens nodig hebt."  # noqa: E501
+        )
 
         self.floor_expansion_button = ttk.Button(
             card, text="Vergroot vloergrens",
