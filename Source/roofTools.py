@@ -200,7 +200,6 @@ def keep_highest_point_above_corner(
     highest_points = []
 
     # For each corner point, find points in full_pcd close in x,y and pick the highest z
-
     for corner in tqdm(corner_points, desc="Finding highest points above corners", unit="corner"):
         mask = (
             (full_points[:, 0] >= corner[0] - search_radius) & (full_points[:, 0] <= corner[0] + search_radius) &
@@ -218,7 +217,7 @@ def keep_highest_point_above_corner(
     # Create point cloud from highest points
     highest_pcd = o3d.cpu.pybind.geometry.PointCloud()
     highest_pcd.points = o3d.utility.Vector3dVector(highest_points)
-    highest_pcd.colors = o3d.utility.Vector3dVector(np.tile([1, 0, 0], (len(highest_pcd.points), 1)))  # red color
+    highest_pcd.colors = o3d.utility.Vector3dVector(np.tile([1, 0, 0], (len(highest_pcd.points), 1)))  # Red color
 
     if not highest_pcd.has_points():
         raise ValueError("No points found above the corner points.")

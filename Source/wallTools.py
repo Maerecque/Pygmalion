@@ -284,7 +284,7 @@ def connect_vertically_aligned_points2(
     # For each base point, check levels in order until match is found
     for i, xy in enumerate(base_level_points[:, :2]):
         matched = False
-        offset = len(base_level_points)  # start after base points
+        offset = len(base_level_points)  # Start after base points
         for lvl in upper_level_points:
             lvl = np.asarray(lvl)
             if lvl.shape[0] == 0:
@@ -299,11 +299,11 @@ def connect_vertically_aligned_points2(
                 # Connect base point i with the found point in this level
                 lines.append([i, offset + idx])
                 matched = True  # noqa: F841
-                break  # stop checking this base point once matched
+                break  # Stop checking this base point once matched
 
             offset += len(lvl)
 
-        # if not matched, do nothing → base point stays unconnected
+        # If not matched, do nothing → base point stays unconnected
 
     # Build LineSet
     lineset = o3d.geometry.LineSet()
@@ -314,7 +314,23 @@ def connect_vertically_aligned_points2(
 
 
 def divide_wall_into_layers(wall_pcd: o3d.geometry.PointCloud, layer_amount: int = 10) -> List[np.ndarray]:
-    # function to detect horizontal layers in a wall point cloud based on Z-value, give back a list of ndarrays
+    """
+    Divides a wall point cloud into horizontal layers based on Z-value, returning a list of arrays for each layer.
+
+    Args:
+        wall_pcd (o3d.geometry.PointCloud): The input point cloud representing the wall.
+        layer_amount (int): The number of horizontal layers to divide the wall into. Must be a positive integer. Defaults to 10.
+
+    Returns:
+        list of np.ndarray: List of arrays, each containing the flattened points for a slice (ordered from low to high).
+        Each array is shape (N_i, 3) for the i-th slice. Returns empty list if no points found in any slice.
+
+    Raises:
+        TypeError: If wall_pcd is not an Open3D PointCloud.
+        ValueError: If layer_amount is less than 1.
+        ValueError: If wall_pcd contains no points.
+    """
+    # Function to detect horizontal layers in a wall point cloud based on Z-value, give back a list of ndarrays
     if not isinstance(wall_pcd, o3d.geometry.PointCloud):
         raise TypeError("wall_pcd must be an Open3D PointCloud object.")
 

@@ -89,13 +89,13 @@ def mesh_simple_downsample(
 
     print("Starting mesh simplification...")
 
-    # Step 1: Compute distances from mesh vertices to the point cloud
+    # Compute distances from mesh vertices to the point cloud
     distances = compute_distances_to_point_cloud(mesh, original_point_cloud)
 
-    # Step 2: Filter vertices and faces based on distance threshold
+    # Filter vertices and faces based on distance threshold
     new_vertices, new_colors, new_faces = filter_vertices_and_faces(mesh, distances, distance_threshold)
 
-    # Step 3: Create a new mesh with filtered vertices and faces
+    # Create a new mesh with filtered vertices and faces
     new_mesh = o3d.geometry.TriangleMesh()
     new_mesh.vertices = o3d.utility.Vector3dVector(new_vertices)
     new_mesh.vertex_colors = o3d.utility.Vector3dVector(new_colors)
@@ -171,7 +171,7 @@ def repair_mesh(meshes: Union[o3d.geometry.TriangleMesh, List[o3d.geometry.Trian
         mesh = o3d.io.read_triangle_mesh("path_to_mesh.ply")
         repaired_mesh = repair_mesh(mesh)
     """
-    # allow single mesh or list/tuple of meshes
+    # Allow single mesh or list/tuple of meshes
     if isinstance(meshes, (list, tuple)):
         trimesh_list = []
         for m in meshes:
@@ -184,7 +184,7 @@ def repair_mesh(meshes: Union[o3d.geometry.TriangleMesh, List[o3d.geometry.Trian
                     process=False
                 )
             )
-        # concatenate into a single Trimesh
+        # Concatenate into a single Trimesh
         mesh_trimesh = trimesh.util.concatenate(trimesh_list)
     else:
         mesh_o3d = meshes
@@ -196,20 +196,20 @@ def repair_mesh(meshes: Union[o3d.geometry.TriangleMesh, List[o3d.geometry.Trian
             process=False
         )
 
-    # 2. Check for and fill any holes
+    # Check for and fill any holes
     if not mesh_trimesh.is_watertight:
         print("Holes detected; filling mesh...")
         mesh_trimesh.fill_holes()
     else:
         print("Mesh is already watertight; no action needed.")
 
-    # 3. Convert the repaired Trimesh object back to Open3D
+    # Convert the repaired Trimesh object back to Open3D
     repaired_mesh_o3d = o3d.geometry.TriangleMesh(
         vertices=o3d.utility.Vector3dVector(mesh_trimesh.vertices),
         triangles=o3d.utility.Vector3iVector(mesh_trimesh.faces.astype(np.int32))
     )
 
-    # 4. Handle colors and normals
+    # Handle colors and normals
     if hasattr(mesh_trimesh.visual, "vertex_colors") and mesh_trimesh.visual.vertex_colors is not None:
         repaired_mesh_o3d.vertex_colors = o3d.utility.Vector3dVector(
             mesh_trimesh.visual.vertex_colors[:, :3].astype(np.float64) / 255.0

@@ -36,7 +36,7 @@ def get_file_path(description: str, fileformat: Any, print_output: bool = True) 
     root.withdraw()  # we don't want a full GUI, so keep the root window from appearing
     current_folder = os.path.realpath(os.path.dirname(__file__))
     root.iconbitmap(current_folder + "\\support_files\\logo.ico")
-    # show an "Open" dialog box and return the path to the selected file
+    # Show an "Open" dialog box and return the path to the selected file
     filename = askopenfilename(
         filetypes=[(description, fileformat)],
         initialdir=os.path.join(current_folder, '..')
@@ -67,11 +67,11 @@ def get_save_file_path(description: str, fileformat: Any, default_name: str) -> 
     root.withdraw()  # we don't want a full GUI, so keep the root window from appearing
     current_folder = os.path.realpath(os.path.dirname(__file__))
     root.iconbitmap(current_folder + "\\support_files\\logo.ico")
-    # show a "save" dialog box and return the path to the selected file
+    # Show a "save" dialog box and return the path to the selected file
     filename = asksaveasfilename(
         filetypes=[(description, fileformat)],          # filetypes=[("Text files", "*.txt"), ("all files", "*.*")]
-        initialdir=os.path.join(current_folder, '..'),  # initialdir=os.path.join(current_folder, '..')
-        initialfile=default_name                        # initialfile="default_name.txt"
+        initialdir=os.path.join(current_folder, '..'),
+        initialfile=default_name
     )
     if filename:
         print("The following file was selected: \n" + filename)
@@ -106,7 +106,7 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
 
         las = laspy.read(filename)
 
-        # check if LAS file is in the correct format
+        # Check if LAS file is in the correct format
         if "<LasData(1.2, point fmt: <PointFormat(3," not in str(las):
             if len(las.points) < 10000000:
                 raise FileFormatError
@@ -121,15 +121,15 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
         scales = las.header.scales
         offsets = las.header.offsets
 
-        # stack coordinates directly along axis=1 (shape: (N,3))
+        # Stack coordinates directly along axis=1 (shape: (N,3))
         point_data = np.stack([las.X, las.Y, las.Z], axis=1)
 
-        # apply scaling and offset with broadcasting
+        # Apply scaling and offset with broadcasting
         point_data = point_data * scales + offsets
 
         geom.points = o3d.utility.Vector3dVector(point_data)
 
-        # normalize colors once, stack axis=1
+        # Normalize colors once, stack axis=1
         colour_data = np.stack([
             normalize_array(las.red, True),
             normalize_array(las.green, True),
@@ -233,14 +233,14 @@ def convert_ply_to_las(input_las_path: str = None):
         print("Select your created ply file to convert it to a LAS file.")
         ply_to_convert_to_las = get_file_path("PLY files", "*.ply")
 
-        # if no PLY file is selected this if statement will be ran.
+        # If no PLY file is selected this if statement will be ran.
         if not ply_to_convert_to_las:
             raise NoFileGivenError
 
         ply_file = PlyData.read(ply_to_convert_to_las, False)
         new_las_file_name = os.path.splitext(ply_to_convert_to_las)[0] + ".las"
 
-        # if no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.
+        # If no LAS file is selected a custom header will be created for the new LAS file that will be made out of the PLY file.
         if not input_las_path:
             custom_header = laspy.LasHeader(version="1.2", point_format=3)
             las_header_point_format = custom_header.point_format

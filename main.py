@@ -503,7 +503,7 @@ class App:
 
         # Local function for Hover ON (changes styles to indicate hover)
         def on_enter(e):
-            # retrieve current cursor style based on step state; only allow pointer if actionable
+            # Retrieve current cursor style based on step state; only allow pointer if actionable
             cursor_style = "hand2"
             state = self._step_states[step_num - 1]
             if state not in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
@@ -597,7 +597,7 @@ class App:
             bar, mode="indeterminate", length=160, bootstyle="info-striped"
         )
         self.progress_bar.grid(row=0, column=1, sticky="e")
-        self.progress_bar.grid_remove()  # hidden by default
+        self.progress_bar.grid_remove()  # Hidden by default
 
     # ── step panel builders ──────────────────────────────────────────────────
 
@@ -1597,7 +1597,7 @@ class App:
                 lod="1.0"
             )
 
-            # update view with the floor lineset
+            # Update view with the floor lineset
             self.update_view_pointcloud(floor_lineset)
 
             self.floor_detection_result_label.configure(
