@@ -2132,8 +2132,9 @@ class App:
 
         confirmed = tk.BooleanVar(value=False)
 
-        ttk.Button(btn_row, text="OK", bootstyle="danger",
-                   command=lambda: (confirmed.set(True), dlg.destroy())).pack(side="left", expand=True, fill="x", padx=(0, 6))
+        ok_btn = ttk.Button(btn_row, text="OK", bootstyle="danger",
+                            command=lambda: (confirmed.set(True), dlg.destroy()))
+        ok_btn.pack(side="left", expand=True, fill="x", padx=(0, 6))
         ttk.Button(btn_row, text="Annuleren", bootstyle="secondary-outline",
                    command=dlg.destroy).pack(side="left", expand=True, fill="x")
 
@@ -2141,6 +2142,7 @@ class App:
         x = self.root.winfo_x() + (self.root.winfo_width() - dlg.winfo_width()) // 2
         y = self.root.winfo_y() + (self.root.winfo_height() - dlg.winfo_height()) // 2
         dlg.geometry(f"+{x}+{y}")
+        ok_btn.focus_set()
 
         self.root.wait_window(dlg)
         if confirmed.get():
