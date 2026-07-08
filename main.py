@@ -78,7 +78,10 @@ from Source.pointCloudEditor import (  # noqa: F401
     open_point_cloud_editor as opce,
     open_mesh_and_lineset_viewer as omalv
 )
-from Source.roofTools import slice_roof_up
+from Source.roofTools import (
+    slice_roof_up,
+    smooth_roof
+)
 from Source.wallTools import (
     extract_wall_points,
     define_min_height_roof,
@@ -101,12 +104,13 @@ STEP_LABELS = [
     "Vloer → 2D CityJSON",     # 7
     "Dakextractie",            # 8
     "Dakverdeling",            # 9
-    "Wandextractie",           # 10
-    "Wandverdeling",           # 11
-    "PCD → Lineset",           # 12
-    "Lineset → Mesh",          # 13
-    "Mesh reparatie",          # 14
-    "CityJSON conversie",      # 15
+    "Dak gladstrijken",        # 10
+    "Wandextractie",           # 11
+    "Wandverdeling",           # 12
+    "PCD → Lineset",           # 13
+    "Lineset → Mesh",          # 14
+    "Mesh reparatie",          # 15
+    "CityJSON conversie",      # 16
 ]
 
 # step states
@@ -272,9 +276,11 @@ class App:
         self.floor_hull = None
         self.floor_corners = None
         self.roof_pcd = None
+        self._original_roof_pcd = None
         self.temp_wall_pcd = None
         self.wall_pcd = None
         self.roof_layer_list = None
+        self._roof_division_settings = None
         self.wall_layer_list = None
         self.roof_wall_lineset = None
         self.floor_lineset = None
@@ -288,7 +294,7 @@ class App:
         self.mesh_preview = None
 
         # Sidebar step state tracking: list index 0 = step 1
-        self._step_states = [PENDING] * 15
+        self._step_states = [PENDING] * 16
         self._step_rows: list[dict] = []   # [{frame, num_lbl, name_lbl, icon_lbl}, ...]
         self._current_step = 0              # 1-based, 0 = none
 
@@ -307,7 +313,7 @@ class App:
         req_w = self.root.winfo_reqwidth()
         req_h = self.root.winfo_reqheight()
         w = max(req_w, 860)
-        h = max(req_h, 645)
+        h = max(req_h, 685)
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = max(0, (sw - w) // 2)
@@ -620,6 +626,7 @@ class App:
             13: self._build_step_13_panel,
             14: self._build_step_14_panel,
             15: self._build_step_15_panel,
+            16: self._build_step_16_panel,
         }
         builders[step_num]()
 
@@ -937,37 +944,71 @@ class App:
             self._load_preset_into("roof_angle_threshold_entry", "angle_threshold")
             self._load_preset_into("roof_merge_radius_entry", "merge_radius")
 
-    # ── Step 10 — Wandextractie ───────────────────────────────────────────────
+    # ── Step 10 — Dak gladstrijken ────────────────────────────────────────────
     def _build_step_10_panel(self):
-        card = self._step_card(10, "Wandextractie")
+        card = self._step_card(10, "Dak gladstrijken")
+        self._field(card, 0, "Voxelgrootte", "roof_smoothing_voxel_size_entry",
+                    (self.validate_flt, '%P'), "Voxelgrootte voor het gladstrijken van het dak.")
+
+        # upsample_factor
+        self._field(card, 1, "Upsample factor", "roof_smoothing_upsample_factor_entry",
+                    (self.validate_flt, '%P'), "Factor voor het verhogen van de resolutie tijdens gladstrijken.")
+
+        self.visualize_roof_smoothing_var = tk.BooleanVar()
+        self.visualize_roof_smoothing_checkbox = ttk.Checkbutton(
+            card, text="Visualiseer gladstrijken",
+            variable=self.visualize_roof_smoothing_var,
+            state="disabled", bootstyle="info-round-toggle"
+        )
+        self.visualize_roof_smoothing_checkbox.grid(row=2, column=0, columnspan=2, sticky="w", pady=5)
+        self.add_tooltip(self.visualize_roof_smoothing_checkbox,
+                         "Toon het gladgestreken dak samen met het oorspronkelijke resultaat.")
+
+        self._action_btn(card, "Strijk dak glad", "roof_smoothing_button",
+                         self.start_smooth_roof_thread,
+                         tooltip="Verminder pieken tussen daklagen voor een natuurlijker hoogteverloop.")
+        self._result_label(card, "roof_smoothing_result_label", "Dak niet gladgestreken.")
+        if self._step_states[9] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+            self.roof_smoothing_button.configure(state="normal")
+            self.roof_smoothing_voxel_size_entry.configure(state="normal")
+            self.roof_smoothing_upsample_factor_entry.configure(state="normal")
+            self.visualize_roof_smoothing_checkbox.configure(state="normal")
+            self._load_preset_into("roof_smoothing_voxel_size_entry", "roof_voxel_size")
+            self._load_preset_into("roof_smoothing_upsample_factor_entry", "roof_upsample_factor")
+            if self.roof_smoothing_upsample_factor_entry.get() == "":
+                self.roof_smoothing_upsample_factor_entry.insert(0, "1.0")
+
+    # ── Step 11 — Wandextractie ───────────────────────────────────────────────
+    def _build_step_11_panel(self):
+        card = self._step_card(11, "Wandextractie")
         self._field(card, 0, "Zoekradius", "wall_search_radius_entry",
                     (self.validate_flt, '%P'), "Zoekradius voor muurpuntidentificatie.")
         self._action_btn(card, "Extraheer muren", "wall_extraction_button",
                          self.start_wall_extraction_thread,
                          tooltip="Extraheer muurpunten uit de puntenwolk.")
         self._result_label(card, "wall_extraction_result_label", "Muren niet geëxtraheerd.")
-        if self._step_states[9] in (ACTIVE, COMPLETE, ERROR):
+        if self._step_states[10] in (ACTIVE, COMPLETE, ERROR):
             self.wall_extraction_button.configure(state="normal")
             self.wall_search_radius_entry.configure(state="normal")
             self._load_preset_into("wall_search_radius_entry", "wall_search_radius")
 
-    # ── Step 11 — Wandverdeling ───────────────────────────────────────────────
-    def _build_step_11_panel(self):
-        card = self._step_card(11, "Wandverdeling")
+    # ── Step 12 — Wandverdeling ───────────────────────────────────────────────
+    def _build_step_12_panel(self):
+        card = self._step_card(12, "Wandverdeling")
         self._field(card, 0, "Aantal lagen", "wall_layer_amount_entry",
                     (self.validate_int, '%P'), "Aantal lagen voor wandverdeling.")
         self._action_btn(card, "Verdeel muren", "wall_division_button",
                          self.start_wall_division_thread,
                          tooltip="Verdeel de muren in lagen.")
         self._result_label(card, "wall_division_result_label", "Muren niet verdeeld.")
-        if self._step_states[10] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+        if self._step_states[11] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.wall_division_button.configure(state="normal")
             self.wall_layer_amount_entry.configure(state="normal")
             self._load_preset_into("wall_layer_amount_entry", "wall_layer_amount")
 
-    # ── Step 12 — PCD → Lineset ───────────────────────────────────────────────
-    def _build_step_12_panel(self):
-        card = self._step_card(12, "Puntenwolk naar Lineset")
+    # ── Step 13 — PCD → Lineset ───────────────────────────────────────────────
+    def _build_step_13_panel(self):
+        card = self._step_card(13, "Puntenwolk naar Lineset")
         self._field(card, 0, "XY tolerantie", "xy_tolerance_entry",
                     (self.validate_flt, '%P'), "XY-tolerantie voor Lineset-conversie.")
         self._field(card, 1, "Max. lijnlengte", "max_line_length_entry",
@@ -976,16 +1017,16 @@ class App:
                          self.start_pcd_to_lineset_thread,
                          tooltip="Converteer de puntenwolk naar een Lineset.")
         self._result_label(card, "pcd_to_lineset_result_label", "Lineset niet gemaakt.")
-        if self._step_states[11] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+        if self._step_states[12] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.pcd_to_lineset_button.configure(state="normal")
             self.xy_tolerance_entry.configure(state="normal")
             self.max_line_length_entry.configure(state="normal")
             self._load_preset_into("xy_tolerance_entry", "xy_tolerance")
             self._load_preset_into("max_line_length_entry", "max_line_length")
 
-    # ── Step 13 — Lineset → Mesh ──────────────────────────────────────────────
-    def _build_step_13_panel(self):
-        card = self._step_card(13, "Lineset naar Mesh")
+    # ── Step 14 — Lineset → Mesh ──────────────────────────────────────────────
+    def _build_step_14_panel(self):
+        card = self._step_card(14, "Lineset naar Mesh")
         self._field(card, 0, "Contour buffer", "contour_buffer_entry",
                     (self.validate_flt, '%P'),
                     "Vergroot de contourgrens (meters) bij het filteren van wanddriehoeken.")
@@ -997,14 +1038,14 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.lineset_to_mesh_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[12] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+        if self._step_states[13] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.contour_buffer_entry.configure(state="normal")
             self.lineset_to_mesh_button.configure(state="normal")
             self._load_preset_into("contour_buffer_entry", "contour_buffer")
 
-    # ── Step 14 — Mesh reparatie ──────────────────────────────────────────────
-    def _build_step_14_panel(self):
-        card = self._step_card(14, "Mesh reparatie")
+    # ── Step 15 — Mesh reparatie ──────────────────────────────────────────────
+    def _build_step_15_panel(self):
+        card = self._step_card(15, "Mesh reparatie")
         ttk.Label(card, text="Geen parameters vereist.").grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 8)
         )
@@ -1016,12 +1057,12 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.repair_mesh_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[13] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+        if self._step_states[14] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.repair_mesh_button.configure(state="normal")
 
-    # ── Step 15 — CityJSON conversie ──────────────────────────────────────────
-    def _build_step_15_panel(self):
-        card = self._step_card(15, "CityJSON conversie")
+    # ── Step 16 — CityJSON conversie ──────────────────────────────────────────
+    def _build_step_16_panel(self):
+        card = self._step_card(16, "CityJSON conversie")
         ttk.Label(card, text="Geen parameters vereist.").grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 8)
         )
@@ -1033,7 +1074,7 @@ class App:
             font=("Segoe UI", 9), bootstyle="secondary"
         )
         self.cityjson_conversion_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        if self._step_states[14] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+        if self._step_states[15] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.cityjson_conversion_button.configure(state="normal")
 
     # ── Sidebar state management ─────────────────────────────────────────────
@@ -1056,6 +1097,14 @@ class App:
             row["frame"].configure(bootstyle=frame_styles.get(state, "dark"))
         except Exception:
             pass
+
+    def _reset_steps_after(self, step_num: int):
+        """Reset all steps after step_num back to pending (gray in sidebar)."""
+        for i in range(step_num + 1, len(STEP_LABELS) + 1):
+            self._update_sidebar_step(i, PENDING)
+
+        if step_num < len(STEP_LABELS):
+            self.save_cityjson_button.configure(state="disabled")
 
     # ── Spinner / status ─────────────────────────────────────────────────────
 
@@ -1274,6 +1323,8 @@ class App:
             self.point_density_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             return
 
+        self._reset_steps_after(2)
+
         self.root.config(cursor="watch")
         self._start_spinner("Puntdichtheid aanpassen...")
         self.disable_section(self.point_density_button, "Bezig...")
@@ -1296,6 +1347,8 @@ class App:
             self.preprocessing_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             return
 
+        self._reset_steps_after(3)
+
         self.root.config(cursor="watch")
         self._start_spinner("Ruis verwijderen...")
         self.disable_section(self.preprocessing_button, "Bezig...")
@@ -1311,6 +1364,7 @@ class App:
         ).start())
 
     def start_heightmap_thread(self):
+        self._reset_steps_after(4)
         self.root.config(cursor="watch")
         self._start_spinner("Hoogtekaart maken...")
         self.disable_section(self.heightmap_button, "Bezig...")
@@ -1318,6 +1372,7 @@ class App:
         threading.Thread(target=self.heightmap_step).start()
 
     def start_floor_detection_thread(self):
+        self._reset_steps_after(5)
         self.root.config(cursor="watch")
         self._start_spinner("Vloergrens detecteren...")
         self.disable_section(self.floor_detection_button, "Bezig...")
@@ -1325,6 +1380,7 @@ class App:
         threading.Thread(target=self.floor_detection_step).start()
 
     def start_floor_expansion_thread(self):
+        self._reset_steps_after(6)
         self.root.config(cursor="watch")
         self._start_spinner("Vloer uitbreiden...")
         self.disable_section(self.floor_expansion_button, "Bezig...")
@@ -1332,6 +1388,7 @@ class App:
         threading.Thread(target=self.floor_expansion_step).start()
 
     def start_floor_2_lineset_2_cityjson_thread(self):
+        self._reset_steps_after(7)
         self.root.config(cursor="watch")
         self._start_spinner("Vloer naar 2D CityJSON...")
         self.disable_section(self.floor_to_cityjson_button, "Bezig...")
@@ -1339,6 +1396,7 @@ class App:
         threading.Thread(target=self.floor_2_lineset_2_cityjson_step).start()
 
     def start_roof_extraction_thread(self):
+        self._reset_steps_after(8)
         self.root.config(cursor="watch")
         self._start_spinner("Dak extraheren...")
         self.disable_section(self.roof_extraction_button, "Bezig...")
@@ -1346,13 +1404,23 @@ class App:
         threading.Thread(target=self.roof_extraction_step).start()
 
     def start_roof_division_thread(self):
+        self._reset_steps_after(9)
         self.root.config(cursor="watch")
         self._start_spinner("Dak verdelen...")
         self.disable_section(self.roof_division_button, "Bezig...")
         self.roof_division_result_label.configure(text="Dak verdelen, even geduld...")
         threading.Thread(target=self.roof_division_step).start()
 
+    def start_smooth_roof_thread(self):
+        self._reset_steps_after(10)
+        self.root.config(cursor="watch")
+        self._start_spinner("Dak gladstrijken...")
+        self.disable_section(self.roof_smoothing_button, "Bezig...")
+        self.roof_smoothing_result_label.configure(text="Dak gladstrijken, even geduld...")
+        threading.Thread(target=self.smooth_roof_step).start()
+
     def start_wall_extraction_thread(self):
+        self._reset_steps_after(11)
         self.root.config(cursor="watch")
         self._start_spinner("Muren extraheren...")
         self.disable_section(self.wall_extraction_button, "Bezig...")
@@ -1360,6 +1428,7 @@ class App:
         threading.Thread(target=self.wall_extraction_step).start()
 
     def start_wall_division_thread(self):
+        self._reset_steps_after(12)
         self.root.config(cursor="watch")
         self._start_spinner("Muren verdelen...")
         self.disable_section(self.wall_division_button, "Bezig...")
@@ -1367,6 +1436,7 @@ class App:
         threading.Thread(target=self.wall_division_step).start()
 
     def start_pcd_to_lineset_thread(self):
+        self._reset_steps_after(13)
         self.root.config(cursor="watch")
         self._start_spinner("Converteren naar Lineset...")
         self.disable_section(self.pcd_to_lineset_button, "Bezig...")
@@ -1374,6 +1444,7 @@ class App:
         threading.Thread(target=self.pcd_to_lineset_step).start()
 
     def start_lineset_to_mesh_thread(self):
+        self._reset_steps_after(14)
         self.root.config(cursor="watch")
         self._start_spinner("Converteren naar Mesh...")
         self.disable_section(self.lineset_to_mesh_button, "Bezig...")
@@ -1381,6 +1452,7 @@ class App:
         threading.Thread(target=self.lineset_to_mesh_step).start()
 
     def start_repair_mesh_thread(self):
+        self._reset_steps_after(15)
         self.root.config(cursor="watch")
         self._start_spinner("Mesh repareren...")
         self.disable_section(self.repair_mesh_button, "Bezig...")
@@ -1547,7 +1619,7 @@ class App:
 
         # When this step is done the rest of the pipeline cannot continue.
         # so we disable everything past it.
-        for i in range(8, 16):
+        for i in range(8, 17):
             self._update_sidebar_step(i, PENDING)
 
         try:
@@ -1627,6 +1699,7 @@ class App:
                 floor_corners_pcd,
                 height=float(self.slice_height_entry.get())
             )
+            self._original_roof_pcd = self.roof_pcd
             self.roof_extraction_result_label.configure(
                 text=f"Dak geëxtraheerd: {len(self.roof_pcd.points):n} dakpunten, {len(self.temp_wall_pcd.points):n} muurpunten.",
                 bootstyle="success"
@@ -1659,6 +1732,15 @@ class App:
                 slab_fatness=float(self.roof_layer_fatness_entry.get()),
                 voxel_size=float(self.roof_voxel_size_entry.get())
             )
+
+            self._roof_division_settings = {
+                "slices_amount": int(self.roof_layers_entry.get()),
+                "slab_fatness": float(self.roof_layer_fatness_entry.get()),
+                "voxel_size": float(self.roof_voxel_size_entry.get()),
+                "angle_threshold_deg": float(self.roof_angle_threshold_entry.get()),
+                "merge_radius": float(self.roof_merge_radius_entry.get())
+            }
+
             self.roof_division_result_label.configure(
                 text=f"Dak verdeeld in {len(self.roof_layer_list)} lagen.", bootstyle="success"
             )
@@ -1671,13 +1753,45 @@ class App:
 
             self.roof_division_button.configure(state="normal", text="Verdeel dak")
             self._update_sidebar_step(9, COMPLETE)
-            self.enable_wall_extraction_section()
+            self.enable_roof_smoothing_section()
             self.root.config(cursor="")
             self._stop_spinner("Dak verdeeld", success=True)
         except Exception as e:
             self.roof_division_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.roof_division_button.configure(state="normal", text="Verdeel dak")
             self._update_sidebar_step(9, ERROR)
+            self.root.config(cursor="")
+            self._stop_spinner("Fout")
+
+    def smooth_roof_step(self):
+        self.lineset_preview = None
+        self.mesh_preview = None
+        try:
+            self.validate_empty_field(self.roof_smoothing_voxel_size_entry)
+            self.validate_empty_field(self.roof_smoothing_upsample_factor_entry)
+
+            self.roof_pcd = smooth_roof(
+                self._original_roof_pcd,
+                voxel_size=float(self.roof_smoothing_voxel_size_entry.get()),
+                upsample_factor=float(self.roof_smoothing_upsample_factor_entry.get()),
+                visualize=bool(self.visualize_roof_smoothing_var.get())
+            )
+
+            self.update_view_pointcloud(self.roof_pcd)
+
+            self.roof_smoothing_result_label.configure(
+                text=f"Dak succesvol gladgestreken. {len(self.roof_layer_list)} lagen vernieuwd.",
+                bootstyle="success"
+            )
+            self.roof_smoothing_button.configure(state="normal", text="Strijk dak glad")
+            self._update_sidebar_step(10, COMPLETE)
+            self.enable_wall_extraction_section()
+            self.root.config(cursor="")
+            self._stop_spinner("Dak gladgestreken", success=True)
+        except Exception as e:
+            self.roof_smoothing_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
+            self.roof_smoothing_button.configure(state="normal", text="Strijk dak glad")
+            self._update_sidebar_step(10, ERROR)
             self.root.config(cursor="")
             self._stop_spinner("Fout")
 
@@ -1700,14 +1814,14 @@ class App:
             )
             self.wall_extraction_button.configure(state="normal", text="Extraheer muren")
             self.update_view_pointcloud(self.wall_pcd)
-            self._update_sidebar_step(10, COMPLETE)
+            self._update_sidebar_step(11, COMPLETE)
             self.enable_wall_division_section()
             self.root.config(cursor="")
             self._stop_spinner("Muren geëxtraheerd", success=True)
         except Exception as e:
             self.wall_extraction_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.wall_extraction_button.configure(state="normal", text="Extraheer muren")
-            self._update_sidebar_step(10, ERROR)
+            self._update_sidebar_step(11, ERROR)
             self.root.config(cursor="")
             self._stop_spinner("Fout")
 
@@ -1729,14 +1843,14 @@ class App:
             self.update_view_pointcloud(self.wall_layers_pcd_preview)
 
             self.wall_division_button.configure(state="normal", text="Verdeel muren")
-            self._update_sidebar_step(11, COMPLETE)
+            self._update_sidebar_step(12, COMPLETE)
             self.enable_pcd_to_lineset_section()
             self.root.config(cursor="")
             self._stop_spinner("Muren verdeeld", success=True)
         except Exception as e:
             self.wall_division_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.wall_division_button.configure(state="normal", text="Verdeel muren")
-            self._update_sidebar_step(11, ERROR)
+            self._update_sidebar_step(12, ERROR)
             self.root.config(cursor="")
             self._stop_spinner("Fout")
 
@@ -1775,14 +1889,14 @@ class App:
             )
             self.lineset_preview = True
             self.pcd_to_lineset_button.configure(state="normal", text="Converteer naar Lineset")
-            self._update_sidebar_step(12, COMPLETE)
+            self._update_sidebar_step(13, COMPLETE)
             self.enable_lineset_to_mesh_section()
             self.root.config(cursor="")
             self._stop_spinner("Lineset gereed", success=True)
         except Exception as e:
             self.pcd_to_lineset_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.pcd_to_lineset_button.configure(state="normal", text="Converteer naar Lineset")
-            self._update_sidebar_step(12, ERROR)
+            self._update_sidebar_step(13, ERROR)
             self.root.config(cursor="")
             self._stop_spinner("Fout")
 
@@ -1799,14 +1913,14 @@ class App:
                 text="Meshes succesvol aangemaakt.", bootstyle="success"
             )
             self.lineset_to_mesh_button.configure(state="normal", text="Converteer naar Mesh")
-            self._update_sidebar_step(13, COMPLETE)
+            self._update_sidebar_step(14, COMPLETE)
             self.enable_repair_mesh_section()
             self.root.config(cursor="")
             self._stop_spinner("Mesh gereed", success=True)
         except Exception as e:
             self.lineset_to_mesh_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.lineset_to_mesh_button.configure(state="normal", text="Converteer naar Mesh")
-            self._update_sidebar_step(13, ERROR)
+            self._update_sidebar_step(14, ERROR)
             self.root.config(cursor="")
             self._stop_spinner("Fout")
 
@@ -1818,14 +1932,14 @@ class App:
                 text="Mesh succesvol hersteld.", bootstyle="success"
             )
             self.repair_mesh_button.configure(state="normal", text="Repareer Mesh")
-            self._update_sidebar_step(14, COMPLETE)
+            self._update_sidebar_step(15, COMPLETE)
             self.enable_cityjson_conversion_section()
             self.root.config(cursor="")
             self._stop_spinner("Mesh hersteld", success=True)
         except Exception as e:
             self.repair_mesh_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.repair_mesh_button.configure(state="normal", text="Repareer Mesh")
-            self._update_sidebar_step(14, ERROR)
+            self._update_sidebar_step(15, ERROR)
             self.root.config(cursor="")
             self._stop_spinner("Fout")
 
@@ -1841,14 +1955,14 @@ class App:
                 text="Succesvol geconverteerd naar CityJSON.", bootstyle="success"
             )
             self.cityjson_conversion_button.configure(state="normal", text="Converteer naar CityJSON")
-            self._update_sidebar_step(15, COMPLETE)
+            self._update_sidebar_step(16, COMPLETE)
             self.save_cityjson_button.configure(state="normal")
             self.root.config(cursor="")
             self._stop_spinner("CityJSON gereed", success=True)
         except Exception as e:
             self.cityjson_conversion_result_label.configure(text=f"Fout: {str(e)}", bootstyle="danger")
             self.cityjson_conversion_button.configure(state="normal", text="Converteer naar CityJSON")
-            self._update_sidebar_step(15, ERROR)
+            self._update_sidebar_step(16, ERROR)
             self.root.config(cursor="")
             self._stop_spinner("Fout")
 
@@ -1893,9 +2007,11 @@ class App:
         self.floor_hull = None
         self.floor_corners = None
         self.roof_pcd = None
+        self._original_roof_pcd = None
         self.temp_wall_pcd = None
         self.wall_pcd = None
         self.roof_layer_list = None
+        self._roof_division_settings = None
         self.wall_layer_list = None
         self.roof_wall_lineset = None
         self.floor_lineset = None
@@ -1908,8 +2024,8 @@ class App:
         self.mesh_preview = None
 
         # Reset sidebar step states
-        self._step_states = [PENDING] * 15
-        for i in range(15):
+        self._step_states = [PENDING] * 16
+        for i in range(16):
             self._update_sidebar_step(i + 1, PENDING)
 
         # Reset global buttons
@@ -1966,29 +2082,33 @@ class App:
         self._update_sidebar_step(9, ACTIVE)
         # self.show_step(9)  # panel builder enables widgets since state is now ACTIVE
 
-    def enable_wall_extraction_section(self):
+    def enable_roof_smoothing_section(self):
         self._update_sidebar_step(10, ACTIVE)
         # self.show_step(10)  # panel builder enables widgets since state is now ACTIVE
 
-    def enable_wall_division_section(self):
+    def enable_wall_extraction_section(self):
         self._update_sidebar_step(11, ACTIVE)
         # self.show_step(11)  # panel builder enables widgets since state is now ACTIVE
 
-    def enable_pcd_to_lineset_section(self):
+    def enable_wall_division_section(self):
         self._update_sidebar_step(12, ACTIVE)
         # self.show_step(12)  # panel builder enables widgets since state is now ACTIVE
 
-    def enable_lineset_to_mesh_section(self):
+    def enable_pcd_to_lineset_section(self):
         self._update_sidebar_step(13, ACTIVE)
         # self.show_step(13)  # panel builder enables widgets since state is now ACTIVE
 
-    def enable_repair_mesh_section(self):
+    def enable_lineset_to_mesh_section(self):
         self._update_sidebar_step(14, ACTIVE)
         # self.show_step(14)  # panel builder enables widgets since state is now ACTIVE
 
-    def enable_cityjson_conversion_section(self):
+    def enable_repair_mesh_section(self):
         self._update_sidebar_step(15, ACTIVE)
         # self.show_step(15)  # panel builder enables widgets since state is now ACTIVE
+
+    def enable_cityjson_conversion_section(self):
+        self._update_sidebar_step(16, ACTIVE)
+        # self.show_step(16)  # panel builder enables widgets since state is now ACTIVE
 
     def enable_view_pointcloud(self, pointcloud):
         self.view_button.configure(
@@ -2052,6 +2172,7 @@ class App:
             ("roof_layers_entry",                 "roof_layers"),           # noqa: E241
             ("roof_layer_fatness_entry",          "roof_layer_fatness"),    # noqa: E241
             ("roof_voxel_size_entry",             "roof_voxel_size"),       # noqa: E241
+            ("roof_smoothing_upsample_factor_entry", "roof_upsample_factor"),  # noqa: E241
             ("roof_angle_threshold_entry",        "angle_threshold"),       # noqa: E241
             ("roof_merge_radius_entry",           "merge_radius"),          # noqa: E241
             ("wall_search_radius_entry",          "wall_search_radius"),    # noqa: E241

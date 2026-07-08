@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import open3d as o3d
-from Source.roofTools import slice_roof_up, keep_highest_point_above_corner
+from Source.roofTools import slice_roof_up, keep_highest_point_above_corner, smooth_roof
 
 
 def _make_pcd(points: np.ndarray) -> o3d.geometry.PointCloud:
@@ -176,3 +176,70 @@ class TestKeepHighestPointAboveCorner:
         full = self._full_pcd()
         result = keep_highest_point_above_corner(corners, full, search_radius=0.05)
         assert isinstance(result, o3d.geometry.PointCloud)
+
+
+# ── smooth_roof ───────────────────────────────────────────────────────────────
+
+class TestSmoothRoof:
+    def test_wrong_type_raises_type_error(self):
+        with pytest.raises(TypeError):
+            smooth_roof("not a pcd")
+
+    def test_empty_cloud_raises_value_error(self):
+        with pytest.raises(ValueError, match="must contain points"):
+            smooth_roof(_make_pcd(np.empty((0, 3))))
+
+    def test_non_positive_voxel_size_raises_value_error(self):
+        pcd = _make_pcd(np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 1.0]]))
+        with pytest.raises(ValueError, match="positive"):
+            smooth_roof(pcd, voxel_size=0.0)
+
+    def test_invalid_upsample_factor_raises_value_error(self):
+        pcd = _make_pcd(np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 1.0]]))
+        with pytest.raises(ValueError, match="upsample_factor"):
+            smooth_roof(pcd, voxel_size=1.0, upsample_factor=0)
+
+    def test_reduces_spike_error_against_linear_trend(self):
+        x = np.arange(0, 21, dtype=float)
+        trend = 0.2 * x + 5.0
+        z = trend.copy()
+
+        # Inject two strong spikes that should be suppressed.
+        z[8] += 4.0
+        z[14] -= 3.0
+
+        pts = np.column_stack([x, np.zeros_like(x), z])
+        pcd = _make_pcd(pts)
+
+        with patch("Source.roofTools.grid_subsampling", side_effect=lambda pc, **kwargs: pc):
+            smoothed = smooth_roof(pcd, voxel_size=1.0, visualize=False)
+
+        smoothed_z = np.asarray(smoothed.points)[:, 2]
+        original_mae = np.mean(np.abs(z - trend))
+        smoothed_mae = np.mean(np.abs(smoothed_z - trend))
+
+        assert smoothed_mae < original_mae
+
+    def test_visualize_false_does_not_call_editor(self):
+        pts = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.2], [2.0, 0.0, 0.4]])
+        pcd = _make_pcd(pts)
+
+        with patch("Source.roofTools.grid_subsampling", side_effect=lambda pc, **kwargs: pc), \
+             patch("Source.roofTools.opce") as mock_opce:
+            smooth_roof(pcd, voxel_size=1.0, visualize=False)
+
+        mock_opce.assert_not_called()
+
+    def test_upsample_factor_increases_point_count(self):
+        pts = np.array([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.2],
+            [2.0, 0.0, 0.4],
+            [3.0, 0.0, 0.6],
+        ])
+        pcd = _make_pcd(pts)
+
+        with patch("Source.roofTools.grid_subsampling", side_effect=lambda pc, **kwargs: pc):
+            smoothed = smooth_roof(pcd, voxel_size=1.0, upsample_factor=3, visualize=False)
+
+        assert len(smoothed.points) == len(pts) * 3
