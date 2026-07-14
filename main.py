@@ -293,6 +293,9 @@ class App:
         self.lineset_preview = None
         self.mesh_preview = None
 
+        # Persist user-edited field values across panel rebuilds
+        self._field_values: dict[str, str] = {}
+
         # Sidebar step state tracking: list index 0 = step 1
         self._step_states = [PENDING] * 16
         self._step_rows: list[dict] = []   # [{frame, num_lbl, name_lbl, icon_lbl}, ...]
@@ -608,6 +611,7 @@ class App:
     # ── step panel builders ──────────────────────────────────────────────────
 
     def show_step(self, step_num: int):
+        self._save_current_field_values()
         self._clear_content()
         self._current_step = step_num
         builders = {
@@ -629,6 +633,38 @@ class App:
             16: self._build_step_16_panel,
         }
         builders[step_num]()
+
+    def _save_current_field_values(self):
+        """Persist values from any currently-visible entry widgets before rebuilding."""
+        _tracked = [
+            "points_per_cm_entry", "neighbour_amount_entry", "std_ratio_entry",
+            "floor_alpha_value_entry", "floor_triangle_size_entry",
+            "corner_distance_threshold_entry", "expansion_value_entry",
+            "max_line_length_entry", "slice_height_entry",
+            "roof_layers_entry", "roof_layer_fatness_entry", "roof_voxel_size_entry",
+            "roof_angle_threshold_entry", "roof_merge_radius_entry",
+            "roof_smoothing_voxel_size_entry", "roof_smoothing_upsample_factor_entry",
+            "wall_search_radius_entry", "wall_layer_amount_entry",
+            "xy_tolerance_entry", "contour_buffer_entry",
+        ]
+        for attr in _tracked:
+            try:
+                entry = getattr(self, attr)
+                if entry.winfo_exists():
+                    self._field_values[attr] = entry.get()
+            except AttributeError:
+                pass
+        _bool_var_widget_pairs = [
+            ("show_removed_points_var", "show_removed_points_checkbox"),
+            ("visualize_heightmap_var", "visualize_heightmap_checkbox"),
+            ("visualize_roof_smoothing_var", "visualize_roof_smoothing_checkbox"),
+        ]
+        for var_attr, widget_attr in _bool_var_widget_pairs:
+            try:
+                if getattr(self, widget_attr).winfo_exists():
+                    self._field_values[var_attr] = getattr(self, var_attr).get()
+            except AttributeError:
+                pass
 
     def _clear_content(self):
         for child in self._content_frame.winfo_children():
@@ -762,7 +798,9 @@ class App:
             "Standaarddeviatieverhouding voor ruisidentificatie."
         )
 
-        self.show_removed_points_var = tk.BooleanVar()
+        self.show_removed_points_var = tk.BooleanVar(
+            value=self._field_values.get("show_removed_points_var", False)
+        )
         self.show_removed_points_checkbox = ttk.Checkbutton(
             card, text="Toon verwijderde punten",
             variable=self.show_removed_points_var,
@@ -788,7 +826,9 @@ class App:
     def _build_step_4_panel(self):
         card = self._step_card(4, "Hoogtekaart genereren")
 
-        self.visualize_heightmap_var = tk.BooleanVar()
+        self.visualize_heightmap_var = tk.BooleanVar(
+            value=self._field_values.get("visualize_heightmap_var", False)
+        )
         self.visualize_heightmap_checkbox = ttk.Checkbutton(
             card, text="Visualiseer hoogtekaart",
             variable=self.visualize_heightmap_var,
@@ -954,7 +994,9 @@ class App:
         self._field(card, 1, "Upsample factor", "roof_smoothing_upsample_factor_entry",
                     (self.validate_flt, '%P'), "Factor voor het verhogen van de resolutie tijdens gladstrijken.")
 
-        self.visualize_roof_smoothing_var = tk.BooleanVar()
+        self.visualize_roof_smoothing_var = tk.BooleanVar(
+            value=self._field_values.get("visualize_roof_smoothing_var", False)
+        )
         self.visualize_roof_smoothing_checkbox = ttk.Checkbutton(
             card, text="Visualiseer gladstrijken",
             variable=self.visualize_roof_smoothing_var,
@@ -1730,7 +1772,9 @@ class App:
                 self.roof_pcd,
                 slices_amount=int(self.roof_layers_entry.get()),
                 slab_fatness=float(self.roof_layer_fatness_entry.get()),
-                voxel_size=float(self.roof_voxel_size_entry.get())
+                voxel_size=float(self.roof_voxel_size_entry.get()),
+                angle_threshold_deg=float(self.roof_angle_threshold_entry.get()),
+                merge_radius=float(self.roof_merge_radius_entry.get())
             )
 
             self._roof_division_settings = {
@@ -2033,7 +2077,8 @@ class App:
         self.save_cityjson_button.configure(state="disabled")
         self._stop_spinner("Gereed")
 
-        # Reload the welcome screen and presets
+        # Clear persisted user values and reload the welcome screen and presets
+        self._field_values.clear()
         self._show_welcome()
         self.load_presets_headless()
 
@@ -2135,7 +2180,21 @@ class App:
         return config
 
     def _load_preset_into(self, attr: str, key: str):
-        """Load a single preset value into a named entry widget if available."""
+        """Load a value into a named entry widget — user edits take priority over presets."""
+        try:
+            entry: ttk.Entry = getattr(self, attr)
+            # Restore user-edited value if one was saved
+            if attr in self._field_values:
+                value = self._field_values[attr]
+                prev_state = str(entry.cget("state"))
+                entry.configure(state="normal")
+                entry.delete(0, "end")
+                entry.insert(0, value)
+                entry.configure(state=prev_state)
+                return
+        except Exception:
+            pass
+        # Fall back to presets.ini
         config = self._read_presets_config()
         if config is None:
             return
