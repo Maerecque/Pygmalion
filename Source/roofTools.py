@@ -372,3 +372,72 @@ def smooth_roof(
           f"downsampled points = {len(roof_downsampled.points)}, smoothed points = {len(smoothed_roof.points)}")
 
     return smoothed_roof
+
+
+if __name__ == "__main__":
+    from Source.fileHandler import readout_LAS_file
+    from Source.pointCloudAltering import alter_point_density, remove_noise_statistical
+    from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
+    from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull
+    from Source.wallTools import define_min_height_roof, connect_vertically_aligned_points
+    from Source.pointCloudEditor import open_point_cloud_editor as opce  # noqa: F811
+    from Source.pointCloudEditor import open_mesh_and_lineset_viewer as omalv  # noqa: F811
+    from Source.roofTools import slice_roof_up, keep_highest_point_above_corner, smooth_roof  # noqa: F811, F401
+    from Source.linesetTools import filter_lines_within_contour, contour_to_lineset
+
+    pointCloud = readout_LAS_file("C:/Users/marcz/3D Objects/Werfkelders/xxxxxxxxxxxxxxxxxxxxxxxx.las")
+    altered_pointCloud = alter_point_density(pointCloud, 1)
+    cleaned_pointCloud = remove_noise_statistical(altered_pointCloud)
+    pointCloudTuple = transform_pointcloud_to_height_map(cleaned_pointCloud, visualize_map_np=True, debugging_logs=True)
+    floor_plan_pointCloud, ceiling_pointCloud, wall_pointCloud = pointCloudTuple
+    floor_lines = find_boundary_from_floor(floor_plan_pointCloud, alpha=8, min_triangle_area=1e-10)
+    floor_hull = sort_points_in_hull(floor_lines, 0.045)
+    floor_hull_pcd = create_point_cloud(floor_hull, color=(1, 0, 0))
+    roof_pcd, temp_wall_pcd = define_min_height_roof(ceiling_pointCloud, floor_hull_pcd, 1.5)
+    print(f"Roof point cloud has {len(roof_pcd.points)} points")
+    slice_amount = 10
+    slab_fatness = 0.01
+    voxel_size = 0.05
+    angle_threshold_deg = 45
+    merge_radius = 0.1
+
+    roof_slices = slice_roof_up(
+        roof_pcd,
+        slices_amount=slice_amount,
+        slab_fatness=slab_fatness,
+        voxel_size=voxel_size,
+        angle_threshold_deg=angle_threshold_deg,
+        merge_radius=merge_radius
+    )
+
+    opce(
+        merge_pcds(
+            [
+                create_point_cloud(
+                    slice_points,
+                    color=(0, 1, 0)
+                ) for slice_points in roof_slices
+            ]
+        ),
+        show_help=False
+    )
+
+    xy_tolerance = 0.1
+    max_line_length = 0.5
+
+    roof_lineset = o3d.geometry.LineSet()
+    for i in range(len(floor_hull) - 1, 0, -1):
+        print(f"Slice {i + 1}: {len(roof_slices[i])} points")
+        roof_lineset += connect_vertically_aligned_points(
+            roof_slices[i - 1],
+            roof_slices[i],
+            float(xy_tolerance)
+        )
+        roof_lineset = contour_to_lineset(
+            sort_points_in_hull(floor_hull[i]),
+            max_line_length=max_line_length
+        )
+
+    roof_lineset = filter_lines_within_contour(floor_hull, roof_lineset)
+
+    omalv(roof_lineset)
