@@ -28,6 +28,7 @@ See individual function docstrings for details.
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
+from scipy.spatial import cKDTree
 import sys
 import os
 
@@ -58,7 +59,7 @@ def slice_roof_up(
         roof_pcd (o3d.cpu.pybind.geometry.PointCloud): Input point cloud to be sliced.
         slices_amount (int, optional): Number of horizontal slices to create. Must be at least 1. Defaults to 2.
         slab_fatness (float, optional): Half-fatness around slice center to include points.
-            Points within ±slab_fatness of slice center are included. Defaults to 0.01.
+            Points within Â±slab_fatness of slice center are included. Defaults to 0.01.
         visualize (bool, optional): Whether to visualize the slicing process. Defaults to False.
         voxel_size (float, optional): Voxel size for downsampling. Defaults to 0.5.
         angle_threshold_deg (float, optional): Angle threshold for corner detection. Defaults to 45.
@@ -150,7 +151,7 @@ def keep_highest_point_above_corner(
     Find the highest point in full_pcd that lies approximately above each point in corner_pcd.
 
     For each corner point, searches for points in full_pcd within a horizontal
-    distance ±search_radius in both x and y directions and selects the point with the highest z-coordinate.
+    distance Â±search_radius in both x and y directions and selects the point with the highest z-coordinate.
 
     Args:
         corner_pcd (o3d.cpu.pybind.geometry.PointCloud): Point cloud containing corner points.
@@ -176,8 +177,8 @@ def keep_highest_point_above_corner(
         Found 4 highest points
 
     Note:
-        - Uses rectangular search area (±search_radius in X and Y)
-        - Returns red-colored points for visualization 🟥.
+        - Uses rectangular search area (Â±search_radius in X and Y)
+        - Returns red-colored points for visualization ðŸŸ¥.
         - With compare_with_corner=True, opens interactive visualization
         - Useful for finding roof peaks above building corners
     """
@@ -200,7 +201,6 @@ def keep_highest_point_above_corner(
     highest_points = []
 
     # For each corner point, find points in full_pcd close in x,y and pick the highest z
-
     for corner in tqdm(corner_points, desc="Finding highest points above corners", unit="corner"):
         mask = (
             (full_points[:, 0] >= corner[0] - search_radius) & (full_points[:, 0] <= corner[0] + search_radius) &
@@ -218,7 +218,7 @@ def keep_highest_point_above_corner(
     # Create point cloud from highest points
     highest_pcd = o3d.cpu.pybind.geometry.PointCloud()
     highest_pcd.points = o3d.utility.Vector3dVector(highest_points)
-    highest_pcd.colors = o3d.utility.Vector3dVector(np.tile([1, 0, 0], (len(highest_pcd.points), 1)))  # red color
+    highest_pcd.colors = o3d.utility.Vector3dVector(np.tile([1, 0, 0], (len(highest_pcd.points), 1)))  # Red color
 
     if not highest_pcd.has_points():
         raise ValueError("No points found above the corner points.")
@@ -228,3 +228,216 @@ def keep_highest_point_above_corner(
         opce(merge_pcds([corner_pcd, highest_pcd]), show_help=False)
 
     return highest_pcd
+
+
+def smooth_roof(
+    roof_pcd: o3d.cpu.pybind.geometry.PointCloud,
+    voxel_size: float = 0.5,
+    upsample_factor: float = 1.0,
+    visualize: bool = False
+) -> o3d.cpu.pybind.geometry.PointCloud:
+    """
+    Smooth a roof point cloud to reduce spiky artifacts between layers.
+
+    This is especially useful for wharf cellars where roofs can look arched with
+    local spikes after reconstruction.
+
+    Args:
+        roof_pcd (o3d.cpu.pybind.geometry.PointCloud): Input point cloud of the roof to be smoothed.
+        voxel_size (float, optional): Voxel size for downsampling. Defaults to 0.5.
+        upsample_factor (float, optional): Density multiplier for visual smoothness.
+            1 keeps the original point count; values >1 add interpolated points.
+            Defaults to 1.0.
+        visualize (bool, optional): Whether to visualize the smoothing process. Defaults to False.
+
+    Returns:
+        o3d.cpu.pybind.geometry.PointCloud: Smoothed point cloud of the roof.
+    """
+    if not isinstance(roof_pcd, o3d.cpu.pybind.geometry.PointCloud):
+        raise TypeError("roof_pcd must be an Open3D PointCloud.")
+
+    if len(roof_pcd.points) == 0:
+        raise ValueError("roof_pcd must contain points.")
+
+    if not isinstance(voxel_size, (int, float)) or voxel_size <= 0:
+        raise ValueError("voxel_size must be a positive number.")
+
+    if not isinstance(upsample_factor, (int, float)) or upsample_factor < 1:
+        raise ValueError("upsample_factor must be a number greater than or equal to 1.")
+
+    original_point_count = len(roof_pcd.points)
+
+    # Downsample first so the following 2D grid smoothing is stable and fast.
+    roof_downsampled = grid_subsampling(
+        roof_pcd,
+        voxel_size=float(voxel_size),
+        print_result=False
+    )
+
+    if len(roof_downsampled.points) == 0:
+        raise ValueError("No points left after downsampling; adjust voxel_size.")
+
+    points = np.asarray(roof_downsampled.points)
+    if points.shape[0] < 3:
+        return roof_downsampled
+
+    xy = points[:, :2]
+    z = points[:, 2]
+
+    # Build an XY grid and aggregate each cell with a robust statistic (median).
+    mins = xy.min(axis=0)
+    cell_indices = np.floor((xy - mins) / float(voxel_size)).astype(int)
+    unique_cells, inverse = np.unique(cell_indices, axis=0, return_inverse=True)
+
+    cell_z = np.zeros(len(unique_cells), dtype=float)
+    for idx in range(len(unique_cells)):
+        z_vals = z[inverse == idx]
+        cell_z[idx] = float(np.median(z_vals))
+
+    cell_to_idx = {tuple(cell): idx for idx, cell in enumerate(unique_cells)}
+    smoothed_cell_z = cell_z.copy()
+
+    # Iteratively smooth cell heights while clamping isolated spikes via local MAD.
+    for _ in range(2):
+        new_z = smoothed_cell_z.copy()
+        for idx, cell in enumerate(unique_cells):
+            cx, cy = int(cell[0]), int(cell[1])
+            neighbors = []
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    n_idx = cell_to_idx.get((cx + dx, cy + dy))
+                    if n_idx is not None:
+                        neighbors.append(smoothed_cell_z[n_idx])
+
+            if len(neighbors) < 3:
+                continue
+
+            neighbors_arr: np.ndarray = np.asarray(neighbors, dtype=float)
+            local_median = float(np.median(neighbors_arr))
+            local_mean = float(np.mean(neighbors_arr))
+            local_mad = float(np.median(np.abs(neighbors_arr - local_median))) + 1e-8
+
+            if abs(smoothed_cell_z[idx] - local_median) > 2.5 * local_mad:
+                new_z[idx] = local_median
+            else:
+                new_z[idx] = 0.6 * smoothed_cell_z[idx] + 0.4 * local_mean
+
+        smoothed_cell_z = new_z
+
+    smoothed_points = points.copy()
+    smoothed_points[:, 2] = smoothed_cell_z[inverse]
+
+    smoothed_roof = o3d.cpu.pybind.geometry.PointCloud()
+    smoothed_roof.points = o3d.utility.Vector3dVector(smoothed_points)
+
+    if roof_downsampled.has_colors():
+        smoothed_roof.colors = roof_downsampled.colors
+
+    if roof_downsampled.has_normals():
+        smoothed_roof.normals = roof_downsampled.normals
+
+    upsample_factor = int(upsample_factor)
+    if upsample_factor > 1 and len(smoothed_points) >= 2:
+        tree = cKDTree(smoothed_points)
+        _, neighbor_idx = tree.query(smoothed_points, k=2)
+        nearest_indices = neighbor_idx[:, 1]
+
+        densified_points_list: list[np.ndarray] = [smoothed_points]
+        densified_colors_list: list[np.ndarray] = []
+
+        has_colors = smoothed_roof.has_colors()
+        if has_colors:
+            base_colors = np.asarray(smoothed_roof.colors)
+            densified_colors_list.append(base_colors)
+
+        for step in range(1, upsample_factor):
+            t = step / float(upsample_factor)
+            interp_points = (1.0 - t) * smoothed_points + t * smoothed_points[nearest_indices]
+            densified_points_list.append(interp_points)
+
+            if has_colors:
+                interp_colors = (1.0 - t) * base_colors + t * base_colors[nearest_indices]
+                densified_colors_list.append(interp_colors)
+
+        densified_points: np.ndarray = np.vstack(densified_points_list)
+        smoothed_roof.points = o3d.utility.Vector3dVector(densified_points)
+
+        if has_colors:
+            smoothed_roof.colors = o3d.utility.Vector3dVector(np.vstack(densified_colors_list))
+
+    if visualize:
+        opce(merge_pcds([roof_downsampled, smoothed_roof]), show_help=False)
+
+    print(f"Smoothed roof point cloud: original points = {original_point_count}, "
+          f"downsampled points = {len(roof_downsampled.points)}, smoothed points = {len(smoothed_roof.points)}")
+
+    return smoothed_roof
+
+
+if __name__ == "__main__":
+    from Source.fileHandler import readout_LAS_file
+    from Source.pointCloudAltering import alter_point_density, remove_noise_statistical
+    from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
+    from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull
+    from Source.wallTools import define_min_height_roof, connect_vertically_aligned_points
+    from Source.pointCloudEditor import open_point_cloud_editor as opce  # noqa: F811
+    from Source.pointCloudEditor import open_mesh_and_lineset_viewer as omalv  # noqa: F811
+    from Source.roofTools import slice_roof_up, keep_highest_point_above_corner, smooth_roof  # noqa: F811, F401
+    from Source.linesetTools import filter_lines_within_contour, contour_to_lineset
+
+    pointCloud = readout_LAS_file("C:/Users/marcz/3D Objects/Werfkelders/xxxxxxxxxxxxxxxxxxxxxxxx.las")
+    altered_pointCloud = alter_point_density(pointCloud, 1)
+    cleaned_pointCloud = remove_noise_statistical(altered_pointCloud)
+    pointCloudTuple = transform_pointcloud_to_height_map(cleaned_pointCloud, visualize_map_np=True, debugging_logs=True)
+    floor_plan_pointCloud, ceiling_pointCloud, wall_pointCloud = pointCloudTuple
+    floor_lines = find_boundary_from_floor(floor_plan_pointCloud, alpha=8, min_triangle_area=1e-10)
+    floor_hull = sort_points_in_hull(floor_lines, 0.045)
+    floor_hull_pcd = create_point_cloud(floor_hull, color=(1, 0, 0))
+    roof_pcd, temp_wall_pcd = define_min_height_roof(ceiling_pointCloud, floor_hull_pcd, 1.5)
+    print(f"Roof point cloud has {len(roof_pcd.points)} points")
+    slice_amount = 10
+    slab_fatness = 0.01
+    voxel_size = 0.05
+    angle_threshold_deg = 45
+    merge_radius = 0.1
+
+    roof_slices = slice_roof_up(
+        roof_pcd,
+        slices_amount=slice_amount,
+        slab_fatness=slab_fatness,
+        voxel_size=voxel_size,
+        angle_threshold_deg=angle_threshold_deg,
+        merge_radius=merge_radius
+    )
+
+    opce(
+        merge_pcds(
+            [
+                create_point_cloud(
+                    slice_points,
+                    color=(0, 1, 0)
+                ) for slice_points in roof_slices
+            ]
+        ),
+        show_help=False
+    )
+
+    xy_tolerance = 0.1
+    max_line_length = 0.5
+
+    roof_lineset = o3d.geometry.LineSet()
+    for i in range(len(floor_hull) - 1, 0, -1):
+        print(f"Slice {i + 1}: {len(roof_slices[i])} points")
+        roof_lineset += connect_vertically_aligned_points(
+            roof_slices[i - 1],
+            roof_slices[i],
+            float(xy_tolerance)
+        )
+        roof_lineset = contour_to_lineset(
+            sort_points_in_hull(floor_hull[i]),
+            max_line_length=max_line_length
+        )
+
+    roof_lineset = filter_lines_within_contour(floor_hull, roof_lineset)
+
+    omalv(roof_lineset)

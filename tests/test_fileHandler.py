@@ -54,30 +54,27 @@ class TestReadoutLASFile:
         result = readout_LAS_file("", prnt_bool=False)
         assert result is None
 
-    def test_nonexistent_file_calls_exit(self):
-        """A path that laspy cannot find triggers exit()."""
+    def test_nonexistent_file_returns_none(self):
+        """A path that laspy cannot find returns None."""
         with patch("Source.fileHandler.laspy.read",
-                   side_effect=FileNotFoundError), \
-             patch("builtins.exit") as mock_exit:
-            readout_LAS_file("does_not_exist.las", prnt_bool=False)
-            mock_exit.assert_called_once()
+                   side_effect=FileNotFoundError):
+            result = readout_LAS_file("does_not_exist.las", prnt_bool=False)
+            assert result is None
 
-    def test_laspy_exception_calls_exit(self):
-        """A laspy.errors.LaspyException triggers exit()."""
+    def test_laspy_exception_returns_none(self):
+        """A laspy.errors.LaspyException returns None."""
         import laspy
         with patch("Source.fileHandler.laspy.read",
-                   side_effect=laspy.errors.LaspyException("bad")), \
-             patch("builtins.exit") as mock_exit:
-            readout_LAS_file("bad.las", prnt_bool=False)
-            mock_exit.assert_called_once()
+                   side_effect=laspy.errors.LaspyException("bad")):
+            result = readout_LAS_file("bad.las", prnt_bool=False)
+            assert result is None
 
-    def test_memory_error_calls_exit(self):
-        """MemoryError triggers exit()."""
+    def test_memory_error_returns_none(self):
+        """MemoryError returns None."""
         with patch("Source.fileHandler.laspy.read",
-                   side_effect=MemoryError), \
-             patch("builtins.exit") as mock_exit:
-            readout_LAS_file("huge.las", prnt_bool=False)
-            mock_exit.assert_called_once()
+                   side_effect=MemoryError):
+            result = readout_LAS_file("huge.las", prnt_bool=False)
+            assert result is None
 
     def test_successful_read_returns_point_cloud(self):
         """A mocked valid LAS read returns an Open3D PointCloud."""
@@ -104,8 +101,7 @@ class TestReadoutLASFile:
     def test_laspy_read_called_with_filename(self):
         """laspy.read is called with the exact filename supplied."""
         with patch("Source.fileHandler.laspy.read",
-                   side_effect=FileNotFoundError) as mock_read, \
-             patch("builtins.exit"):
+                   side_effect=FileNotFoundError) as mock_read:
             readout_LAS_file("my_scan.las", prnt_bool=False)
             mock_read.assert_called_once_with("my_scan.las")
 

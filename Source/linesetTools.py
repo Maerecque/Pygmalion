@@ -361,7 +361,7 @@ def generate_city_json_from_building(
             idx_ring = unique + [unique[0]]
         return idx_ring
 
-    # 1. Extract closed rings for floor, wall, and roof
+    # Extract closed rings for floor, wall, and roof
     surface_names = ['FloorSurface', 'WallSurface', 'RoofSurface']
     linesets = [floor_lineset, wall_lineset, roof_lineset]
     all_points = []
@@ -376,13 +376,13 @@ def generate_city_json_from_building(
             rings.append([])
             print(f"Warning: Could not extract ring: {e}")
 
-    # 2. Stack all points and deduplicate globally
+    # Stack all points and deduplicate globally
     all_points_concat = np.vstack([p for p in all_points if len(p) > 0])
     unique_points, inverse = np.unique(
         np.round(all_points_concat, 8), axis=0, return_inverse=True
     )
 
-    # 3. Remap and repair rings to global indices
+    # Remap and repair rings to global indices
     offsets = np.cumsum([0] + [len(p) for p in all_points[:-1]])
     boundaries = []
     semantics = []
@@ -399,7 +399,7 @@ def generate_city_json_from_building(
     if not boundaries:
         raise ValueError("No valid surfaces to export.")
 
-    # 4. Build CityJSON object
+    # Build CityJSON object
     cityjson = {
         'type': 'CityJSON',
         'version': '1.1',
@@ -428,7 +428,7 @@ def generate_city_json_from_building(
     if cityjson_properties:
         cityjson.update(cityjson_properties)
 
-    # 5. Tkinter save file dialog
+    # Tkinter save file dialog
     root = tk.Tk()
     root.withdraw()
     file_path = filedialog.asksaveasfilename(

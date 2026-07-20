@@ -66,7 +66,7 @@ def merge_list_of_pointclouds(pcd_list: list) -> o3d.cpu.pybind.geometry.PointCl
 
     # Check if the input list contains point clouds with points
     if not all(len(pcd.points) > 0 for pcd in pcd_list):
-        # remove the point clouds with no points
+        # Remove the point clouds with no points
         pcd_list = [pcd for pcd in pcd_list if len(pcd.points) > 0]
 
         # Check again if there are still point clouds in the list that have no points
@@ -362,7 +362,7 @@ def transform_mesh_to_pcd(
 
     print("Transforming mesh to point cloud...")
 
-    # calculate overall density of the point cloud
+    # Calculate overall density of the point cloud
     original_point_mahalanobis_distance = o3d.geometry.PointCloud.compute_mahalanobis_distance(original_pcd)
     density = len(original_pcd.points) / np.sum(original_point_mahalanobis_distance)
 

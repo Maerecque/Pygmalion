@@ -62,7 +62,7 @@ def expand_boundary(
     vertices = None
     z_values = None
 
-    # convert expansion_size to the same units as the mesh's vertices (assuming the mesh is in meters, we convert to centimeters)
+    # Convert expansion_size to the same units as the mesh's vertices (assuming the mesh is in meters, we convert to centimeters)
     expansion_size /= 100
 
     # Show amount of points in the original mesh (for debugging purposes)
@@ -102,7 +102,7 @@ def expand_boundary(
 
         # Visualize the original and expanded points together
         opce(merge_pcds([original_pcd, expanded_pcd]), show_help=False)
-        # empty the original point cloud to free up memory
+        # Empty the original point cloud to free up memory
         original_pcd.clear()
         cm_value = None  # Clear the cm_value variable to free up memory
 

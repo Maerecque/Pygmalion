@@ -137,7 +137,7 @@ def _find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
     Returns:
         Number of triangles added.
     """
-    # collect edges -> count
+    # Collect edges -> count
     triangles = np.asarray(mesh.triangles, dtype=int)
     edges: dict = {}
     for tri in triangles:
@@ -151,7 +151,7 @@ def _find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
     if not boundary_edges:
         return []
 
-    # adjacency for boundary edges
+    # Adjacency for boundary edges
     adj: dict = {}
     for a, b in boundary_edges:
         adj.setdefault(a, []).append(b)
@@ -164,7 +164,7 @@ def _find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
             e = (min(start, nb), max(start, nb))
             if e in visited_edges:
                 continue
-            # walk a loop
+            # Walk a loop
             loop = [start, nb]
             visited_edges.add(e)
             while True:
@@ -181,7 +181,7 @@ def _find_boundary_loops(mesh: o3d.geometry.TriangleMesh) -> list:
                 visited_edges.add(edge)
                 if nxt == loop[0]:
                     break
-            # ensure closed loop (remove final duplicate)
+            # Ensure closed loop (remove final duplicate)
             if loop[0] == loop[-1]:
                 loop = loop[:-1]
             if len(loop) >= 3:
@@ -203,7 +203,7 @@ def _best_fit_plane_basis(points: np.ndarray):
     # PCA
     cov = np.cov((points - centroid).T)
     eigvals, eigvecs = np.linalg.eigh(cov)
-    # smallest eigenvalue -> normal
+    # Smallest eigenvalue -> normal
     normal = eigvecs[:, np.argmin(eigvals)]
     u = eigvecs[:, np.argmax(eigvals)]
     v = np.cross(normal, u)
@@ -233,19 +233,19 @@ def _fill_hole_by_triangulation(
     """
     verts = np.asarray(mesh.vertices)
     loop_pts = verts[np.asarray(loop)]
-    # small sanity checks
+    # Small sanity checks
     if len(loop_pts) < 3:
         return 0
     if max_edge_len is not None:
         dists = np.linalg.norm(np.roll(loop_pts, -1, axis=0) - loop_pts, axis=1)
         if np.any(dists > max_edge_len):
-            # hole edges too large — skip
+            # Hole edges too large — skip
             return 0
 
     centroid, u, v, normal = _best_fit_plane_basis(loop_pts)
     # 3D -> 2D
     coords2d = np.column_stack([np.dot(loop_pts - centroid, u), np.dot(loop_pts - centroid, v)])
-    # create polygon and triangulate
+    # Create polygon and triangulate
     poly = Polygon(coords2d)
     if not poly.is_valid:
         poly = poly.buffer(0)
@@ -266,39 +266,39 @@ def _fill_hole_by_triangulation(
     else:
         contour_poly = None
 
-    # create map from 2D coordinates to indices when possible (avoid duplicate vertices)
+    # Create map from 2D coordinates to indices when possible (avoid duplicate vertices)
     global_vertices = verts.tolist()
     index_map = {}  # (x2,y2) -> index
-    # fill index_map with existing loop vertices
+    # Fill index_map with existing loop vertices
     for li, pt2 in zip(loop, coords2d):
         key = (round(float(pt2[0]), 8), round(float(pt2[1]), 8))
         index_map[key] = int(li)
 
     for t in tri_polys:
-        tri_coords = np.array(t.exterior.coords)[:3]  # shapely returns closed ring
+        tri_coords = np.array(t.exterior.coords)[:3]  # Shapely returns closed ring
         centroid2 = tri_coords.mean(axis=0)
-        # check within contour if provided
+        # Check within contour if provided
         if contour_poly is not None:
             if not (contour_poly.contains(ShapelyPoint(centroid2)) or contour_poly.covers(ShapelyPoint(centroid2))):
                 continue
-        # for each corner, either reuse existing vertex or create new
+        # For each corner, either reuse existing vertex or create new
         tri_idx = []
         for c in tri_coords:
             key = (round(float(c[0]), 8), round(float(c[1]), 8))
             if key in index_map:
                 tri_idx.append(index_map[key])
             else:
-                # map back to 3D
+                # Map back to 3D
                 pt3 = centroid + u * c[0] + v * c[1]
                 global_vertices.append([float(pt3[0]), float(pt3[1]), float(pt3[2])])
                 new_idx = len(global_vertices) - 1
                 index_map[key] = new_idx
                 tri_idx.append(new_idx)
-        # ensure triangle is not degenerate
+        # Ensure triangle is not degenerate
         if len(set(tri_idx)) == 3:
             new_triangles.append(tri_idx)
 
-    # update mesh (append new vertices and triangles)
+    # Update mesh (append new vertices and triangles)
     if new_triangles:
         mesh.vertices = o3d.utility.Vector3dVector(np.asarray(global_vertices))
         all_tris = np.vstack([np.asarray(mesh.triangles, dtype=int), np.asarray(new_triangles, dtype=int)])
@@ -342,7 +342,7 @@ def _fill_mesh_holes(
     added = 0
     for loop in loops:
         if len(loop) > max_hole_vertices:
-            # skip extremely large holes unless explicitly desired
+            # Skip extremely large holes unless explicitly desired
             continue
         added += _fill_hole_by_triangulation(mesh, loop, contour=contour, max_edge_len=max_edge_len)
     return added
@@ -379,21 +379,21 @@ def _stitch_loop_pair(mesh: o3d.geometry.TriangleMesh, loopA: list, loopB: list)
     verts = np.asarray(mesh.vertices)
     A = verts[np.asarray(loopA)]
     B = verts[np.asarray(loopB)]
-    # find closest pairs
+    # Find closest pairs
     from scipy.spatial import cKDTree
     treeB = cKDTree(B)
     pairs = []
     for i, p in enumerate(A):
         dist, idx = treeB.query(p)
         pairs.append((i, idx, dist))
-    # create triangles by walking along A and linking to nearest B
+    # Create triangles by walking along A and linking to nearest B
     global_vertices = verts.tolist()  # noqa: F841
     new_tris = []
     for i in range(len(pairs)):
         a_idx = loopA[pairs[i][0]]
         b_idx = loopB[pairs[i][1]]
         a_next = loopA[pairs[(i + 1) % len(pairs)][0]]
-        # triangle (a, b, a_next) - simple bridging
+        # Triangle (a, b, a_next) - simple bridging
         if len({a_idx, b_idx, a_next}) == 3:
             new_tris.append([int(a_idx), int(b_idx), int(a_next)])
     if new_tris:
@@ -500,12 +500,12 @@ def repair_mesh_with_contour(
                             pass
                         used.add(i)
                         used.add(j)
-            # after stitching, we'll re-run hole filling on current mesh
+            # After stitching, we'll re-run hole filling on current mesh
 
     # 2) Fill remaining holes (clipped by contour if provided)
     _fill_mesh_holes(mesh, contour=contour_arr, max_hole_vertices=max_hole_vertices, max_edge_len=max_edge_len)
 
-    # recompute normals and return
+    # Recompute normals and return
     try:
         mesh.compute_vertex_normals()
     except Exception:
