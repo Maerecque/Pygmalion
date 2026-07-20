@@ -96,6 +96,8 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
 
         laspy.errors.LaspyException: If Laspy runs into an error.
 
+        AttributeError: If the given file is not a LAS/LAZ file or Laspy cannot handle it.
+
 
     Returns:
         o3d.cpu.pybind.geometry.PointCloud: An Open3D point cloud containing the contents of the LAS/LAZ file.
@@ -145,24 +147,24 @@ def readout_LAS_file(filename: str, prnt_bool: bool = True) -> o3d.cpu.pybind.ge
 
     except FileNotFoundError:
         print("Could not find a file on the given PATH,  please check if the PATH exists.")
-        exit()
+        return
     except NoFileGivenError:
         print("No file was selected, script will not be stopped.")
         return
-    except laspy.errors.LaspyException:
+    except (laspy.errors.LaspyException, AttributeError):
         print("The framework could not handle this file, please check if the file is not corrupted and if it is a LAS/LAZ file.")
-        exit()
+        return
     except FileFormatError:
         print("The chosen LAS/LAZ file is not in the correct format or correct version. This file will not be used.")
-        exit()
+        return
     except MemoryError:
         print("The chosen LAS/LAZ file is too large to be loaded into memory. This file will not be used. And the script will be closed.")  # noqa: E501
-        exit()
+        return
     except Exception as e:
         print("An unforeseen error occurred. See below for details.")
         print(type(e))
         print(e)
-        exit()
+        return
 
 
 def readout_e57_file(file_path: str) -> o3d.geometry.PointCloud:

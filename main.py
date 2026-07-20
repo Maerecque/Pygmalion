@@ -48,13 +48,16 @@ def get_application_version():
 # This line is needed so the scripts from the source folder are imported correctly without the need of an __init__ file.
 sys.path.insert(1, "/".join(os.path.realpath(__file__).split("/")[0:-2]))
 
+import laspy  # noqa: E402
 import open3d as o3d  # noqa: E402 — must come after sys.path setup
 from Source.boundaryScript import expand_boundary
 from Source.fileHandler import (  # noqa: F401
     get_file_path,
     readout_LAS_file,
     readout_e57_file,
-    get_save_file_path
+    get_save_file_path,
+    FileFormatError,
+    NoFileGivenError
 )
 from Source.floorplanFinder import find_boundary_from_floor, sort_points_in_hull
 from Source.heightMapModule import transform_pointcloud_to_height_map, create_point_cloud
@@ -1328,12 +1331,24 @@ class App:
             self._handle_select_file_error(e, file_path)
 
     def _handle_select_file_error(self, e, file_path):
+        # Disable sections after step 1, since the file load failed
+        self._reset_steps_after(1)
+
         if hasattr(self, 'file_select_button') and self.file_select_button.winfo_exists():
             self.file_select_button.configure(text="📂  Selecteer puntenwolkbestand", state="normal")
         if hasattr(self, 'point_amount_label') and self.point_amount_label.winfo_exists():
             self.point_amount_label.configure(text="")
         self._stop_spinner("Fout bij laden")
-        self.show_message("Foutmelding", f"Fout bij laden van puntenwolkbestand: {str(e)}", "error")
+
+        if isinstance(e, FileFormatError):
+            msg = "Het bestand heeft een ongeldig of niet-ondersteund formaat."
+        elif isinstance(e, NoFileGivenError):
+            msg = "Geen bestand geselecteerd."
+        elif isinstance(e, (laspy.errors.LaspyException, AttributeError)):
+            msg = "Het LAS/LAZ-bestand kon niet worden gelezen. Controleer of het bestand geldig en niet corrupt is."
+        else:
+            msg = f"Fout bij laden van puntenwolkbestand: {str(e)}"
+        self.show_message("Foutmelding", msg, "error")
         self.root.config(cursor="")
         try:
             if file_path and hasattr(self, 'file_label') and self.file_label.winfo_exists():
