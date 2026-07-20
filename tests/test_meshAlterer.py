@@ -125,6 +125,49 @@ class TestO3dToCityJson:
         solid_boundaries = result["CityObjects"]["t"]["geometry"][0]["boundaries"][0]
         assert len(solid_boundaries) == len(mesh.triangles)
 
+    def test_no_crs_produces_no_metadata(self):
+        mesh = _make_simple_mesh()
+        result = o3d_to_cityjson(mesh)
+        assert "metadata" not in result
+
+    def test_epsg_shorthand_is_converted_to_ogc_uri(self):
+        mesh = _make_simple_mesh()
+        result = o3d_to_cityjson(mesh, crs="EPSG:28992")
+        assert result["metadata"]["referenceSystem"] == \
+            "https://www.opengis.net/def/crs/EPSG/0/28992"
+
+    def test_full_ogc_uri_is_passed_through_unchanged(self):
+        mesh = _make_simple_mesh()
+        uri = "https://www.opengis.net/def/crs/EPSG/0/4326"
+        result = o3d_to_cityjson(mesh, crs=uri)
+        assert result["metadata"]["referenceSystem"] == uri
+
+    def test_crs_lowercase_epsg_is_accepted(self):
+        mesh = _make_simple_mesh()
+        result = o3d_to_cityjson(mesh, crs="epsg:28992")
+        assert result["metadata"]["referenceSystem"] == \
+            "https://www.opengis.net/def/crs/EPSG/0/28992"
+
+    def test_metadata_key_absent_when_crs_is_none(self):
+        mesh = _make_simple_mesh()
+        result = o3d_to_cityjson(mesh, crs=None)
+        assert "metadata" not in result
+
+    def test_invalid_crs_non_numeric_epsg_raises(self):
+        mesh = _make_simple_mesh()
+        with pytest.raises(ValueError, match="EPSG code must be numeric"):
+            o3d_to_cityjson(mesh, crs="EPSG:abc")
+
+    def test_invalid_crs_random_string_raises(self):
+        mesh = _make_simple_mesh()
+        with pytest.raises(ValueError, match="Invalid CRS format"):
+            o3d_to_cityjson(mesh, crs="RD_New")
+
+    def test_invalid_crs_epsg_without_code_raises(self):
+        mesh = _make_simple_mesh()
+        with pytest.raises(ValueError, match="EPSG code must be numeric"):
+            o3d_to_cityjson(mesh, crs="EPSG:")
+
 
 class TestFilterVerticesAndFacesMocks:
     # ── Mock tests ───────────────────────────────────────────────────────────

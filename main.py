@@ -648,7 +648,7 @@ class App:
             "roof_angle_threshold_entry", "roof_merge_radius_entry",
             "roof_smoothing_voxel_size_entry", "roof_smoothing_upsample_factor_entry",
             "wall_search_radius_entry", "wall_layer_amount_entry",
-            "xy_tolerance_entry", "contour_buffer_entry",
+            "xy_tolerance_entry", "contour_buffer_entry", "crs_entry",
         ]
         for attr in _tracked:
             try:
@@ -898,12 +898,21 @@ class App:
                                                validatecommand=(self.validate_flt, '%P'))
         self.max_line_length_entry.grid(row=13, column=1, sticky="ew", pady=(12, 5))
 
+        ttk.Label(card, text="Coördinaatreferentiesysteem (optioneel)").grid(
+            row=14, column=0, sticky="w", pady=5, padx=(0, 12))
+        self.crs_entry = ttk.Entry(card, width=18, state="disabled")
+        self.crs_entry.grid(row=14, column=1, sticky="ew", pady=5)
+        self.add_tooltip(self.crs_entry,
+                         "Optioneel: voer een coördinaatreferentiesysteem in, "
+                         "bijv. 'EPSG:28992' of een volledige OGC URI. "
+                         "Laat leeg om geen referentiesysteem op te slaan.")
+
         self.floor_to_cityjson_button = ttk.Button(
             card, text="💾  Vloer → 2D CityJSON",
             bootstyle="success-outline", state="disabled",
             command=self.start_floor_2_lineset_2_cityjson_thread, width=26
         )
-        self.floor_to_cityjson_button.grid(row=14, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+        self.floor_to_cityjson_button.grid(row=15, column=0, columnspan=2, sticky="ew", pady=(4, 0))
         self.add_tooltip(self.floor_to_cityjson_button,
                          "Converteer de gedetecteerde vloergrens naar een 2D CityJSON-bestand.")
 
@@ -911,7 +920,7 @@ class App:
             card, text="Vloergrens niet gedetecteerd.",
             font=("Segoe UI", 9), bootstyle="secondary"
         )
-        self.floor_detection_result_label.grid(row=15, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        self.floor_detection_result_label.grid(row=16, column=0, columnspan=2, sticky="w", pady=(8, 0))
         if self._step_states[4] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
             self.floor_detection_button.configure(state="normal")
             self.floor_alpha_value_entry.configure(state="normal")
@@ -925,8 +934,10 @@ class App:
             self.floor_expansion_button.configure(state="normal")
             self._load_preset_into("expansion_value_entry", "expansion_value")
             self.max_line_length_entry.configure(state="normal")
-            self.floor_to_cityjson_button.configure(state="normal")
             self._load_preset_into("max_line_length_entry", "max_line_length")
+            self.crs_entry.configure(state="normal")
+            self._load_preset_into("crs_entry", "crs")
+            self.floor_to_cityjson_button.configure(state="normal")
 
     # ── Step 6 — Vloer uitbreiden (standalone panel) ─────────────────────────
     def _build_step_6_panel(self):
@@ -1108,9 +1119,15 @@ class App:
     # ── Step 16 — CityJSON conversie ──────────────────────────────────────────
     def _build_step_16_panel(self):
         card = self._step_card(16, "CityJSON conversie")
-        ttk.Label(card, text="Geen parameters vereist.").grid(
-            row=0, column=0, columnspan=2, sticky="w", pady=(0, 8)
-        )
+        ttk.Label(card, text="Coördinaatreferentiesysteem (optioneel)").grid(
+            row=0, column=0, sticky="w", pady=5, padx=(0, 12))
+        self.crs_entry = ttk.Entry(card, width=18, state="disabled")
+        self.crs_entry.grid(row=0, column=1, sticky="ew", pady=5)
+        self._load_preset_into("crs_entry", "crs")
+        self.add_tooltip(self.crs_entry,
+                         "Optioneel: voer een coördinaatreferentiesysteem in, "
+                         "bijv. 'EPSG:28992' of een volledige OGC URI. "
+                         "Laat leeg om geen referentiesysteem op te slaan.")
         self._action_btn(card, "Converteer naar CityJSON", "cityjson_conversion_button",
                          self.start_cityjson_conversion_thread,
                          tooltip="Converteer de 3D Mesh naar een CityJSON-bestand.")
@@ -1120,6 +1137,7 @@ class App:
         )
         self.cityjson_conversion_result_label.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         if self._step_states[15] in (ACTIVE, COMPLETE, ERROR, OPTIONAL):
+            self.crs_entry.configure(state="normal")
             self.cityjson_conversion_button.configure(state="normal")
 
     # ── Sidebar state management ─────────────────────────────────────────────
@@ -1719,11 +1737,13 @@ class App:
             else:
                 floor_lineset = contour_to_lineset(self.floor_corners)
             floor_mesh = lineset_to_trianglemesh(floor_lineset, self.floor_corners)
+            crs_value = self.crs_entry.get().strip() or None
             cityjson_data = o3d_to_cityjson(
                 floor_mesh,
                 cityobject_id="Gebouw_Vloer_1",
                 obj_type="Building",
-                lod="1.0"
+                lod="1.0",
+                crs=crs_value
             )
 
             # Update view with the floor lineset
@@ -1836,6 +1856,12 @@ class App:
                 visualize=bool(self.visualize_roof_smoothing_var.get())
             )
 
+            if self._roof_division_settings is not None:
+                self.roof_layer_list = slice_roof_up(
+                    self.roof_pcd,
+                    **self._roof_division_settings
+                )
+
             self.update_view_pointcloud(self.roof_pcd)
 
             self.roof_smoothing_result_label.configure(
@@ -1940,6 +1966,11 @@ class App:
                     sort_points_in_hull(self.roof_layer_list[i]),
                     max_line_length=float(self.max_line_length_entry.get())
                 )
+            if self.roof_layer_list:
+                self.roof_wall_lineset += contour_to_lineset(
+                    sort_points_in_hull(self.roof_layer_list[0]),
+                    max_line_length=float(self.max_line_length_entry.get())
+                )
             self.roof_wall_lineset = filter_lines_within_contour(self.floor_corners, self.roof_wall_lineset)
             self.floor_lineset = contour_to_lineset(self.floor_corners)
             self.total_lineset = merge_lineset(self.floor_lineset, self.roof_wall_lineset)
@@ -2004,11 +2035,13 @@ class App:
 
     def cityjson_conversion_step(self):
         try:
+            crs_value = self.crs_entry.get().strip() or None
             self.cityjson_data = o3d_to_cityjson(
                 self.repaired_mesh,
                 cityobject_id="Gebouw_1",
                 obj_type="Building",
-                lod="1.0"
+                lod="1.0",
+                crs=crs_value
             )
             self.cityjson_conversion_result_label.configure(
                 text="Succesvol geconverteerd naar CityJSON.", bootstyle="success"
@@ -2133,6 +2166,8 @@ class App:
         self.floor_to_cityjson_button.configure(state="normal")
         self.max_line_length_entry.configure(state="normal")
         self._load_preset_into("max_line_length_entry", "max_line_length")
+        self.crs_entry.configure(state="normal")
+        self._load_preset_into("crs_entry", "crs")
 
     def enable_roof_extraction_section(self):
         self._update_sidebar_step(8, ACTIVE)
@@ -2254,6 +2289,7 @@ class App:
             ("xy_tolerance_entry",               "xy_tolerance"),           # noqa: E241
             ("max_line_length_entry",             "max_line_length"),       # noqa: E241
             ("contour_buffer_entry",              "contour_buffer"),        # noqa: E241
+            ("crs_entry",                          "crs")                   # noqa: E241
         ]
 
         for attr, key in entries_and_keys:
