@@ -245,6 +245,7 @@ def o3d_to_cityjson(
     cityobject_id: str = "obj1",
     obj_type: str = "Building",
     lod: str = "1.0",
+    crs: str = None,
 ) -> dict:
     """Convert an Open3D TriangleMesh into a minimal CityJSON object.
 
@@ -261,6 +262,10 @@ def o3d_to_cityjson(
             "Building", "TINRelief"). Defaults to "Building".
         lod (str, optional): Level of detail of the geometry.
             Defaults to "1.0".
+        crs (str, optional): EPSG code or full OGC URI for the coordinate
+            reference system (e.g. "EPSG:28992" or
+            "https://www.opengis.net/def/crs/EPSG/0/28992").
+            If None, no referenceSystem is added. Defaults to None.
 
     Returns:
         dict: A CityJSON object containing vertices and geometry
@@ -286,4 +291,23 @@ def o3d_to_cityjson(
         },
         "vertices": vertices,
     }
+
+    if crs is not None:
+        # Normalise a bare "EPSG:XXXXX" code to the OGC URI form required by CityJSON 1.1
+        if crs.upper().startswith("EPSG:"):
+            epsg_code = crs.split(":", 1)[1]
+            if not epsg_code.isdigit():
+                raise ValueError(
+                    f"Invalid CRS format '{crs}': EPSG code must be numeric (e.g. 'EPSG:28992')."
+                )
+            crs_uri = f"https://www.opengis.net/def/crs/EPSG/0/{epsg_code}"
+        elif crs.startswith("https://") or crs.startswith("http://"):
+            crs_uri = crs
+        else:
+            raise ValueError(
+                f"Invalid CRS format '{crs}': expected 'EPSG:<code>' or a full OGC URI "
+                f"starting with 'http://' or 'https://'."
+            )
+        cityjson["metadata"] = {"referenceSystem": crs_uri}
+
     return cityjson
