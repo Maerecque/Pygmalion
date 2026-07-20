@@ -1856,6 +1856,12 @@ class App:
                 visualize=bool(self.visualize_roof_smoothing_var.get())
             )
 
+            if self._roof_division_settings is not None:
+                self.roof_layer_list = slice_roof_up(
+                    self.roof_pcd,
+                    **self._roof_division_settings
+                )
+
             self.update_view_pointcloud(self.roof_pcd)
 
             self.roof_smoothing_result_label.configure(
@@ -1958,6 +1964,11 @@ class App:
                 )
                 self.roof_wall_lineset += contour_to_lineset(
                     sort_points_in_hull(self.roof_layer_list[i]),
+                    max_line_length=float(self.max_line_length_entry.get())
+                )
+            if self.roof_layer_list:
+                self.roof_wall_lineset += contour_to_lineset(
+                    sort_points_in_hull(self.roof_layer_list[0]),
                     max_line_length=float(self.max_line_length_entry.get())
                 )
             self.roof_wall_lineset = filter_lines_within_contour(self.floor_corners, self.roof_wall_lineset)
