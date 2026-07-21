@@ -58,13 +58,29 @@ def slice_roof_up(
     Args:
         roof_pcd (o3d.cpu.pybind.geometry.PointCloud): Input point cloud to be sliced.
         slices_amount (int, optional): Number of horizontal slices to create. Must be at least 1. Defaults to 2.
-        slab_fatness (float, optional): Half-fatness around slice center to include points.
-            Points within Â±slab_fatness of slice center are included. Defaults to 0.01.
-        visualize (bool, optional): Whether to visualize the slicing process. Defaults to False.
-        voxel_size (float, optional): Voxel size for downsampling. Defaults to 0.5.
-        angle_threshold_deg (float, optional): Angle threshold for corner detection. Defaults to 45.
-        window (int, optional): Window size for corner detection. Defaults to 3.
-        merge_radius (float, optional): Merge radius for corner detection. Defaults to 0.1.
+            Higher values produce more cross-sections with finer vertical resolution, capturing more detail
+            in complex roofs. Lower values yield fewer, coarser sections and faster processing.
+        slab_fatness (float, optional): Half-thickness (in metres) of each horizontal slice around its center Z.
+            Points within ±slab_fatness of the slice center are included. Defaults to 0.01.
+            Higher values capture more points per slice (denser cross-sections) but increase the risk of
+            adjacent slices overlapping and mixing points from different heights. Lower values produce
+            thinner, cleaner slices at the cost of potentially empty slices with sparse point clouds.
+        visualize (bool, optional): Whether to visualize each slice's corners interactively. Defaults to False.
+        voxel_size (float, optional): Voxel size (in metres) for downsampling each slice before corner detection.
+            Defaults to 0.5. Smaller values retain more points and produce finer corner detail but increase
+            processing time. Larger values aggressively subsample the slice, speeding up corner detection
+            at the cost of spatial precision.
+        angle_threshold_deg (float, optional): Minimum interior angle change (in degrees) required to classify
+            a point as a corner. Defaults to 45. Lower values detect more corners including gentle bends,
+            while higher values only detect sharp corners, reducing noise in smoother roof profiles.
+        window (int, optional): Number of neighbouring points on each side used when computing the angle at
+            a candidate corner. Defaults to 3. Larger windows smooth out local noise and ignore minor
+            irregularities, but may miss tight corners. Smaller windows are more sensitive to fine detail
+            but also more susceptible to noise.
+        merge_radius (float, optional): Distance threshold (in metres) within which nearby detected corners
+            are merged into a single point. Defaults to 0.1. Higher values consolidate clustered corners
+            into one representative point, reducing duplicates in dense areas. Lower values keep corners
+            distinct, preserving detail but potentially leaving redundant nearby points.
 
     Returns:
         list of np.ndarray: List of arrays, each containing the flattened points for a slice (ordered from low to high).
@@ -131,6 +147,8 @@ def slice_roof_up(
 
         temp_corners_pcd = o3d.cpu.pybind.geometry.PointCloud()
         temp_corners_pcd.points = o3d.utility.Vector3dVector(temp_corners_array)
+
+        print(f"Slice at Z={z_center:.3f}: {len(slice_points)} points, {len(temp_corners_array)} corners found")
 
         if visualize:
             opce(temp_corners_pcd, show_help=False)

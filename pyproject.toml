@@ -4,7 +4,7 @@ build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "pygmalion-pointcloud"
-version = "1.1.4"
+version = "1.1.5"
 description = "Point cloud processing and CityJSON conversion for wharf cellar structures"
 requires-python = ">=3.7, <=3.12"
 dependencies = [

@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.7.9%20--%203.12.10-blue.svg" alt="Python 3.7.9 - 3.12.10"></a>
-  <img src="https://img.shields.io/badge/version-1.1.4-g.svg" alt="Versie">
+  <img src="https://img.shields.io/badge/version-1.1.5-g.svg" alt="Versie">
   <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/platform-windows-lightgrey" alt="Platform: Windows"></a>
   <a href="https://github.com/Maerecque/Pygmalion/actions/workflows/ci.yml"><img src="https://github.com/Maerecque/Pygmalion/actions/workflows/ci.yml/badge.svg?label=Tests" alt="Tests"></a>
   <a href="https://flake8.pycqa.org/"><img src="https://img.shields.io/badge/code%20style-flake8-blue" alt="Code Style: flake8"></a>

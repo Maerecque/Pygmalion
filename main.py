@@ -776,7 +776,9 @@ class App:
         card = self._step_card(2, "Puntdichtheid aanpassen")
         self._field(
             card, 0, "Punten per cm²", "points_per_cm_entry", (self.validate_flt, '%P'),
-            "Het gewenste aantal punten per cm² in de puntenwolk."
+            "Het gewenste aantal punten per cm² in de puntenwolk.\n"
+            "Een hogere waarde resulteert in een dichtere puntenwolk/hoger behoud van punten.\n"
+            "Een lagere waarde resulteert in een dunnere puntenwolk/lager behoud van punten."
         )
         self._action_btn(
             card, "Pas puntdichtheid aan", "point_density_button",
@@ -794,11 +796,14 @@ class App:
         card = self._step_card(3, "Ruis verwijderen")
         self._field(
             card, 0, "Aantal buren", "neighbour_amount_entry", (self.validate_int, '%P'),
-            "Aantal naburige punten voor ruisbeoordeling. \n Hoe meer buren, hoe grondiger de beoordeling, maar ook hoe langer het proces duurt."  # noqa: E501
+            "Aantal naburige punten voor ruisbeoordeling. \n"
+            "Hoe meer buren, hoe grondiger de beoordeling, maar ook hoe langer het proces duurt."  # noqa: E501
         )
         self._field(
             card, 1, "Std ratio", "std_ratio_entry", (self.validate_flt, '%P'),
-            "Standaarddeviatieverhouding voor ruisidentificatie."
+            "Standaarddeviatieverhouding voor ruisidentificatie.\n"
+            "Een lagere waarde resulteert in een strengere ruisbeoordeling, \n"
+            "Een hogere waarde een mildere beoordeling oplevert."
         )
 
         self.show_removed_points_var = tk.BooleanVar(
@@ -811,7 +816,7 @@ class App:
         )
         self.show_removed_points_checkbox.grid(row=2, column=0, columnspan=2, sticky="w", pady=5)
         self.add_tooltip(self.show_removed_points_checkbox,
-                         "Als ingeschakeld, worden verwijderde punten als rood weergegeven.")
+                         "Als ingeschakeld, zal een visualisatie van de verwijderde punten als rood weergegeven worden.")
 
         self._action_btn(card, "Start voorbewerking", "preprocessing_button",
                          self.start_preprocessing_thread,
@@ -838,7 +843,12 @@ class App:
             state="disabled", bootstyle="info-round-toggle"
         )
         self.visualize_heightmap_checkbox.grid(row=0, column=0, columnspan=2, sticky="w", pady=5)
-        self.add_tooltip(self.visualize_heightmap_checkbox, "Visualiseer de gemaakte hoogtekaart.")
+        self.add_tooltip(
+            self.visualize_heightmap_checkbox,
+            "Visualiseer de gemaakte hoogtekaart.\n"
+            "In deze visualisatie wordt de hoogtekaart als een kleurenoverlay op de puntenwolk weergegeven.\n"
+            "De kleuren geven de hoogte aan, waarbij blauw de laagste punten en rood de hoogste punten vertegenwoordigt."
+        )
 
         self._action_btn(card, "Maak hoogtekaart", "heightmap_button",
                          self.start_heightmap_thread,
@@ -855,15 +865,23 @@ class App:
         card = self._step_card(5, "Vloergrens detectie")
         self._field(card, 0, "Alpha waarde", "floor_alpha_value_entry",
                     (self.validate_flt, '%P'),
-                    "Alpha-waarde voor vloergrensdetectie. \n Lagere waarden resulteren in een strakkere, meer gedetailleerde grens, \n terwijl hogere waarden een lossere, meer gegeneraliseerde grens opleveren."  # noqa: E501
+                    "Alpha-waarde voor vloergrensdetectie. \n"
+                    "Lagere waarden resulteren in een strakkere, meer gedetailleerde grens,\n"
+                    "Hogere waarden een lossere, meer gegeneraliseerde grens opleveren."
                     )
         self._field(card, 1, "Driehoekgrootte", "floor_triangle_size_entry",
                     (self.validate_flt, '%P'),
-                    "Grootte van driehoeken voor vloergrensdetectie. \n Deze driehoeken worden gebruikt in het Delaunay-triangulatieproces om de vloergrens te bepalen. \n Kleinere waarden kunnen leiden tot een meer gedetailleerde grens, maar kunnen ook meer ruis veroorzaken, \n terwijl grotere waarden een gladdere grens opleveren, maar mogelijk minder nauwkeurig zijn."  # noqa: E501
+                    "Grootte van driehoeken voor vloergrensdetectie.\n"
+                    "Deze driehoeken worden gebruikt in het Delaunay-triangulatieproces om de vloergrens te bepalen. \n"
+                    "Kleinere waarden kunnen leiden tot een meer gedetailleerde grens, maar kunnen ook meer ruis veroorzaken, \n"
+                    "Grotere waarden een gladdere grens opleveren, maar mogelijk minder nauwkeurig zijn."
                     )
         self._field(card, 2, "Afstandsdrempel", "corner_distance_threshold_entry",
                     (self.validate_flt, '%P'),
-                    "Afstandsdrempel voor hoekidentificatie. \n Deze waarde wordt gebruikt om te bepalen of een punt als een hoek van de vloergrens wordt beschouwd op basis van de afstand tot aangrenzende punten. \n Kleinere waarden resulteren in striktere hoekdetectie, terwijl grotere waarden meer punten als hoeken kunnen classificeren, \n wat kan leiden tot een meer hoekige vloergrens."  # noqa: E501
+                    "Afstandsdrempel voor hoekidentificatie.\n"
+                    "Deze waarde wordt gebruikt om te bepalen of een punt als een hoek van de vloergrens wordt beschouwd op basis van de afstand tot aangrenzende punten.\n"  # noqa: E501
+                    "Kleinere waarden resulteren in striktere hoekdetectie,\n"
+                    "Grotere waarden meer punten als hoeken kunnen classificeren, wat kan leiden tot een meer hoekige vloergrens."
                     )
 
         self._action_btn(card, "Detecteer vloergrens", "floor_detection_button",
@@ -879,7 +897,9 @@ class App:
         self.expansion_value_entry.grid(row=11, column=1, sticky="ew", pady=5)
         self.add_tooltip(
             self.expansion_value_entry,
-            "Waarde in cm waarmee de vloergrens wordt vergroot. \n Let op na deze functie werkt de rest van de pipeline mogelijk niet correct vanwege de gewijzigde geometrie, \n gebruik alleen als je specifiek een vergrote vloergrens nodig hebt."  # noqa: E501
+            "Waarde in cm waarmee de vloergrens wordt vergroot.\n"
+            "Let op: na deze functie werkt de rest van de pipeline mogelijk niet correct vanwege de gewijzigde geometrie, \n"
+            "gebruik alleen als je specifiek een vergrote vloergrens nodig hebt."
         )
 
         self.floor_expansion_button = ttk.Button(
@@ -897,6 +917,11 @@ class App:
                                                validate="key",
                                                validatecommand=(self.validate_flt, '%P'))
         self.max_line_length_entry.grid(row=13, column=1, sticky="ew", pady=(12, 5))
+        self.add_tooltip(
+            self.max_line_length_entry,
+            "Optioneel: voer een maximale lijnlengte in (in meters) voor de 2D CityJSON-export.\n"
+            "Lijnen langer dan deze waarde worden opgesplitst in kortere segmenten."
+        )
 
         ttk.Label(card, text="Coördinaatreferentiesysteem (optioneel)").grid(
             row=14, column=0, sticky="w", pady=5, padx=(0, 12))
@@ -952,9 +977,12 @@ class App:
     # ── Step 8 — Dakextractie ─────────────────────────────────────────────────
     def _build_step_8_panel(self):
         card = self._step_card(8, "Dakextractie")
-        self._field(card, 0, "Snijlaaghoogte", "slice_height_entry",
-                    (self.validate_flt, '%P'),
-                    "Hoogte van de snijlaag voor dakpuntextractie.")
+        self._field(
+            card, 0, "Snijlaaghoogte (in meters)", "slice_height_entry",
+            (self.validate_flt, '%P'),
+            "Hoogte van de snijlaag voor dakpuntextractie.\n"
+            "De waarde bepaalt vanaf hoe hoog de puntenwolk wordt opgedeeld om dakpunten te identificeren.\n"
+        )
         self._action_btn(card, "Extraheer dakpunten", "roof_extraction_button",
                          self.start_roof_extraction_thread,
                          tooltip="Extraheer dakpunten op basis van de snijlaaghoogte.")
@@ -972,15 +1000,30 @@ class App:
     def _build_step_9_panel(self):
         card = self._step_card(9, "Dakverdeling")
         self._field(card, 0, "Daklagen", "roof_layers_entry",
-                    (self.validate_int, '%P'), "Aantal lagen voor dakverdeling.")
+                    (self.validate_int, '%P'),
+                    "Aantal horizontale lagen waarin het dak wordt verdeeld.\n"
+                    "Meer lagen geeft een fijnere verticale opdeling en meer detail bij complexe dakvormen.\n"
+                    "Minder lagen verwerkt sneller, maar mist mogelijk fijnere hoogteverschillen.")
         self._field(card, 1, "Laagdikte", "roof_layer_fatness_entry",
-                    (self.validate_flt, '%P'), "Dikte van elke daklaag.")
+                    (self.validate_flt, '%P'),
+                    "Halve dikte (in meters) van elke horizontale laag rondom het middelpunt.\n"
+                    "Hogere waarde: meer punten per laag, maar aangrenzende lagen kunnen overlappen.\n"
+                    "Lagere waarde: dunnere, schonere lagen, maar mogelijk lege lagen bij dunne puntenwolken.")
         self._field(card, 2, "Voxelgrootte", "roof_voxel_size_entry",
-                    (self.validate_flt, '%P'), "Voxelgrootte voor dakverdeling.")
+                    (self.validate_flt, '%P'),
+                    "Rastercellgrootte (in meters) voor het uitdunnen van elke laag vóór hoekdetectie.\n"
+                    "Kleinere waarde: meer punten behouden, fijnere hoekdetectie, langere verwerkingstijd.\n"
+                    "Grotere waarde: agressiever uitdunnen, sneller, maar minder ruimtelijke nauwkeurigheid.")
         self._field(card, 3, "Hoekdrempel", "roof_angle_threshold_entry",
-                    (self.validate_flt, '%P'), "Hoekdrempel voor dakvlakidentificatie.")
+                    (self.validate_flt, '%P'),
+                    "Minimale hoekverandering (in graden) om een punt als hoek te classificeren.\n"
+                    "Lagere waarde: meer hoeken gedetecteerd, inclusief zachte bochten.\n"
+                    "Hogere waarde: alleen scherpe hoeken, minder ruis bij gladde dakprofielen.")
         self._field(card, 4, "Koppelradius", "roof_merge_radius_entry",
-                    (self.validate_flt, '%P'), "Radius om nabijgelegen dakvlakken samen te voegen.")
+                    (self.validate_flt, '%P'),
+                    "Afstand (in meters) waarbinnen nabijgelegen hoekpunten worden samengevoegd.\n"
+                    "Hogere waarde: geclusterde hoeken worden samengevoegd tot één punt, minder duplicaten.\n"
+                    "Lagere waarde: hoeken blijven afzonderlijk, meer detail maar mogelijk overbodige punten.")
         self._action_btn(card, "Verdeel dak", "roof_division_button",
                          self.start_roof_division_thread,
                          tooltip="Verdeel het dak in lagen.")
@@ -1001,12 +1044,22 @@ class App:
     # ── Step 10 — Dak gladstrijken ────────────────────────────────────────────
     def _build_step_10_panel(self):
         card = self._step_card(10, "Dak gladstrijken")
-        self._field(card, 0, "Voxelgrootte", "roof_smoothing_voxel_size_entry",
-                    (self.validate_flt, '%P'), "Voxelgrootte voor het gladstrijken van het dak.")
+        self._field(
+            card, 0, "Voxelgrootte", "roof_smoothing_voxel_size_entry",
+            (self.validate_flt, '%P'),
+            "Voxelgrootte voor het gladstrijken van het dak.\n"
+            "Kleinere waarde: meer detail behouden, maar langere verwerkingstijd.\n"
+            "Grotere waarde: sneller, maar mogelijk verlies van fijne details."
+        )
 
         # upsample_factor
-        self._field(card, 1, "Upsample factor", "roof_smoothing_upsample_factor_entry",
-                    (self.validate_flt, '%P'), "Factor voor het verhogen van de resolutie tijdens gladstrijken.")
+        self._field(
+            card, 1, "Upsample factor", "roof_smoothing_upsample_factor_entry",
+            (self.validate_int, '%P'),
+            "Factor voor het verhogen van de resolutie tijdens gladstrijken.\n"
+            "Hogere waarde: meer detail behouden, maar langere verwerkingstijd.\n"
+            "Accepteerd alleen gehele getallen groter dan of gelijk aan 1."
+        )
 
         self.visualize_roof_smoothing_var = tk.BooleanVar(
             value=self._field_values.get("visualize_roof_smoothing_var", False)
@@ -1032,13 +1085,18 @@ class App:
             self._load_preset_into("roof_smoothing_voxel_size_entry", "roof_voxel_size")
             self._load_preset_into("roof_smoothing_upsample_factor_entry", "roof_upsample_factor")
             if self.roof_smoothing_upsample_factor_entry.get() == "":
-                self.roof_smoothing_upsample_factor_entry.insert(0, "1.0")
+                self.roof_smoothing_upsample_factor_entry.insert(0, "1")
 
     # ── Step 11 — Wandextractie ───────────────────────────────────────────────
     def _build_step_11_panel(self):
         card = self._step_card(11, "Wandextractie")
-        self._field(card, 0, "Zoekradius", "wall_search_radius_entry",
-                    (self.validate_flt, '%P'), "Zoekradius voor muurpuntidentificatie.")
+        self._field(
+            card, 0, "Zoekradius", "wall_search_radius_entry",
+            (self.validate_flt, '%P'),
+            "Zoekradius voor muurpuntidentificatie.\n"
+            "Kleinere waarde: minder punten worden als muurpunten geïdentificeerd, maar kan leiden tot gaten in de muur.\n"
+            "Grotere waarde: meer punten worden als muurpunten geïdentificeerd, maar kan leiden tot onnauwkeurige muurgrenzen."
+        )
         self._action_btn(card, "Extraheer muren", "wall_extraction_button",
                          self.start_wall_extraction_thread,
                          tooltip="Extraheer muurpunten uit de puntenwolk.")
@@ -1051,8 +1109,11 @@ class App:
     # ── Step 12 — Wandverdeling ───────────────────────────────────────────────
     def _build_step_12_panel(self):
         card = self._step_card(12, "Wandverdeling")
-        self._field(card, 0, "Aantal lagen", "wall_layer_amount_entry",
-                    (self.validate_int, '%P'), "Aantal lagen voor wandverdeling.")
+        self._field(
+            card, 0, "Aantal lagen", "wall_layer_amount_entry",
+            (self.validate_int, '%P'),
+            "Aantal lagen voor wandverdeling."
+        )
         self._action_btn(card, "Verdeel muren", "wall_division_button",
                          self.start_wall_division_thread,
                          tooltip="Verdeel de muren in lagen.")
@@ -1065,10 +1126,21 @@ class App:
     # ── Step 13 — PCD → Lineset ───────────────────────────────────────────────
     def _build_step_13_panel(self):
         card = self._step_card(13, "Puntenwolk naar Lineset")
-        self._field(card, 0, "XY tolerantie", "xy_tolerance_entry",
-                    (self.validate_flt, '%P'), "XY-tolerantie voor Lineset-conversie.")
-        self._field(card, 1, "Max. lijnlengte", "max_line_length_entry",
-                    (self.validate_flt, '%P'), "Maximale lijnlengte voor Lineset-conversie.")
+        self._field(
+            card, 0, "XY tolerantie", "xy_tolerance_entry",
+            (self.validate_flt, '%P'),
+            "XY-tolerantie voor Lineset-conversie.\n"
+            "Bepaalt hoe dicht punten bij elkaar moeten liggen om als één lijnsegment te worden samengevoegd.\n"
+            "Een hogere waarde resulteert in minder, langere lijnen,\n"
+            "een lagere waarde meer, kortere lijnen oplevert."
+        )
+        self._field(
+            card, 1, "Max. lijnlengte", "max_line_length_entry",
+            (self.validate_flt, '%P'),
+            "Maximale lijnlengte voor Lineset-conversie in meters.\n"
+            "Lijnen langer dan deze waarde worden opgesplitst in kortere segmenten.\n"
+            "Om te voorkomen dat onterecht lange lijnen ontstaan, wordt het aanbevolen om de standaardwaarde te gebruiken."
+        )
         self._action_btn(card, "Converteer naar Lineset", "pcd_to_lineset_button",
                          self.start_pcd_to_lineset_thread,
                          tooltip="Converteer de puntenwolk naar een Lineset.")
@@ -1083,9 +1155,13 @@ class App:
     # ── Step 14 — Lineset → Mesh ──────────────────────────────────────────────
     def _build_step_14_panel(self):
         card = self._step_card(14, "Lineset naar Mesh")
-        self._field(card, 0, "Contour buffer", "contour_buffer_entry",
-                    (self.validate_flt, '%P'),
-                    "Vergroot de contourgrens (meters) bij het filteren van wanddriehoeken.")
+        self._field(
+            card, 0, "Contour buffer", "contour_buffer_entry",
+            (self.validate_flt, '%P'),
+            "Vergroot de contourgrens (meters) bij het filteren van wanddriehoeken.\n"
+            "Een hogere waarde resulteert in een grotere buffer rond de contour, \n"
+            "een lagere waarde in een kleinere buffer."
+        )
         self._action_btn(card, "Converteer naar Mesh", "lineset_to_mesh_button",
                          self.start_lineset_to_mesh_thread,
                          tooltip="Converteer de Lineset naar een 3D Mesh.")
@@ -1515,7 +1591,9 @@ class App:
         self.root.config(cursor="watch")
         self._start_spinner("Converteren naar Lineset...")
         self.disable_section(self.pcd_to_lineset_button, "Bezig...")
-        self.pcd_to_lineset_result_label.configure(text="Converteren naar Lineset, even geduld...")
+        self.pcd_to_lineset_result_label.configure(
+            text="Converteren naar Lineset, even geduld... Deze stap kan langer duren bij grote puntenwolken."
+        )
         threading.Thread(target=self.pcd_to_lineset_step).start()
 
     def start_lineset_to_mesh_thread(self):
@@ -1852,7 +1930,7 @@ class App:
             self.roof_pcd = smooth_roof(
                 self._original_roof_pcd,
                 voxel_size=float(self.roof_smoothing_voxel_size_entry.get()),
-                upsample_factor=float(self.roof_smoothing_upsample_factor_entry.get()),
+                upsample_factor=int(self.roof_smoothing_upsample_factor_entry.get()),
                 visualize=bool(self.visualize_roof_smoothing_var.get())
             )
 
