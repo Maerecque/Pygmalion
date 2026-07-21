@@ -247,6 +247,7 @@ def connect_vertically_aligned_points2(
         upper_level_points (Union[np.ndarray, List[np.ndarray]]): Either a single Mx3 array or a list of arrays, each
         representing an upper level.
         xy_tol (float, optional): Maximum allowed distance in XY plane for points to be considered vertically aligned.
+            A higher value allows for more lenient matching, while a lower value requires stricter alignment.
         Defaults to 1e-2.
 
     Returns:
